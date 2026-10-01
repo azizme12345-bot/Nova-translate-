@@ -183,85 +183,150 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = React.useRef<any>(null);
-  const shouldListenRef = React.useRef<boolean>(false);
-  const baseTextRef = React.useRef<string>('');
+  const isListeningRef = React.useRef<boolean>(false);
 
-  const stopVoiceInput = () => {
-    shouldListenRef.current = false;
-    setIsListening(false);
+  const getSpeechLanguage = (language: string): string => {
+    if (!language) return 'en-US';
+
+    if (language.includes('Urdu')) return 'ur-PK';
+    if (language.includes('English')) return 'en-US';
+    if (language.includes('Punjabi')) return 'pa-PK';
+    if (language.includes('Arabic')) return 'ar-SA';
+    if (language.includes('Hindi')) return 'hi-IN';
+    if (language.includes('Japanese')) return 'ja-JP';
+    if (language.includes('Chinese')) return 'zh-CN';
+    if (language.includes('French')) return 'fr-FR';
+    if (language.includes('German')) return 'de-DE';
+    if (language.includes('Spanish')) return 'es-ES';
+
+    return 'en-US';
+  };
+
+  const stopSpeechRecognition = () => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch {
-        // ignore
+      } catch (error) {
+        console.warn('Speech recognition stop error:', error);
       }
       recognitionRef.current = null;
     }
+    isListeningRef.current = false;
+    setIsListening(false);
   };
 
-  const startVoiceRecognition = () => {
+  const startSpeechRecognition = async () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (SpeechRecognition) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // ignore
+    if (!SpeechRecognition) {
+      onToast('Voice input is not supported in this browser.');
+      return;
+    }
+
+    if (isListeningRef.current || recognitionRef.current) {
+      stopSpeechRecognition();
+      return;
+    }
+
+    // Request microphone access beforehand to prompt user cleanly if needed
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err: any) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          console.warn('Microphone permission denied:', err.name);
+          onToast('Microphone permission was denied. Please allow microphone access in your browser settings.');
+          isListeningRef.current = false;
+          setIsListening(false);
+          return;
         }
       }
+    }
 
+    try {
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
+
+      recognition.lang = getSpeechLanguage(fromLang);
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = 'ur-PK'; // Set Urdu language code
+      recognition.maxAlternatives = 1;
+
+      isListeningRef.current = true;
+      setIsListening(true);
 
       recognition.onstart = () => {
+        isListeningRef.current = true;
         setIsListening(true);
         onToast('Listening… speak into your microphone');
       };
 
       recognition.onresult = (event: any) => {
-        let currentTranscript = '';
+        let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
+          transcript += event.results[i][0].transcript;
         }
-        if (currentTranscript.trim()) {
-          setInputText(currentTranscript); // Directly bind live speech to main text box
+
+        if (transcript.trim()) {
+          setInputText(transcript);
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Speech error:', event.error);
+        const errorName = event.error || 'unknown';
+        console.warn('Speech recognition notice:', errorName);
+        isListeningRef.current = false;
         setIsListening(false);
+        recognitionRef.current = null;
+
+        if (errorName === 'not-allowed') {
+          onToast('Microphone permission was denied. Please allow microphone access in your browser settings.');
+        } else if (errorName === 'no-speech') {
+          onToast('No speech detected. Please try again.');
+        } else if (errorName === 'network') {
+          onToast('Speech recognition network error. Please try again.');
+        } else if (errorName === 'audio-capture') {
+          onToast('No microphone was detected on this device.');
+        } else if (errorName === 'aborted') {
+          onToast('Microphone stopped.');
+        } else {
+          onToast('Microphone error: ' + errorName);
+        }
       };
 
       recognition.onend = () => {
+        isListeningRef.current = false;
         setIsListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.start();
-    } else {
-      onToast('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
+    } catch (error: any) {
+      console.warn('Speech recognition start error:', error);
+      isListeningRef.current = false;
+      setIsListening(false);
+      recognitionRef.current = null;
+      if (error?.name === 'NotAllowedError') {
+        onToast('Microphone permission was denied. Please allow microphone access in your browser settings.');
+      } else {
+        onToast('Could not start the microphone. Please try again.');
+      }
     }
   };
 
-  const handleVoiceInput = () => {
-    if (isListening) {
-      stopVoiceInput();
-      onToast('Voice input stopped.');
-      return;
+  const handleVoiceInput = async () => {
+    if (isListeningRef.current || recognitionRef.current) {
+      stopSpeechRecognition();
+    } else {
+      await startSpeechRecognition();
     }
-
-    baseTextRef.current = inputText;
-    startVoiceRecognition();
   };
 
   React.useEffect(() => {
     return () => {
-      stopVoiceInput();
+      stopSpeechRecognition();
     };
   }, []);
 
@@ -327,29 +392,10 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <span id="count">{inputText.length} / 5000</span>
             </div>
             <div className="panelbody">
-              {isListening && (
-                <div
-                  style={{
-                    background: '#fee2e2',
-                    color: '#991b1b',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    marginBottom: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: 600,
-                  }}
-                >
-                  <span>🔴</span>
-                  <span>مائیک آن ہے، بولیں / Microphone active… Speak now</span>
-                </div>
-              )}
               <textarea
                 id="input"
                 maxLength={5000}
-                placeholder="Type or speak something… (یہاں لکھیں یا بولیں)"
+                placeholder="Type or speak something…"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 style={{ fontSize: fontSizeMap[textSize] }}
@@ -367,14 +413,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                     id="mic"
                     onClick={handleVoiceInput}
                     type="button"
-                    style={{
-                      background: isListening ? '#ef4444' : undefined,
-                      color: isListening ? '#ffffff' : undefined,
-                      fontWeight: isListening ? 'bold' : 'normal',
-                      borderColor: isListening ? '#dc2626' : undefined,
-                    }}
+                    aria-label={isListening ? 'Stop microphone' : 'Start microphone'}
                   >
-                    {isListening ? '🔴 Stop Listening' : '🎤 Speak'}
+                    {isListening ? '⏹ Stop' : '🎤 Speak'}
                   </button>
                   <button className="mini" id="clear" onClick={handleClear} type="button">
                     Clear
@@ -487,14 +528,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               el.scrollIntoView({ behavior: 'smooth', block: 'center' });
               el.focus();
             }
-            if (!isListening) {
-              handleVoiceInput();
-            }
+            handleVoiceInput();
           }}
         >
           <div>🎤</div>
-          <h3>Voice Translation / صوتی ترجمہ</h3>
-          <p>Speak naturally and stream live speech into translation.</p>
+          <h3>Voice Translation</h3>
+          <p>Speak naturally and prepare voice input for instant translation.</p>
         </div>
         <div className="card" onClick={() => onNavigate('camera')}>
           <div>📷</div>
