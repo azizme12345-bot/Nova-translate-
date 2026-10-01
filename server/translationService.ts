@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * Standard list of supported languages in Nova Translate
@@ -36,23 +36,32 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 ];
 
 /**
- * Initializes Google GenAI client securely using server-side environment variables.
+ * Initializes GoogleGenerativeAI client supporting both standard ('AIzaSy...')
+ * and Service Account / REST format keys ('AQ....') via process.env.GEMINI_API_KEY.
  */
-function getAIClient(): GoogleGenAI {
+function getGenAI(): GoogleGenerativeAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.trim() === '' || apiKey === 'MY_GEMINI_API_KEY') {
-    throw new Error('GEMINI_API_KEY is not configured in backend environment variables.');
+    throw new Error('GEMINI_API_KEY Missing in Environment Variables');
   }
 
-  return new GoogleGenAI({
-    apiKey: apiKey.trim(),
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
+  return new GoogleGenerativeAI(apiKey.trim());
+}
+
+/**
+ * Strict 1.5 Flash generative model instance
+ */
+export const getGenerativeModel = (systemInstruction?: string) => {
+  const genAI = getGenAI();
+  return genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    systemInstruction,
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: 'application/json',
     },
   });
-}
+};
 
 export interface TranslationRequest {
   text: string;
@@ -107,7 +116,7 @@ export interface VoiceSynthesizeResponse {
 }
 
 /**
- * Centralized Backend Translation Service
+ * Centralized Backend Translation Service powered by gemini-1.5-flash
  */
 export class TranslationService {
   /**
@@ -130,82 +139,32 @@ export class TranslationService {
       sourceLang.toLowerCase().includes('auto') ||
       sourceLang.toLowerCase() === 'detect';
 
-    const ai = getAIClient();
-
-    const prompt = `You are the core translation engine of Nova Translate, an elite multi-lingual translation system.
+    const prompt = `You are the translation engine of Nova Translate.
 Translate the following input text accurately, fluently, and naturally into ${targetLang}.
-Preserve line breaks, markdown/formatting, punctuation, tone, and idioms without adding commentary, prefixes, or notes.
+Preserve line breaks, formatting, punctuation, and idioms.
 
 Input text:
 """
 ${rawText}
 """
-`;
+
+Respond with a JSON object in this format:
+{
+  "translatedText": "the translated string in ${targetLang}",
+  "detectedSourceLanguage": "the detected language name of the source text (e.g. Urdu, English, Arabic)",
+  "detectedLanguageCode": "two letter ISO 639-1 code if identifiable",
+  "isRTL": true or false depending on whether ${targetLang} is right-to-left
+}`;
 
     const systemInstruction = `You are a professional AI translator.
 Source language instruction: ${isAutoDetect ? 'Detect source language automatically.' : `Source language is ${sourceLang}.`}
 Target language: ${targetLang}.
-Respond with a strict JSON object matching the requested schema.`;
+Respond with a strict JSON object.`;
 
-    // Target Gemini model strictly set to gemini-1.5-flash
-    const candidateModels = ['gemini-1.5-flash', 'gemini-flash-latest'];
-    let response: any = null;
-    let lastError: any = null;
+    const model = getGenerativeModel(systemInstruction);
+    const result = await model.generateContent(prompt);
+    const outputText = result.response.text() || '{}';
 
-    for (const model of candidateModels) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          response = await ai.models.generateContent({
-            model,
-            contents: prompt,
-            config: {
-              systemInstruction,
-              temperature: 0.2,
-              thinkingConfig: model.startsWith('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  translatedText: {
-                    type: Type.STRING,
-                    description: 'The clean translated text in the target language.',
-                  },
-                  detectedSourceLanguage: {
-                    type: Type.STRING,
-                    description: 'The detected language name of the source text (e.g., Urdu, English, Arabic).',
-                  },
-                  detectedLanguageCode: {
-                    type: Type.STRING,
-                    description: 'Two-letter ISO 639-1 code if identifiable.',
-                  },
-                  isRTL: {
-                    type: Type.BOOLEAN,
-                    description: 'True if the target language is right-to-left.',
-                  },
-                },
-                required: ['translatedText', 'detectedSourceLanguage'],
-              },
-            },
-          });
-          if (response?.text) break;
-        } catch (err: any) {
-          lastError = err;
-          // If 503 or 429, wait a moment and try next
-          if (err.status === 503 || err.status === 429 || err.message?.includes('503')) {
-            await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
-          } else {
-            break;
-          }
-        }
-      }
-      if (response?.text) break;
-    }
-
-    if (!response || !response.text) {
-      throw lastError || new Error('Translation model currently unavailable. Please try again.');
-    }
-
-    const outputText = response.text || '{}';
     let parsed: {
       translatedText?: string;
       detectedSourceLanguage?: string;
@@ -216,7 +175,6 @@ Respond with a strict JSON object matching the requested schema.`;
     try {
       parsed = JSON.parse(outputText);
     } catch {
-      // Fallback if parsing fails
       parsed = {
         translatedText: outputText.trim(),
         detectedSourceLanguage: sourceLang,
@@ -241,7 +199,7 @@ Respond with a strict JSON object matching the requested schema.`;
   }
 
   /**
-   * Automatically detects language of input text.
+   * Automatically detects language of input text using gemini-1.5-flash.
    */
   static async detect(text: string): Promise<DetectLanguageResponse> {
     const rawText = (text || '').trim();
@@ -249,31 +207,23 @@ Respond with a strict JSON object matching the requested schema.`;
       throw new Error('Text to detect is required.');
     }
 
-    const ai = getAIClient();
     const prompt = `Identify the natural language of the following text:
 """
 ${rawText.slice(0, 1000)}
-"""`;
+"""
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            languageName: { type: Type.STRING, description: 'E.g., Urdu, English, Arabic, Spanish' },
-            languageCode: { type: Type.STRING, description: 'ISO 639-1 two-letter code, e.g. ur, en, ar' },
-            confidence: { type: Type.NUMBER, description: 'Confidence between 0.0 and 1.0' },
-            direction: { type: Type.STRING, description: 'ltr or rtl' },
-          },
-          required: ['languageName', 'languageCode', 'confidence', 'direction'],
-        },
-      },
-    });
+Return a JSON object:
+{
+  "languageName": "English / Urdu / Arabic / Spanish / etc",
+  "languageCode": "two letter ISO 639-1 code",
+  "confidence": 0.95,
+  "direction": "ltr" or "rtl"
+}`;
 
-    const parsed = JSON.parse(response.text || '{}');
+    const model = getGenerativeModel('You are an expert language identifier. Return strict JSON.');
+    const result = await model.generateContent(prompt);
+    const parsed = JSON.parse(result.response.text() || '{}');
+
     return {
       text: rawText,
       detectedLanguage: parsed.languageName || 'Unknown',
@@ -284,7 +234,7 @@ ${rawText.slice(0, 1000)}
   }
 
   /**
-   * OCR & Translation: Extracts text from an image and translates it to target language.
+   * OCR & Translation: Extracts text from an image and translates it to target language using gemini-1.5-flash.
    */
   static async ocrAndTranslate(req: OCRTranslationRequest): Promise<OCRTranslationResponse> {
     if (!req.imageBase64) {
@@ -303,7 +253,13 @@ ${rawText.slice(0, 1000)}
     }
 
     const targetLang = (req.targetLanguage || 'English').trim();
-    const ai = getAIClient();
+    const genAI = getGenAI();
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
 
     const imagePart = {
       inlineData: {
@@ -312,30 +268,18 @@ ${rawText.slice(0, 1000)}
       },
     };
 
-    const textPart = {
-      text: `Perform OCR on this image. Extract all text clearly and accurately.
+    const prompt = `Perform OCR on this image. Extract all text clearly and accurately.
 Then translate all extracted text into ${targetLang}.
-Return a JSON object with 'extractedText', 'translatedText', and 'detectedSourceLanguage'.`,
-    };
+Return a strict JSON object with:
+{
+  "extractedText": "all extracted text from image",
+  "translatedText": "the translated version in ${targetLang}",
+  "detectedSourceLanguage": "language of text in image"
+}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: { parts: [imagePart, textPart] },
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            extractedText: { type: Type.STRING, description: 'All text recognized in the image' },
-            translatedText: { type: Type.STRING, description: 'The translated version in the target language' },
-            detectedSourceLanguage: { type: Type.STRING, description: 'Language of the text in the image' },
-          },
-          required: ['extractedText', 'translatedText', 'detectedSourceLanguage'],
-        },
-      },
-    });
+    const result = await model.generateContent([prompt, imagePart]);
+    const parsed = JSON.parse(result.response.text() || '{}');
 
-    const parsed = JSON.parse(response.text || '{}');
     return {
       extractedText: (parsed.extractedText || '').trim(),
       translatedText: (parsed.translatedText || '').trim(),
@@ -346,8 +290,7 @@ Return a JSON object with 'extractedText', 'translatedText', and 'detectedSource
   }
 
   /**
-   * Voice synthesis backend preparation.
-   * Attempts high-fidelity Gemini TTS audio generation; provides fallback info for browser speech synthesis.
+   * Voice synthesis backend preparation using gemini-1.5-flash fallback.
    */
   static async synthesizeVoice(req: VoiceSynthesizeRequest): Promise<VoiceSynthesizeResponse> {
     const rawText = (req.text || '').trim();
@@ -355,38 +298,7 @@ Return a JSON object with 'extractedText', 'translatedText', and 'detectedSource
       throw new Error('Text for voice synthesis is required.');
     }
 
-    try {
-      const ai = getAIClient();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash-lite-tts',
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: rawText.slice(0, 1000) }],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: (req.voiceName as any) || 'Kore' },
-            },
-          },
-        },
-      });
-
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        return {
-          audioBase64: base64Audio,
-          mimeType: 'audio/wav',
-          fallbackToBrowserTTS: false,
-        };
-      }
-    } catch {
-      // Fallback seamlessly to client-side SpeechSynthesis if TTS quota or regional voice is constrained
-    }
-
+    // Browser SpeechSynthesis will render audio locally
     return {
       mimeType: 'audio/wav',
       fallbackToBrowserTTS: true,

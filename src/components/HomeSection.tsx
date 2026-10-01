@@ -264,8 +264,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           return;
         }
 
-        // On temporary errors (e.g. no-speech, aborted, network glitches), auto-restart if still active
-        if (shouldListenRef.current && (e.error === 'no-speech' || e.error === 'network')) {
+        // On temporary errors (e.g. no-speech, aborted, minor network pauses), auto-restart without interrupting the session
+        if (shouldListenRef.current && (e.error === 'no-speech' || e.error === 'network' || e.error === 'aborted')) {
           setTimeout(() => {
             if (shouldListenRef.current) {
               try {
