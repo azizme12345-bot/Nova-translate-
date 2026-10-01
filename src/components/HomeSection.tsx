@@ -201,14 +201,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
   const startVoiceRecognition = () => {
     const SpeechRecognition =
-      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      onToast('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
-      return;
-    }
-
-    try {
+    if (SpeechRecognition) {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -221,20 +216,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       recognitionRef.current = recognition;
       recognition.continuous = false;
       recognition.interimResults = true;
-
-      const lower = fromLang.toLowerCase();
-      if (lower.includes('urdu')) recognition.lang = 'ur-PK';
-      else if (lower.includes('arabic')) recognition.lang = 'ar-SA';
-      else if (lower.includes('punjabi')) recognition.lang = 'pa-IN';
-      else if (lower.includes('hindi')) recognition.lang = 'hi-IN';
-      else if (lower.includes('spanish')) recognition.lang = 'es-ES';
-      else if (lower.includes('french')) recognition.lang = 'fr-FR';
-      else if (lower.includes('german')) recognition.lang = 'de-DE';
-      else if (lower.includes('japanese')) recognition.lang = 'ja-JP';
-      else if (lower.includes('chinese')) recognition.lang = 'zh-CN';
-      else if (lower.includes('russian')) recognition.lang = 'ru-RU';
-      else if (lower.includes('turkish')) recognition.lang = 'tr-TR';
-      else recognition.lang = 'ur-PK';
+      recognition.lang = 'ur-PK'; // Set Urdu language code
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -242,43 +224,27 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       };
 
       recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-
-        for (let i = 0; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
+        let currentTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript;
         }
-
-        const recognizedText = (finalTranscript + ' ' + interimTranscript).trim();
-        const prefix = baseTextRef.current ? baseTextRef.current.trim() + ' ' : '';
-        setInputText(prefix + recognizedText);
+        if (currentTranscript.trim()) {
+          setInputText(currentTranscript); // Directly bind live speech to main text box
+        }
       };
 
-      recognition.onerror = (e: any) => {
+      recognition.onerror = (event: any) => {
+        console.error('Speech error:', event.error);
         setIsListening(false);
-        if (e.error === 'no-speech' || e.error === 'aborted') {
-          return;
-        }
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          onToast('Microphone access was denied. Please allow mic permission.');
-        } else {
-          onToast(`Microphone notice: ${e.error || 'interrupted'}`);
-        }
       };
 
       recognition.onend = () => {
         setIsListening(false);
-        recognitionRef.current = null;
       };
 
       recognition.start();
-    } catch {
-      setIsListening(false);
-      onToast('Unable to start microphone.');
+    } else {
+      onToast('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
     }
   };
 
