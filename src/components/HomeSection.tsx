@@ -85,7 +85,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       // Auto-voice output if enabled in settings
       if (voiceOutputEnabled) {
-        speakText(result.translatedText, toLang);
+        playSpeech(result.translatedText, toLang, false);
       }
     } catch (err: any) {
       setStatus('Ready');
@@ -135,58 +135,233 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     }
   };
 
-  const speakText = async (textToSpeak: string, targetLanguageName: string) => {
-    if (!textToSpeak || textToSpeak === 'Your translation will appear here.') {
-      onToast('No translation to read.');
-      return;
+  // ==========================================
+  // TEXT TO SPEECH (LISTEN) IMPLEMENTATION
+  // ==========================================
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const isSpeakingRef = React.useRef<boolean>(false);
+  const voicesRef = React.useRef<SpeechSynthesisVoice[]>([]);
+  const utteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
+  const speechResumeIntervalRef = React.useRef<any>(null);
+
+  const clearResumeInterval = () => {
+    if (speechResumeIntervalRef.current) {
+      clearInterval(speechResumeIntervalRef.current);
+      speechResumeIntervalRef.current = null;
     }
-
-    // Call backend voice preparation
-    const voicePrep = await ApiClient.prepareVoiceSynthesis(textToSpeak, targetLanguageName);
-
-    if (voicePrep.audioBase64) {
-      const audio = new Audio(`data:audio/wav;base64,${voicePrep.audioBase64}`);
-      audio.play().catch(() => {
-        fallbackBrowserSpeak(textToSpeak, targetLanguageName);
-      });
-      return;
-    }
-
-    fallbackBrowserSpeak(textToSpeak, targetLanguageName);
   };
 
-  const fallbackBrowserSpeak = (text: string, langName: string) => {
+  // Asynchronously populate and update browser voices
+  React.useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+
+    const populateVoices = () => {
+      try {
+        const available = window.speechSynthesis.getVoices();
+        if (available && available.length > 0) {
+          voicesRef.current = available;
+        }
+      } catch (err) {
+        console.warn('Speech synthesis voice retrieval notice:', err);
+      }
+    };
+
+    populateVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = populateVoices;
+    }
+
+    return () => {
+      clearResumeInterval();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const getTargetSpeechLanguage = (language: string): string => {
+    if (!language) return 'en-US';
+
+    if (language.includes('Urdu')) return 'ur-PK';
+    if (language.includes('English')) return 'en-US';
+    if (language.includes('Punjabi')) return 'pa-PK';
+    if (language.includes('Arabic')) return 'ar-SA';
+    if (language.includes('Hindi')) return 'hi-IN';
+    if (language.includes('Japanese')) return 'ja-JP';
+    if (language.includes('Chinese')) return 'zh-CN';
+    if (language.includes('French')) return 'fr-FR';
+    if (language.includes('German')) return 'de-DE';
+    if (language.includes('Spanish')) return 'es-ES';
+
+    return 'en-US';
+  };
+
+  const playSpeech = (text: string, targetLanguageName: string, showToastOnStart = true) => {
     if (!('speechSynthesis' in window)) {
       onToast('Voice output is not supported by your browser.');
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    // 1. Read actual translated text from output
+    const cleanText = (text || '').trim();
 
-    // Map common languages to browser BCP 47 codes
-    const lower = langName.toLowerCase();
-    if (lower.includes('urdu')) utterance.lang = 'ur-PK';
-    else if (lower.includes('arabic')) utterance.lang = 'ar-SA';
-    else if (lower.includes('punjabi')) utterance.lang = 'pa-IN';
-    else if (lower.includes('hindi')) utterance.lang = 'hi-IN';
-    else if (lower.includes('spanish')) utterance.lang = 'es-ES';
-    else if (lower.includes('french')) utterance.lang = 'fr-FR';
-    else if (lower.includes('german')) utterance.lang = 'de-DE';
-    else if (lower.includes('japanese')) utterance.lang = 'ja-JP';
-    else if (lower.includes('chinese')) utterance.lang = 'zh-CN';
-    else utterance.lang = 'en-US';
+    // 2. Do not read placeholder text
+    // 3. If there is no translated text, show "Please translate some text first."
+    if (!cleanText || cleanText === 'Your translation will appear here.') {
+      onToast('Please translate some text first.');
+      return;
+    }
 
-    window.speechSynthesis.speak(utterance);
-    onToast('Reading aloud…');
+    // Cancel any ongoing speech cleanly
+    clearResumeInterval();
+    const wasActive = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+    if (wasActive) {
+      window.speechSynthesis.cancel();
+    }
+
+    // On Android Chrome, a small delay (50ms) after cancel ensures the native audio queue is ready
+    setTimeout(() => {
+      try {
+        // 5. Use the TARGET language, not the source language
+        const langCode = getTargetSpeechLanguage(targetLanguageName);
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utteranceRef.current = utterance; // Prevent garbage collection on Android Chrome
+
+        utterance.lang = langCode;
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // 6. Use speechSynthesis.getVoices()
+        let voices = voicesRef.current;
+        if (!voices || voices.length === 0) {
+          try {
+            voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+              voicesRef.current = voices;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // 8. Find exact matching voice when available
+        // 9. If exact voice is unavailable, find a language-prefix match (e.g., ur-PK -> ur)
+        if (voices && voices.length > 0) {
+          const normalizedTarget = langCode.toLowerCase().replace('_', '-');
+          const prefix = normalizedTarget.split('-')[0];
+
+          const exactVoice = voices.find(
+            (v) => v.lang && v.lang.toLowerCase().replace('_', '-') === normalizedTarget
+          );
+
+          if (exactVoice) {
+            utterance.voice = exactVoice;
+            utterance.lang = exactVoice.lang;
+          } else {
+            const prefixVoice = voices.find(
+              (v) => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith(prefix)
+            );
+            if (prefixVoice) {
+              utterance.voice = prefixVoice;
+              utterance.lang = prefixVoice.lang;
+            }
+          }
+        }
+
+        // 12. Handle onstart, onend, onerror
+        utterance.onstart = () => {
+          isSpeakingRef.current = true;
+          setIsSpeaking(true);
+          if (showToastOnStart) onToast('Reading aloud…');
+
+          // Keep-alive timer for Android Chrome (prevents freezing on longer texts)
+          clearResumeInterval();
+          speechResumeIntervalRef.current = setInterval(() => {
+            if (window.speechSynthesis.speaking) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            } else {
+              clearResumeInterval();
+            }
+          }, 5000);
+        };
+
+        utterance.onend = () => {
+          clearResumeInterval();
+          utteranceRef.current = null;
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+        };
+
+        utterance.onerror = (e: any) => {
+          clearResumeInterval();
+          utteranceRef.current = null;
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+
+          const errType = e?.error || 'unknown';
+          if (errType === 'canceled' || errType === 'interrupted') {
+            return; // Normal stop/cancel
+          }
+          console.warn('Speech synthesis playback notice:', errType);
+          if (errType === 'language-unavailable' || errType === 'synthesis-unavailable') {
+            onToast('Voice for this language is not installed on this device.');
+          } else {
+            onToast('Voice playback notice: ' + errType);
+          }
+        };
+
+        window.speechSynthesis.speak(utterance);
+        // Force-resume on Android Chrome to overcome autoplay/idle freeze
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      } catch (err) {
+        clearResumeInterval();
+        utteranceRef.current = null;
+        console.warn('Speech synthesis speak error:', err);
+        isSpeakingRef.current = false;
+        setIsSpeaking(false);
+        onToast('Could not play speech on this device.');
+      }
+    }, wasActive ? 50 : 0);
   };
 
+  const handleListen = () => {
+    if (!('speechSynthesis' in window)) {
+      onToast('Voice output is not supported by your browser.');
+      return;
+    }
+
+    // 13. If Listen is already speaking and user presses Listen again, stop/cancel current speech
+    if (isSpeakingRef.current || window.speechSynthesis.speaking) {
+      clearResumeInterval();
+      window.speechSynthesis.cancel();
+      utteranceRef.current = null;
+      isSpeakingRef.current = false;
+      setIsSpeaking(false);
+      onToast('Speech stopped.');
+      return;
+    }
+
+    playSpeech(outputText, toLang, true);
+  };
+
+  // ==========================================
+  // SPEECH TO TEXT (MICROPHONE) IMPLEMENTATION
+  // ==========================================
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = React.useRef<any>(null);
   const isListeningRef = React.useRef<boolean>(false);
 
   const getSpeechLanguage = (language: string): string => {
-    if (!language) return 'en-US';
+    if (!language) return 'ur-PK';
+
+    if (language.includes('Auto')) {
+      if (detectedBadge && detectedBadge.includes('English')) return 'en-US';
+      return 'ur-PK'; // default source in Nova Translate is Urdu
+    }
 
     if (language.includes('Urdu')) return 'ur-PK';
     if (language.includes('English')) return 'en-US';
@@ -204,18 +379,24 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
   const stopSpeechRecognition = () => {
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.warn('Speech recognition stop error:', error);
-      }
+      const rec = recognitionRef.current;
       recognitionRef.current = null;
+      // Detach listeners before aborting to prevent zombie callbacks from resetting state
+      rec.onstart = null;
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+      try {
+        rec.abort();
+      } catch (error) {
+        console.warn('Speech recognition abort notice:', error);
+      }
     }
     isListeningRef.current = false;
     setIsListening(false);
   };
 
-  const startSpeechRecognition = async () => {
+  const startSpeechRecognition = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -224,26 +405,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       return;
     }
 
-    if (isListeningRef.current || recognitionRef.current) {
-      stopSpeechRecognition();
-      return;
-    }
-
-    // Request microphone access beforehand to prompt user cleanly if needed
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (err: any) {
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          console.warn('Microphone permission denied:', err.name);
-          onToast('Microphone permission was denied. Please allow microphone access in your browser settings.');
-          isListeningRef.current = false;
-          setIsListening(false);
-          return;
-        }
-      }
-    }
+    // Clean up any stale or previous recognition instance
+    stopSpeechRecognition();
 
     try {
       const recognition = new SpeechRecognition();
@@ -254,23 +417,21 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
-      isListeningRef.current = true;
-      setIsListening(true);
-
       recognition.onstart = () => {
         isListeningRef.current = true;
         setIsListening(true);
         onToast('Listening… speak into your microphone');
       };
 
+      // Accumulate all segments from index 0 so Android Chrome doesn't erase previous words
       recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
         }
 
-        if (transcript.trim()) {
-          setInputText(transcript);
+        if (fullTranscript.trim()) {
+          setInputText(fullTranscript);
         }
       };
 
@@ -290,7 +451,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         } else if (errorName === 'audio-capture') {
           onToast('No microphone was detected on this device.');
         } else if (errorName === 'aborted') {
-          onToast('Microphone stopped.');
+          // Normal stop/cancel, do not alarm user
         } else {
           onToast('Microphone error: ' + errorName);
         }
@@ -316,17 +477,21 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     }
   };
 
-  const handleVoiceInput = async () => {
+  const handleVoiceInput = () => {
     if (isListeningRef.current || recognitionRef.current) {
       stopSpeechRecognition();
     } else {
-      await startSpeechRecognition();
+      startSpeechRecognition();
     }
   };
 
   React.useEffect(() => {
     return () => {
       stopSpeechRecognition();
+      clearResumeInterval();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
@@ -453,10 +618,11 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   <button
                     className="mini"
                     id="listen"
-                    onClick={() => speakText(outputText, toLang)}
+                    onClick={handleListen}
                     type="button"
+                    aria-label={isSpeaking ? 'Stop speaking' : 'Listen to translation'}
                   >
-                    🔊 Listen
+                    {isSpeaking ? '⏹ Stop' : '🔊 Listen'}
                   </button>
                   <button className="mini" id="copy" onClick={handleCopy} type="button">
                     📋 Copy

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ApiClient, LanguageOption, OCRResult } from '../services/apiClient.ts';
+import React, { useRef, useState } from 'react';
+import { Camera, Upload, Loader2, Image as ImageIcon, Volume2, Copy } from 'lucide-react';
+import { ApiClient, LanguageOption } from '../services/apiClient.ts';
 import { HistoryItem } from '../types.ts';
 
 interface CameraSectionProps {
@@ -8,410 +9,210 @@ interface CameraSectionProps {
   onToast: (msg: string) => void;
 }
 
-/**
- * Client-side image compressor: scales down images to a maximum width/height of 800px
- * and compresses to JPEG quality 0.6 before sending payload to server.
- */
-function compressImage(file: File | Blob, maxDimension = 800, quality = 0.6): Promise<{ base64: string; mimeType: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (readerEvent) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          resolve({ base64: readerEvent.target?.result as string, mimeType: 'image/jpeg' });
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const mimeType = 'image/jpeg';
-        const compressedBase64 = canvas.toDataURL(mimeType, quality);
-        resolve({ base64: compressedBase64, mimeType });
-      };
-      img.onerror = () => reject(new Error('Failed to process image.'));
-      img.src = readerEvent.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error('Failed to read image.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 export const CameraSection: React.FC<CameraSectionProps> = ({
   languages,
   onAddHistory,
   onToast,
 }) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [compressedMime, setCompressedMime] = useState<string>('image/jpeg');
   const [targetLang, setTargetLang] = useState('English 🇬🇧');
-  const [isScanning, setIsScanning] = useState(false);
-  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [ocrResult, setOcrResult] = useState<{ original: string; translated: string } | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Live Camera Viewfinder State
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const startLiveCamera = async () => {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
+  const compressAndProcessImage = (file: File) => {
+    setIsLoading(true);
+    setOcrResult(null);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
 
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setIsCameraActive(true);
-      onToast('Camera started. Align text and tap Snap.');
-    } catch {
-      onToast('Could not access camera. Please allow camera permissions or upload an image.');
-    }
-  };
-
-  const stopLiveCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setIsCameraActive(false);
-  };
-
-  const captureLiveSnap = async () => {
-    if (!videoRef.current) return;
-
-    try {
-      const video = videoRef.current;
-      const canvas = document.createElement('canvas');
-      const maxDim = 800;
-      let width = video.videoWidth || 640;
-      let height = video.videoHeight || 480;
-
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
+        const MAX_WIDTH = 800;
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
         }
-      }
 
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-        setPreviewUrl(dataUrl);
-        setCompressedMime('image/jpeg');
-        setOcrResult(null);
-        stopLiveCamera();
-        onToast('Photo snapped and compressed! Ready to scan.');
-      }
-    } catch {
-      onToast('Failed to snap photo.');
-    }
-  };
+        canvas.width = width;
+        canvas.height = height;
 
-  useEffect(() => {
-    return () => {
-      stopLiveCamera();
-    };
-  }, []);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          
+          try {
+            const ocr = await ApiClient.ocrAndTranslate(compressedBase64, targetLang);
+            setOcrResult({
+              original: ocr.extractedText,
+              translated: ocr.translatedText,
+            });
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+            // Save to history
+            onAddHistory({
+              id: Math.random().toString(36).substring(2, 9),
+              input: ocr.extractedText,
+              output: ocr.translatedText,
+              from: ocr.detectedSourceLanguage || 'Detected',
+              to: targetLang,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              detectedLang: ocr.detectedSourceLanguage,
+            });
 
-    if (!file.type.startsWith('image/')) {
-      onToast('Please select a valid image file (PNG, JPG, WEBP).');
-      return;
-    }
-
-    try {
-      onToast('Compressing image…');
-      const { base64, mimeType } = await compressImage(file);
-      setPreviewUrl(base64);
-      setCompressedMime(mimeType);
-      setOcrResult(null);
-      stopLiveCamera();
-      onToast('Image ready for scan.');
-    } catch {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreviewUrl(reader.result as string);
-        setCompressedMime(file.type || 'image/jpeg');
+            onToast('OCR Translation completed successfully!');
+          } catch (err: any) {
+            onToast(err.message || 'Image translation failed.');
+          } finally {
+            setIsLoading(false);
+          }
+        }
       };
-      reader.readAsDataURL(file);
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      compressAndProcessImage(file);
     }
   };
 
-  const handleStartScan = async () => {
-    if (!previewUrl) {
-      onToast('Please snap or upload an image first.');
-      return;
-    }
-
-    setIsScanning(true);
-    onToast('Scanning image with AI OCR…');
-
-    try {
-      const result = await ApiClient.ocrAndTranslate(previewUrl, targetLang, compressedMime);
-      setOcrResult(result);
-      onToast('Text extracted and translated successfully!');
-
-      if (result.extractedText && result.translatedText) {
-        onAddHistory({
-          id: Date.now().toString(),
-          from: `${result.detectedSourceLanguage || 'Image OCR'} 📷`,
-          to: result.targetLanguage,
-          input: result.extractedText,
-          output: result.translatedText,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        });
-      }
-    } catch (err: any) {
-      onToast(err.message || 'OCR processing failed. Please try again.');
-    } finally {
-      setIsScanning(false);
+  const handleCopy = () => {
+    if (ocrResult?.translated) {
+      navigator.clipboard.writeText(ocrResult.translated);
+      onToast('Translation copied to clipboard!');
     }
   };
 
-  const copyResult = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      onToast('Copied to clipboard');
-    } catch {
-      onToast('Failed to copy');
+  const handleSpeak = () => {
+    if (!ocrResult?.translated) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(ocrResult.translated);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      onToast('Speech Synthesis is not supported in this browser.');
     }
   };
 
   return (
-    <section className="section active" id="camera">
-      <div className="hero">
-        <div>
-          <div className="eyebrow">VISUAL TRANSLATION</div>
-          <h1>Camera & Image</h1>
-          <p className="subtitle">Snap photos with live camera or upload images for instant AI text translation.</p>
-        </div>
+    <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100 max-w-2xl mx-auto space-y-4">
+      <div>
+        <h3 className="font-semibold text-gray-800 mb-1 flex items-center gap-2 text-lg">
+          <ImageIcon className="w-5 h-5 text-emerald-600" />
+          Image & Document Scanner
+        </h3>
+        <p className="text-sm text-gray-500">Scan signs, documents, or screenshots and translate them instantly.</p>
       </div>
 
-      <div className="workspace" style={{ textAlign: 'center', padding: '30px 20px' }}>
-        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📷</div>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0 10px' }}>
-          Scan text from an image / تصویر سے ترجمہ کریں
-        </h2>
-        <p className="subtitle" style={{ marginBottom: '20px' }}>
-          Capture road signs, documents, menus, or photos for accurate Gemini Flash translation.
-        </p>
+      {/* Target Language Selection */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Translate To</label>
+        <select
+          value={targetLang}
+          onChange={(e) => setTargetLang(e.target.value)}
+          className="w-full bg-gray-50 border border-gray-200 text-gray-800 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium"
+        >
+          {languages.map((l) => (
+            <option key={l.code} value={l.label}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div style={{ maxWidth: '420px', margin: '0 auto 20px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', textAlign: 'left' }}>
-            Translate into / میں ترجمہ کریں:
-          </label>
-          <select
-            className="select"
-            value={targetLang}
-            onChange={(e) => setTargetLang(e.target.value)}
-          >
-            {languages.map((l) => (
-              <option key={l.code} value={l.label}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Hidden inputs to separate Camera and File Picker */}
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
-        {/* Action Buttons: Live Snap vs Gallery */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {!isCameraActive ? (
-            <button
-              className="primary"
-              onClick={startLiveCamera}
-              type="button"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              📸 Open Live Camera Snap
-            </button>
+      <div className="grid grid-cols-2 gap-3">
+        {/* Live Camera Button */}
+        <button
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={isLoading}
+          className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 shadow disabled:opacity-50 transition-all"
+        >
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            <button
-              className="mini"
-              onClick={stopLiveCamera}
-              type="button"
-              style={{ background: '#ef4444', color: '#fff' }}
-            >
-              ✕ Close Camera
-            </button>
+            <Camera className="w-5 h-5" />
           )}
+          <span>Take Photo</span>
+        </button>
 
-          <input
-            type="file"
-            id="camera-upload-input"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="camera-upload-input"
-            className="mini"
-            style={{
-              cursor: 'pointer',
-              padding: '12px 20px',
-              height: 'auto',
-              borderRadius: '12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-            }}
-          >
-            📁 Choose Photo / File
-          </label>
-        </div>
-
-        {/* Live Camera Viewfinder */}
-        {isCameraActive && (
-          <div
-            style={{
-              maxWidth: '460px',
-              margin: '0 auto 20px',
-              position: 'relative',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              background: '#000',
-              border: '2px solid var(--accent)',
-            }}
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ width: '100%', maxHeight: '360px', objectFit: 'cover' }}
-            />
-            <div style={{ padding: '12px', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center' }}>
-              <button
-                className="primary"
-                onClick={captureLiveSnap}
-                type="button"
-                style={{ fontSize: '16px', fontWeight: 'bold', padding: '10px 24px' }}
-              >
-                📸 Capture Snap Now
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Image Preview */}
-        {previewUrl && (
-          <div style={{ margin: '20px auto', maxWidth: '340px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '8px' }}>
-              ✓ Image Ready (Optimized & Compressed)
-            </p>
-            <img
-              src={previewUrl}
-              alt="Scan Preview"
-              style={{
-                width: '100%',
-                maxHeight: '260px',
-                objectFit: 'contain',
-                borderRadius: '14px',
-                border: '1px solid var(--border)',
-              }}
-            />
-          </div>
-        )}
-
-        <div style={{ marginTop: '16px' }}>
-          <button
-            className="primary"
-            onClick={handleStartScan}
-            disabled={isScanning || !previewUrl}
-            type="button"
-            style={{ minWidth: '200px' }}
-          >
-            {isScanning ? '⏳ Scanning with AI…' : '🚀 Start OCR Scan'}
-          </button>
-        </div>
+        {/* File / Gallery Upload Button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          className="py-3 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium flex items-center justify-center gap-2 shadow disabled:opacity-50 transition-all"
+        >
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Upload className="w-5 h-5" />
+          )}
+          <span>Upload File</span>
+        </button>
       </div>
 
-      {/* OCR Results Display */}
+      {/* OCR & Translation Results display */}
       {ocrResult && (
-        <div className="editorgrid" style={{ marginTop: '20px' }}>
-          <div className="panel">
-            <div className="panelhead">
-              <span>Extracted Text ({ocrResult.detectedSourceLanguage || 'Detected'})</span>
-              <button
-                className="mini"
-                onClick={() => copyResult(ocrResult.extractedText)}
-                type="button"
-              >
-                📋 Copy
-              </button>
-            </div>
-            <div className="panelbody">
-              <div className="output" style={{ minHeight: '140px' }}>
-                {ocrResult.extractedText || 'No text recognized.'}
-              </div>
-            </div>
+        <div className="mt-4 border border-gray-100 rounded-xl overflow-hidden shadow-inner bg-gray-50 divide-y divide-gray-100">
+          <div className="p-4 space-y-1 bg-white">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Extracted Text</span>
+            <p className="text-gray-700 text-sm whitespace-pre-wrap">{ocrResult.original}</p>
           </div>
-
-          <div className="panel">
-            <div className="panelhead">
-              <span>Translated Text ({ocrResult.targetLanguage})</span>
-              <button
-                className="mini"
-                onClick={() => copyResult(ocrResult.translatedText)}
-                type="button"
-              >
-                📋 Copy
-              </button>
-            </div>
-            <div className="panelbody">
-              <div
-                className="output"
-                style={{
-                  minHeight: '140px',
-                  direction: /[\u0600-\u06FF\u0750-\u077F]/.test(ocrResult.translatedText) ? 'rtl' : 'ltr',
-                  fontWeight: 600,
-                }}
-              >
-                {ocrResult.translatedText}
+          <div className="p-4 space-y-3 bg-emerald-50/30">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Translation</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSpeak}
+                  className="p-1.5 rounded-lg bg-white border border-gray-100 text-gray-600 hover:text-emerald-600 transition-colors shadow-sm"
+                  title="Speak translation"
+                >
+                  <Volume2 className={`w-4 h-4 ${isSpeaking ? 'animate-bounce text-emerald-600' : ''}`} />
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="p-1.5 rounded-lg bg-white border border-gray-100 text-gray-600 hover:text-emerald-600 transition-colors shadow-sm"
+                  title="Copy translation"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
               </div>
             </div>
+            <p className="text-gray-800 text-base font-medium whitespace-pre-wrap leading-relaxed">
+              {ocrResult.translated}
+            </p>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 };
