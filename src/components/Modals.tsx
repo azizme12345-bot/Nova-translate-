@@ -60,7 +60,7 @@ export const Modals: React.FC<ModalsProps> = ({
                 Nova Translate is an AI-powered translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
               </p>
               <p style={{ margin: '0 0 10px' }}>
-                <strong>Engine:</strong> Powered by Gemini 3.8 Flash multimodal reasoning on a secure serverless backend.
+                <strong>Engine:</strong> Powered by Gemini 1.5 Flash multimodal reasoning on a secure serverless backend.
               </p>
               <p style={{ margin: '0 0 10px' }}>
                 <strong>Deploy Anywhere:</strong> Built with standard Node.js Express and Vercel Serverless Function compatibility.

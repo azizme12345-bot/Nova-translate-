@@ -9,10 +9,10 @@ interface CameraSectionProps {
 }
 
 /**
- * Client-side image compressor: scales down high-resolution images to max 1280px
- * and compresses to JPEG (quality 0.82) to avoid network bottlenecks and 413 payload errors.
+ * Client-side image compressor: scales down images to limit maximum width to 800px
+ * and compresses to JPEG quality 0.6 before sending payload to server.
  */
-function compressImage(file: File, maxDimension = 1280, quality = 0.82): Promise<{ base64: string; mimeType: string }> {
+function compressImage(file: File, maxWidth = 800, quality = 0.6): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (readerEvent) => {
@@ -21,14 +21,9 @@ function compressImage(file: File, maxDimension = 1280, quality = 0.82): Promise
         let width = img.width;
         let height = img.height;
 
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
         }
 
         const canvas = document.createElement('canvas');
@@ -38,7 +33,7 @@ function compressImage(file: File, maxDimension = 1280, quality = 0.82): Promise
 
         if (!ctx) {
           // Fallback to raw base64 if canvas context is unavailable
-          resolve({ base64: readerEvent.target?.result as string, mimeType: file.type || 'image/jpeg' });
+          resolve({ base64: readerEvent.target?.result as string, mimeType: 'image/jpeg' });
           return;
         }
 

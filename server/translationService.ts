@@ -147,8 +147,8 @@ Source language instruction: ${isAutoDetect ? 'Detect source language automatica
 Target language: ${targetLang}.
 Respond with a strict JSON object matching the requested schema.`;
 
-    // Fast and robust models in order of priority
-    const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    // Target Gemini model strictly set to gemini-1.5-flash
+    const candidateModels = ['gemini-1.5-flash', 'gemini-flash-latest'];
     let response: any = null;
     let lastError: any = null;
 
@@ -256,7 +256,7 @@ ${rawText.slice(0, 1000)}
 """`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -319,7 +319,7 @@ Return a JSON object with 'extractedText', 'translatedText', and 'detectedSource
     };
 
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
+      model: 'gemini-1.5-flash',
       contents: { parts: [imagePart, textPart] },
       config: {
         responseMimeType: 'application/json',

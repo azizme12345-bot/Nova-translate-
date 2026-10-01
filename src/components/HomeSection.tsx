@@ -183,23 +183,28 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = React.useRef<any>(null);
+  const shouldListenRef = React.useRef<boolean>(false);
+  const baseTextRef = React.useRef<string>('');
 
-  const handleVoiceInput = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      onToast('Voice input requires Google Chrome, Edge or Safari.');
-      return;
-    }
-
-    if (isListening && recognitionRef.current) {
+  const stopVoiceInput = () => {
+    shouldListenRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch {
         // ignore
       }
-      setIsListening(false);
+      recognitionRef.current = null;
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+
+    if (!SpeechRecognition) {
+      onToast('Voice input requires Google Chrome, Edge or Safari.');
       return;
     }
 
@@ -214,8 +219,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
       const lower = fromLang.toLowerCase();
       if (lower.includes('urdu')) recognition.lang = 'ur-PK';
@@ -235,37 +240,87 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
-        if (transcript) {
-          setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-          onToast('Speech recognized!');
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (let i = 0; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
         }
+
+        const recognizedText = (finalTranscript + ' ' + interimTranscript).trim();
+        const prefix = baseTextRef.current ? baseTextRef.current.trim() + ' ' : '';
+        setInputText(prefix + recognizedText);
       };
 
       recognition.onerror = (e: any) => {
-        setIsListening(false);
-        // Gracefully ignore normal browser cancellations and silence timeouts
-        if (e.error === 'aborted' || e.error === 'no-speech') {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          shouldListenRef.current = false;
+          setIsListening(false);
+          onToast('Microphone permission was denied.');
           return;
         }
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          onToast('Microphone permission was denied. Please allow mic access in your browser.');
-        } else {
-          onToast(`Microphone notice: ${e.error}`);
+
+        // On temporary errors (e.g. no-speech, aborted, network glitches), auto-restart if still active
+        if (shouldListenRef.current && (e.error === 'no-speech' || e.error === 'network')) {
+          setTimeout(() => {
+            if (shouldListenRef.current) {
+              try {
+                recognition.start();
+              } catch {
+                // ignore
+              }
+            }
+          }, 300);
         }
       };
 
       recognition.onend = () => {
-        setIsListening(false);
-        recognitionRef.current = null;
+        // Auto-restart if voice listening is still actively requested
+        if (shouldListenRef.current) {
+          setTimeout(() => {
+            if (shouldListenRef.current) {
+              try {
+                recognition.start();
+              } catch {
+                // ignore
+              }
+            }
+          }, 200);
+        } else {
+          setIsListening(false);
+          recognitionRef.current = null;
+        }
       };
 
       recognition.start();
     } catch {
+      shouldListenRef.current = false;
       setIsListening(false);
       onToast('Unable to start microphone.');
     }
   };
+
+  const handleVoiceInput = () => {
+    if (isListening || shouldListenRef.current) {
+      stopVoiceInput();
+      onToast('Voice input stopped.');
+      return;
+    }
+
+    baseTextRef.current = inputText;
+    shouldListenRef.current = true;
+    startVoiceRecognition();
+  };
+
+  React.useEffect(() => {
+    return () => {
+      stopVoiceInput();
+    };
+  }, []);
 
   const fontSizeMap = {
     small: '16px',
