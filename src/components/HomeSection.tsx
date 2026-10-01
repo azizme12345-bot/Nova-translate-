@@ -181,6 +181,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     onToast('Reading aloud…');
   };
 
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = React.useRef<any>(null);
+
   const handleVoiceInput = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -190,8 +193,27 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       return;
     }
 
+    if (isListening && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      setIsListening(false);
+      return;
+    }
+
     try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+
       const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       recognition.continuous = false;
       recognition.interimResults = false;
 
@@ -208,21 +230,39 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       else recognition.lang = 'en-US';
 
       recognition.onstart = () => {
+        setIsListening(true);
         onToast('Listening… speak into your microphone');
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-        onToast('Speech recognized!');
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+          onToast('Speech recognized!');
+        }
       };
 
       recognition.onerror = (e: any) => {
-        onToast(`Speech recognition notice: ${e.error || 'mic unavailable'}`);
+        setIsListening(false);
+        // Gracefully ignore normal browser cancellations and silence timeouts
+        if (e.error === 'aborted' || e.error === 'no-speech') {
+          return;
+        }
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          onToast('Microphone permission was denied. Please allow mic access in your browser.');
+        } else {
+          onToast(`Microphone notice: ${e.error}`);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.start();
-    } catch (e: any) {
+    } catch {
+      setIsListening(false);
       onToast('Unable to start microphone.');
     }
   };

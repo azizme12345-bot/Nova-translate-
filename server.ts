@@ -26,9 +26,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// JSON body parser with 15MB limit for OCR base64 images
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+// JSON body parser with 25MB limit for OCR base64 images and large text payloads
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+// Graceful JSON & payload error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err?.type === 'entity.too.large' || err?.status === 413) {
+    res.status(413).json({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'The uploaded file or payload exceeds the allowed server limit (25MB). Please use a smaller image or text.',
+      },
+    });
+    return;
+  }
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json({
+      error: {
+        code: 'INVALID_JSON',
+        message: 'Invalid JSON payload received by server.',
+      },
+    });
+    return;
+  }
+  next(err);
+});
 
 // Apply Rate Limiter to all /api/ endpoints (60 req/min per IP)
 app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 60 }));

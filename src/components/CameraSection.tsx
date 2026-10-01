@@ -8,18 +8,65 @@ interface CameraSectionProps {
   onToast: (msg: string) => void;
 }
 
+/**
+ * Client-side image compressor: scales down high-resolution images to max 1280px
+ * and compresses to JPEG (quality 0.82) to avoid network bottlenecks and 413 payload errors.
+ */
+function compressImage(file: File, maxDimension = 1280, quality = 0.82): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          // Fallback to raw base64 if canvas context is unavailable
+          resolve({ base64: readerEvent.target?.result as string, mimeType: file.type || 'image/jpeg' });
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = 'image/jpeg';
+        const compressedBase64 = canvas.toDataURL(mimeType, quality);
+        resolve({ base64: compressedBase64, mimeType });
+      };
+      img.onerror = () => reject(new Error('Failed to load image for processing.'));
+      img.src = readerEvent.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export const CameraSection: React.FC<CameraSectionProps> = ({
   languages,
   onAddHistory,
   onToast,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [compressedMime, setCompressedMime] = useState<string>('image/jpeg');
   const [targetLang, setTargetLang] = useState('English 🇬🇧');
   const [isScanning, setIsScanning] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -28,19 +75,22 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
       return;
     }
 
-    if (file.size > 12 * 1024 * 1024) {
-      onToast('Image size exceeds 12MB limit.');
-      return;
+    try {
+      onToast('Optimizing image…');
+      const { base64, mimeType } = await compressImage(file);
+      setPreviewUrl(base64);
+      setCompressedMime(mimeType);
+      setOcrResult(null);
+      onToast('Image ready for scan.');
+    } catch {
+      // Fallback to direct read
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result as string);
+        setCompressedMime(file.type || 'image/jpeg');
+      };
+      reader.readAsDataURL(file);
     }
-
-    setSelectedFile(file);
-    setOcrResult(null);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreviewUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleStartScan = async () => {
@@ -53,8 +103,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     onToast('Scanning image with AI OCR…');
 
     try {
-      const mimeType = selectedFile?.type || 'image/jpeg';
-      const result = await ApiClient.ocrAndTranslate(previewUrl, targetLang, mimeType);
+      const result = await ApiClient.ocrAndTranslate(previewUrl, targetLang, compressedMime);
 
       setOcrResult(result);
       onToast('Image text extracted and translated successfully!');

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
 
 /**
  * Standard list of supported languages in Nova Translate
@@ -161,6 +161,7 @@ Respond with a strict JSON object matching the requested schema.`;
             config: {
               systemInstruction,
               temperature: 0.2,
+              thinkingConfig: model.startsWith('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
               responseMimeType: 'application/json',
               responseSchema: {
                 type: Type.OBJECT,

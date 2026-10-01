@@ -39,6 +39,40 @@ export interface DetectedLanguageResult {
   direction: 'ltr' | 'rtl';
 }
 
+/**
+ * Safely parses response and handles HTTP error codes and non-JSON payloads gracefully.
+ */
+async function handleApiResponse<T = any>(res: Response): Promise<T> {
+  const contentType = res.headers.get('content-type') || '';
+  
+  if (contentType.includes('application/json')) {
+    let json: any;
+    try {
+      json = await res.json();
+    } catch {
+      throw new Error(`Server returned an unparseable response (HTTP ${res.status}).`);
+    }
+
+    if (!res.ok || !json.success) {
+      throw new Error(json?.error?.message || `Request failed with HTTP status ${res.status}.`);
+    }
+
+    return json.data !== undefined ? json.data : json;
+  }
+
+  // Handle non-JSON responses (e.g. HTML 413, 502, 504 error pages from proxy/gateways)
+  const rawText = await res.text();
+  if (res.status === 413 || rawText.includes('Request Entity Too Large') || rawText.includes('Payload Too Large')) {
+    throw new Error('The uploaded image or text exceeds the maximum allowed upload size. Please use a smaller image.');
+  }
+
+  if (!res.ok) {
+    throw new Error(rawText.slice(0, 150) || `Server error (HTTP ${res.status})`);
+  }
+
+  throw new Error(`Unexpected non-JSON response from server (HTTP ${res.status})`);
+}
+
 export class ApiClient {
   /**
    * Request text translation from our secure backend endpoint
@@ -60,12 +94,7 @@ export class ApiClient {
       }),
     });
 
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error?.message || `Translation failed with status ${res.status}`);
-    }
-
-    return json.data;
+    return await handleApiResponse<TranslationResult>(res);
   }
 
   /**
@@ -80,12 +109,7 @@ export class ApiClient {
       body: JSON.stringify({ text }),
     });
 
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error?.message || 'Language detection failed');
-    }
-
-    return json.data;
+    return await handleApiResponse<DetectedLanguageResult>(res);
   }
 
   /**
@@ -93,11 +117,8 @@ export class ApiClient {
    */
   static async getSupportedLanguages(): Promise<LanguageOption[]> {
     const res = await fetch('/api/languages');
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error('Failed to retrieve supported languages');
-    }
-    return json.languages;
+    const json = await handleApiResponse<{ languages: LanguageOption[] }>(res);
+    return json.languages || [];
   }
 
   /**
@@ -120,12 +141,7 @@ export class ApiClient {
       }),
     });
 
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error?.message || 'OCR translation failed');
-    }
-
-    return json.data;
+    return await handleApiResponse<OCRResult>(res);
   }
 
   /**
@@ -140,14 +156,12 @@ export class ApiClient {
         },
         body: JSON.stringify({ text, language }),
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        return json.data;
-      }
+      const data = await handleApiResponse<{ audioBase64?: string; fallbackToBrowserTTS: boolean }>(res);
+      return data || { fallbackToBrowserTTS: true };
     } catch {
       // Fallback seamlessly to client-side SpeechSynthesis
+      return { fallbackToBrowserTTS: true };
     }
-    return { fallbackToBrowserTTS: true };
   }
 
   /**

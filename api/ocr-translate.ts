@@ -3,7 +3,7 @@ import { TranslationService } from '../server/translationService.ts';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '15mb',
+      sizeLimit: '25mb',
     },
   },
 };
