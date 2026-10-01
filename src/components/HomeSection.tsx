@@ -361,10 +361,29 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <span id="count">{inputText.length} / 5000</span>
             </div>
             <div className="panelbody">
+              {isListening && (
+                <div
+                  style={{
+                    background: '#fee2e2',
+                    color: '#991b1b',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>🔴</span>
+                  <span>مائیک آن ہے، بولیں / Microphone active… Speak now</span>
+                </div>
+              )}
               <textarea
                 id="input"
                 maxLength={5000}
-                placeholder="Type or speak something…"
+                placeholder="Type or speak something… (یہاں لکھیں یا بولیں)"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 style={{ fontSize: fontSizeMap[textSize] }}
@@ -377,8 +396,19 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               />
               <div className="tools">
                 <div className="toolgroup">
-                  <button className="mini" id="mic" onClick={handleVoiceInput} type="button">
-                    🎤 Speak
+                  <button
+                    className="mini"
+                    id="mic"
+                    onClick={handleVoiceInput}
+                    type="button"
+                    style={{
+                      background: isListening ? '#ef4444' : undefined,
+                      color: isListening ? '#ffffff' : undefined,
+                      fontWeight: isListening ? 'bold' : 'normal',
+                      borderColor: isListening ? '#dc2626' : undefined,
+                    }}
+                  >
+                    {isListening ? '🔴 Stop Listening' : '🎤 Speak'}
                   </button>
                   <button className="mini" id="clear" onClick={handleClear} type="button">
                     Clear
@@ -483,10 +513,22 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       </div>
 
       <div className="cards">
-        <div className="card" onClick={handleVoiceInput}>
+        <div
+          className="card"
+          onClick={() => {
+            const el = document.getElementById('input');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.focus();
+            }
+            if (!isListening) {
+              handleVoiceInput();
+            }
+          }}
+        >
           <div>🎤</div>
-          <h3>Voice Translation</h3>
-          <p>Speak naturally and prepare voice input for instant translation.</p>
+          <h3>Voice Translation / صوتی ترجمہ</h3>
+          <p>Speak naturally and stream live speech into translation.</p>
         </div>
         <div className="card" onClick={() => onNavigate('camera')}>
           <div>📷</div>
