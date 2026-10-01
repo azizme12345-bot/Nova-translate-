@@ -1,30 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 export interface VoiceSectionProps {
-  fromLang: string;
+  fromLang?: string;
   inputText: string;
   onUpdateInput: (text: string) => void;
   onToast: (msg: string) => void;
 }
 
 /**
- * VoiceSection / Speech recognition module using webkitSpeechRecognition
- * Streams live transcripts directly into the input area without interrupting
- * the session during minor network pauses.
+ * VoiceSection: Voice mic speech recognition component and hook
+ * Configures SpeechRecognition / webkitSpeechRecognition with:
+ * - continuous = false
+ * - interimResults = true
+ * - lang = dynamic based on source language (defaults to 'ur-PK')
+ * - real-time live input streaming
+ * - graceful error and onend lifecycle recovery
  */
 export const VoiceSection: React.FC<VoiceSectionProps> = ({
-  fromLang,
+  fromLang = 'Urdu 🇵🇰',
   inputText,
   onUpdateInput,
   onToast,
 }) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef<boolean>(false);
   const baseTextRef = useRef<string>('');
 
   const stopVoiceInput = () => {
-    shouldListenRef.current = false;
     setIsListening(false);
     if (recognitionRef.current) {
       try {
@@ -36,12 +38,29 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
     }
   };
 
+  const getRecognitionLang = (langName: string): string => {
+    const lower = (langName || '').toLowerCase();
+    if (lower.includes('urdu')) return 'ur-PK';
+    if (lower.includes('arabic')) return 'ar-SA';
+    if (lower.includes('punjabi')) return 'pa-IN';
+    if (lower.includes('hindi')) return 'hi-IN';
+    if (lower.includes('spanish')) return 'es-ES';
+    if (lower.includes('french')) return 'fr-FR';
+    if (lower.includes('german')) return 'de-DE';
+    if (lower.includes('japanese')) return 'ja-JP';
+    if (lower.includes('chinese')) return 'zh-CN';
+    if (lower.includes('russian')) return 'ru-RU';
+    if (lower.includes('turkish')) return 'tr-TR';
+    if (lower.includes('persian') || lower.includes('farsi')) return 'fa-IR';
+    return 'en-US';
+  };
+
   const startVoiceRecognition = () => {
     const SpeechRecognition =
-      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      onToast('Voice input requires Google Chrome, Edge or Safari.');
+      onToast('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -56,26 +75,18 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
 
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
-      recognition.continuous = true;
-      recognition.interimResults = true;
 
-      const lower = fromLang.toLowerCase();
-      if (lower.includes('urdu')) recognition.lang = 'ur-PK';
-      else if (lower.includes('arabic')) recognition.lang = 'ar-SA';
-      else if (lower.includes('punjabi')) recognition.lang = 'pa-IN';
-      else if (lower.includes('hindi')) recognition.lang = 'hi-IN';
-      else if (lower.includes('spanish')) recognition.lang = 'es-ES';
-      else if (lower.includes('french')) recognition.lang = 'fr-FR';
-      else if (lower.includes('german')) recognition.lang = 'de-DE';
-      else if (lower.includes('japanese')) recognition.lang = 'ja-JP';
-      else if (lower.includes('chinese')) recognition.lang = 'zh-CN';
-      else recognition.lang = 'en-US';
+      // Required recognition settings
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = getRecognitionLang(fromLang);
 
       recognition.onstart = () => {
         setIsListening(true);
         onToast('Listening… speak into your microphone');
       };
 
+      // Real-time live transcript streaming to the input field
       recognition.onresult = (event: any) => {
         let finalTranscript = '';
         let interimTranscript = '';
@@ -88,68 +99,46 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
           }
         }
 
-        const recognizedText = (finalTranscript + ' ' + interimTranscript).trim();
+        const currentSpeech = (finalTranscript + ' ' + interimTranscript).trim();
         const prefix = baseTextRef.current ? baseTextRef.current.trim() + ' ' : '';
-        onUpdateInput(prefix + recognizedText);
+        onUpdateInput(prefix + currentSpeech);
       };
 
+      // Graceful error recovery
       recognition.onerror = (e: any) => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          shouldListenRef.current = false;
-          setIsListening(false);
-          onToast('Microphone permission was denied.');
+        setIsListening(false);
+        // Silently handle harmless browser cancellations and silence timeouts
+        if (e.error === 'no-speech' || e.error === 'aborted') {
           return;
         }
-
-        // On minor network pauses, no-speech, or transient interruptions, automatically recover
-        if (shouldListenRef.current) {
-          setTimeout(() => {
-            if (shouldListenRef.current) {
-              try {
-                recognition.start();
-              } catch {
-                // ignore
-              }
-            }
-          }, 300);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          onToast('Microphone access was denied. Please allow mic permission.');
+        } else {
+          onToast(`Microphone notice: ${e.error || 'interrupted'}`);
         }
       };
 
+      // On end, cleanly reset listening state
       recognition.onend = () => {
-        // Auto-restart if voice listening is still actively requested
-        if (shouldListenRef.current) {
-          setTimeout(() => {
-            if (shouldListenRef.current) {
-              try {
-                recognition.start();
-              } catch {
-                // ignore
-              }
-            }
-          }, 200);
-        } else {
-          setIsListening(false);
-          recognitionRef.current = null;
-        }
+        setIsListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.start();
     } catch {
-      shouldListenRef.current = false;
       setIsListening(false);
-      onToast('Unable to start microphone.');
+      onToast('Unable to access microphone.');
     }
   };
 
   const handleVoiceToggle = () => {
-    if (isListening || shouldListenRef.current) {
+    if (isListening) {
       stopVoiceInput();
       onToast('Voice input stopped.');
       return;
     }
 
     baseTextRef.current = inputText;
-    shouldListenRef.current = true;
     startVoiceRecognition();
   };
 

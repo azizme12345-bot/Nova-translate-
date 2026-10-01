@@ -9,10 +9,11 @@ interface CameraSectionProps {
 }
 
 /**
- * Client-side image compressor: scales down images to limit maximum width to 800px
+ * Client-side image compressor: scales down images to a maximum width/height of 800px
  * and compresses to JPEG quality 0.6 before sending payload to server.
+ * This fixes Vercel 413 Payload Limit Errors and 'Unexpected token R' syntax errors.
  */
-function compressImage(file: File, maxWidth = 800, quality = 0.6): Promise<{ base64: string; mimeType: string }> {
+function compressImage(file: File, maxDimension = 800, quality = 0.6): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (readerEvent) => {
@@ -21,9 +22,14 @@ function compressImage(file: File, maxWidth = 800, quality = 0.6): Promise<{ bas
         let width = img.width;
         let height = img.height;
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
         }
 
         const canvas = document.createElement('canvas');

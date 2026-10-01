@@ -204,7 +204,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      onToast('Voice input requires Google Chrome, Edge or Safari.');
+      onToast('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -219,7 +219,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
-      recognition.continuous = true;
+      recognition.continuous = false;
       recognition.interimResults = true;
 
       const lower = fromLang.toLowerCase();
@@ -232,7 +232,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       else if (lower.includes('german')) recognition.lang = 'de-DE';
       else if (lower.includes('japanese')) recognition.lang = 'ja-JP';
       else if (lower.includes('chinese')) recognition.lang = 'zh-CN';
-      else recognition.lang = 'en-US';
+      else if (lower.includes('russian')) recognition.lang = 'ru-RU';
+      else if (lower.includes('turkish')) recognition.lang = 'tr-TR';
+      else recognition.lang = 'ur-PK';
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -257,62 +259,37 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       };
 
       recognition.onerror = (e: any) => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          shouldListenRef.current = false;
-          setIsListening(false);
-          onToast('Microphone permission was denied.');
+        setIsListening(false);
+        if (e.error === 'no-speech' || e.error === 'aborted') {
           return;
         }
-
-        // On temporary errors (e.g. no-speech, aborted, minor network pauses), auto-restart without interrupting the session
-        if (shouldListenRef.current && (e.error === 'no-speech' || e.error === 'network' || e.error === 'aborted')) {
-          setTimeout(() => {
-            if (shouldListenRef.current) {
-              try {
-                recognition.start();
-              } catch {
-                // ignore
-              }
-            }
-          }, 300);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          onToast('Microphone access was denied. Please allow mic permission.');
+        } else {
+          onToast(`Microphone notice: ${e.error || 'interrupted'}`);
         }
       };
 
       recognition.onend = () => {
-        // Auto-restart if voice listening is still actively requested
-        if (shouldListenRef.current) {
-          setTimeout(() => {
-            if (shouldListenRef.current) {
-              try {
-                recognition.start();
-              } catch {
-                // ignore
-              }
-            }
-          }, 200);
-        } else {
-          setIsListening(false);
-          recognitionRef.current = null;
-        }
+        setIsListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.start();
     } catch {
-      shouldListenRef.current = false;
       setIsListening(false);
       onToast('Unable to start microphone.');
     }
   };
 
   const handleVoiceInput = () => {
-    if (isListening || shouldListenRef.current) {
+    if (isListening) {
       stopVoiceInput();
       onToast('Voice input stopped.');
       return;
     }
 
     baseTextRef.current = inputText;
-    shouldListenRef.current = true;
     startVoiceRecognition();
   };
 
