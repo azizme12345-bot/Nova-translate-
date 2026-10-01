@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16d39d" />
+      <stop offset="100%" stop-color="#07513b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#001f16" flood-opacity="0.4" />
+    </filter>
+  </defs>
+  <rect width="450" height="450" x="31" y="31" rx="110" fill="url(#brandGrad)" filter="url(#shadow)" />
+  <text x="256" y="325" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="240" font-weight="900" fill="#ffffff" text-anchor="middle">A</text>
+  <path d="M 330 350 L 390 350 M 370 335 L 390 350 L 370 365 M 390 380 L 330 380 M 350 365 L 330 380 L 350 395" stroke="#65f2c7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>
