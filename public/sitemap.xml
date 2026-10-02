@@ -1,9 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>/</loc>
-    <lastmod>2026-09-30</lastmod>
+    <loc>https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/</loc>
+    <lastmod>2026-10-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ur" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=ur"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=ar"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="hi" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=hi"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/?lang=pa"/>
+  </url>
+  <url>
+    <loc>https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/#voice</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/#camera</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/#history</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>
