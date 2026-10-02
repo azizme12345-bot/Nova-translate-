@@ -1,5 +1,6 @@
 import React from 'react';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
+import { BrandLogo } from './BrandLogo.tsx';
 
 interface TopbarProps {
   onToggleTheme: () => void;
@@ -11,9 +12,9 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ onToggleTheme, onHelp, onOpenSettings, onToast }) => {
   return (
     <header className="topbar">
-      <div className="mobilebrand">
-        <div className="logo">A</div>
-        Nova Translate
+      <div className="mobilebrand flex items-center gap-2 font-bold text-lg text-emerald-950 dark:text-emerald-100">
+        <BrandLogo size={36} />
+        <span>Nova Translate</span>
       </div>
       <div></div>
       <div className="top-actions">

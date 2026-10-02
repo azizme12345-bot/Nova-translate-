@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivePage } from '../types.ts';
+import { BrandLogo } from './BrandLogo.tsx';
 
 interface SidebarProps {
   activePage: ActivePage;
@@ -9,9 +10,9 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) => {
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <div className="logo">A</div>
-        <span>Nova Translate</span>
+      <div className="brand cursor-pointer" onClick={() => onSelectPage('home')}>
+        <BrandLogo size={42} />
+        <span className="font-extrabold text-lg text-white">Nova Translate</span>
       </div>
       <nav className="nav">
         <button

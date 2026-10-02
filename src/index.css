@@ -1,27 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f7f9fb;
+  --bg: #f4f8f6;
   --surface: #ffffff;
-  --surface2: #eef5f2;
-  --text: #0f1720;
-  --muted: #64748b;
-  --primary: #004630;
-  --primary2: #1f6a4f;
-  --accent: #18b98a;
-  --border: #dce8e3;
+  --surface2: #e8f2ef;
+  --text: #083e38;
+  --muted: #537e77;
+  --primary: #0d5c52;
+  --primary2: #107569;
+  --accent: #2dd4bf;
+  --cream: #fbf8eb;
+  --border: #d0e5e0;
   --danger: #b42318;
-  --shadow: 0 12px 35px rgba(0, 70, 48, 0.10);
+  --shadow: 0 12px 35px rgba(13, 92, 82, 0.12);
   --radius: 20px;
 }
 
 body.dark {
-  --bg: #071812;
-  --surface: #0d241c;
-  --surface2: #15352a;
-  --text: #f4faf7;
-  --muted: #94a3b8;
-  --border: #21483a;
+  --bg: #051e1b;
+  --surface: #0a2e29;
+  --surface2: #103d37;
+  --text: #fbf8eb;
+  --muted: #80b0a8;
+  --border: #194a43;
 }
 
 * {
@@ -53,7 +54,7 @@ button {
 
 .sidebar {
   width: 255px;
-  background: #062b20;
+  background: linear-gradient(180deg, #0d5c52 0%, #063832 100%);
   color: #ffffff;
   padding: 22px 14px;
   display: flex;

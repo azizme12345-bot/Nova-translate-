@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrandLogo } from './BrandLogo.tsx';
 
 interface ModalsProps {
   showPrivacy: boolean;
@@ -47,7 +48,7 @@ export const Modals: React.FC<ModalsProps> = ({
         <div className="modal-overlay" onClick={onCloseAbout}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <div className="logo">A</div>
+              <BrandLogo size={52} />
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
                   Nova Translate
