@@ -50,7 +50,12 @@ function getAIClient(): GoogleGenAI {
 }
 
 // Active supported Flash models with high availability fallback
-const FLASH_MODELS = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+const FLASH_MODELS = [
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite-preview',
+];
 
 export interface TranslationRequest {
   text: string;
@@ -285,10 +290,15 @@ ${rawText.slice(0, 1000)}
     };
 
     const textPart = {
-      text: `Perform high accuracy OCR on this image.
-1. Extract all text clearly and accurately.
-2. Translate all extracted text into ${targetLang}.
-Respond with strict JSON matching schema.`,
+      text: `You are the master OCR & Document Translation engine of Nova Translate.
+Your goal is to extract every piece of text visible in this image with maximum clarity and precision, and provide a crystal-clear, fluent, and naturally formatted translation in ${targetLang}.
+
+Instructions:
+1. Extract ALL text present in the image cleanly. Preserve paragraph breaks, lists, headings, and numbers accurately.
+2. Translate the entire extracted content accurately into ${targetLang} with high readability, correct punctuation, and crystal-clear natural phrasing.
+3. If the target language is Urdu, Arabic, Persian, Pashto, or Sindhi, ensure fluent idiomatic writing and proper phrasing.
+4. If the target language is English or any other language, ensure clear paragraphs and proper capitalization.
+Respond with strict JSON matching the schema.`,
     };
 
     let response: any = null;
@@ -354,12 +364,24 @@ Respond with strict JSON matching schema.`,
     }
 
     const ai = getAIClient();
-    const cleanBase64 = audioBase64.replace(/^data:audio\/[a-z0-9.-]+;base64,/, '');
+
+    let cleanBase64 = audioBase64;
+    let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/webm';
+
+    if (cleanBase64.includes(';base64,')) {
+      const parts = cleanBase64.split(';base64,');
+      const header = parts[0];
+      cleanBase64 = parts[1];
+      const match = header.match(/data:(audio\/[a-zA-Z0-9.+_-]+)/);
+      if (match) detectedMime = match[1];
+    } else if (cleanBase64.includes(',')) {
+      cleanBase64 = cleanBase64.split(',')[1];
+    }
 
     const audioPart = {
       inlineData: {
-        data: cleanBase64,
-        mimeType: mimeType.split(';')[0] || 'audio/webm',
+        data: cleanBase64.trim(),
+        mimeType: detectedMime || 'audio/webm',
       },
     };
 
@@ -376,7 +398,12 @@ Return ONLY valid JSON:
     let response: any = null;
     let lastError: any = null;
 
-    const modelsToTry = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    const modelsToTry = [
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite-preview',
+    ];
 
     for (const model of modelsToTry) {
       try {
@@ -405,9 +432,16 @@ Return ONLY valid JSON:
       throw lastError || new Error('Could not transcribe audio.');
     }
 
-    const parsed = JSON.parse(response.text);
+    let extractedText = '';
+    try {
+      const parsed = JSON.parse(response.text);
+      extractedText = parsed.text || '';
+    } catch {
+      extractedText = response.text.replace(/```json\n?|\n?```/g, '').trim();
+    }
+
     return {
-      text: (parsed.text || '').trim(),
+      text: extractedText.trim(),
     };
   }
 

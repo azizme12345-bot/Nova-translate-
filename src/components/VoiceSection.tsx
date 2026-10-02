@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Volume2, ArrowRightLeft, Sparkles, Check, Copy } from 'lucide-react';
 import { ApiClient, LanguageOption } from '../services/apiClient.ts';
+import { GlobalAudioPlayer, getLanguageSpeechCode } from '../services/audioPlayer.ts';
 import { HistoryItem } from '../types.ts';
 
 interface VoiceSectionProps {
@@ -23,50 +24,23 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [isSpeakingOriginal, setIsSpeakingOriginal] = useState(false);
   const [isSpeakingTranslation, setIsSpeakingTranslation] = useState(false);
+  const [audioProgressText, setAudioProgressText] = useState('');
   const [copied, setCopied] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef<boolean>(false);
   const baseTextRef = useRef<string>('');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerIntervalRef = useRef<any>(null);
 
-  const getLanguageSpeechCode = (langName: string): string => {
-    if (!langName) return 'en-US';
-    if (langName.includes('Urdu')) return 'ur-PK';
-    if (langName.includes('English')) return 'en-US';
-    if (langName.includes('Arabic')) return 'ar-SA';
-    if (langName.includes('Hindi')) return 'hi-IN';
-    if (langName.includes('Punjabi')) return 'pa-IN';
-    if (langName.includes('French')) return 'fr-FR';
-    if (langName.includes('German')) return 'de-DE';
-    if (langName.includes('Spanish')) return 'es-ES';
-    if (langName.includes('Chinese')) return 'zh-CN';
-    if (langName.includes('Japanese')) return 'ja-JP';
-    if (langName.includes('Russian')) return 'ru-RU';
-    if (langName.includes('Turkish')) return 'tr-TR';
-    return 'en-US';
-  };
-
   const stopAllAudio = () => {
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      } catch {}
-      audioRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-    }
+    GlobalAudioPlayer.stop();
     setIsSpeakingOriginal(false);
     setIsSpeakingTranslation(false);
+    setAudioProgressText('');
   };
 
   const stopListening = () => {
@@ -147,10 +121,15 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
           streamRef.current = null;
         }
 
-        if (audioChunksRef.current.length === 0) return;
+        const liveCaptured = (transcript || '').trim();
+        if (audioChunksRef.current.length === 0) {
+          return;
+        }
 
         const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        if (blob.size < 400) return;
+        if (blob.size < 50) {
+          return;
+        }
 
         setIsProcessingAudio(true);
         onToast('Transcribing recorded voice with AI...');
@@ -162,7 +141,9 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
             try {
               const res = await ApiClient.transcribeAudio(base64Data, blob.type, fromLang);
               if (res && res.text && res.text.trim()) {
-                setTranscript(baseTextRef.current + res.text.trim());
+                const finalSpeech = res.text.trim();
+                const combined = baseTextRef.current ? `${baseTextRef.current} ${finalSpeech}` : finalSpeech;
+                setTranscript(combined);
                 onToast('Voice transcription completed.');
               }
             } catch (err: any) {
@@ -197,26 +178,26 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
         recognition.maxAlternatives = 1;
 
         recognition.onresult = (event: any) => {
-          let finalStr = '';
-          let interimStr = '';
-
+          let accumulated = '';
           for (let i = 0; i < event.results.length; i++) {
-            const item = event.results[i];
-            if (item.isFinal) {
-              finalStr += item[0].transcript + ' ';
-            } else {
-              interimStr += item[0].transcript;
-            }
+            accumulated += event.results[i][0].transcript + ' ';
           }
 
-          const total = (finalStr + interimStr).trim();
-          if (total) {
-            setTranscript(baseTextRef.current + total);
+          const liveSpeech = accumulated.trim();
+          if (liveSpeech) {
+            const combined = baseTextRef.current ? `${baseTextRef.current} ${liveSpeech}` : liveSpeech;
+            setTranscript(combined);
           }
         };
 
         recognition.onerror = (event: any) => {
           console.warn('Speech recognition notice:', event?.error);
+          if (event?.error === 'language-not-supported' && isListeningRef.current) {
+            try {
+              recognition.lang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+              recognition.start();
+            } catch {}
+          }
         };
 
         recognition.onend = () => {
@@ -243,37 +224,6 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
     }
   };
 
-  const fallbackBrowserVoice = (clean: string, langName: string, isOriginal: boolean) => {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.lang = getLanguageSpeechCode(langName);
-
-      utterance.onstart = () => {
-        if (isOriginal) {
-          setIsSpeakingOriginal(true);
-        } else {
-          setIsSpeakingTranslation(true);
-        }
-      };
-
-      utterance.onend = () => {
-        setIsSpeakingOriginal(false);
-        setIsSpeakingTranslation(false);
-      };
-
-      utterance.onerror = () => {
-        setIsSpeakingOriginal(false);
-        setIsSpeakingTranslation(false);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      setIsSpeakingOriginal(false);
-      setIsSpeakingTranslation(false);
-    }
-  };
-
   const playVoice = (text: string, langName: string, isOriginal: boolean) => {
     const clean = (text || '').trim();
     if (!clean) {
@@ -281,61 +231,45 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
       return;
     }
 
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      } catch {}
-      audioRef.current = null;
-    }
-
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-    }
-
     if ((isOriginal && isSpeakingOriginal) || (!isOriginal && isSpeakingTranslation)) {
-      setIsSpeakingOriginal(false);
-      setIsSpeakingTranslation(false);
+      stopAllAudio();
       onToast('Audio playback stopped.');
       return;
     }
 
-    setIsSpeakingOriginal(false);
-    setIsSpeakingTranslation(false);
+    stopAllAudio();
 
-    try {
-      const audioUrl = ApiClient.getTtsAudioUrl(clean, langName);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
+    if (isOriginal) {
+      setIsSpeakingOriginal(true);
+      onToast('Playing spoken text aloud...');
+    } else {
+      setIsSpeakingTranslation(true);
+      onToast('Playing translation aloud...');
+    }
 
-      audio.onplay = () => {
-        if (isOriginal) {
-          setIsSpeakingOriginal(true);
-          onToast('Playing spoken text aloud...');
+    GlobalAudioPlayer.play(clean, langName, {
+      onStart: () => {
+        if (isOriginal) setIsSpeakingOriginal(true);
+        else setIsSpeakingTranslation(true);
+      },
+      onProgress: (cur, tot) => {
+        if (tot > 1) {
+          setAudioProgressText(`(${cur}/${tot})`);
         } else {
-          setIsSpeakingTranslation(true);
-          onToast('Playing translation aloud...');
+          setAudioProgressText('');
         }
-      };
-
-      audio.onended = () => {
-        audioRef.current = null;
+      },
+      onEnd: () => {
         setIsSpeakingOriginal(false);
         setIsSpeakingTranslation(false);
-      };
-
-      audio.onerror = () => {
-        fallbackBrowserVoice(clean, langName, isOriginal);
-      };
-
-      audio.play().catch(() => {
-        fallbackBrowserVoice(clean, langName, isOriginal);
-      });
-    } catch {
-      fallbackBrowserVoice(clean, langName, isOriginal);
-    }
+        setAudioProgressText('');
+      },
+      onError: () => {
+        setIsSpeakingOriginal(false);
+        setIsSpeakingTranslation(false);
+        setAudioProgressText('');
+      },
+    });
   };
 
   const handleTranslate = async () => {
@@ -490,6 +424,10 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
               </span>
             ) : isProcessingAudio ? (
               <span className="text-emerald-200 text-sm font-semibold">⏳ Transcribing recorded voice...</span>
+            ) : (isSpeakingOriginal || isSpeakingTranslation) ? (
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/30 text-emerald-100 text-sm font-semibold animate-pulse">
+                🔊 Playing audio {audioProgressText}...
+              </span>
             ) : (
               <span className="text-emerald-200/80 text-xs">Click the microphone button to begin speaking</span>
             )}
@@ -509,7 +447,7 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
                 <textarea
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
-                  placeholder="Your spoken words will appear here in real time…"
+                  placeholder="Your spoken words or pasted text will appear here in real time…"
                   className="w-full min-h-[140px] text-gray-800 dark:text-gray-100 bg-transparent text-base border-0 focus:ring-0 p-0 resize-none outline-none"
                 />
               </div>
@@ -519,11 +457,11 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
               <button
                 onClick={() => playVoice(transcript, fromLang, true)}
                 type="button"
-                className={`mini ${isSpeakingOriginal ? 'active-pulse' : ''}`}
+                className={`mini ${isSpeakingOriginal ? 'active-pulse bg-emerald-600 text-white' : ''}`}
                 title="Listen to original spoken text"
               >
                 <Volume2 className="w-4 h-4 text-emerald-600" />
-                {isSpeakingOriginal ? '⏹ Stop' : '🔊 Listen'}
+                {isSpeakingOriginal ? `⏹ Stop ${audioProgressText}` : '🔊 Listen'}
               </button>
               <button
                 onClick={() => setTranscript('')}
@@ -559,11 +497,11 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
                 onClick={() => playVoice(translatedText, toLang, false)}
                 type="button"
                 disabled={!translatedText}
-                className={`mini ${isSpeakingTranslation ? 'active-pulse' : ''} disabled:opacity-50`}
+                className={`mini ${isSpeakingTranslation ? 'active-pulse bg-emerald-600 text-white' : ''} disabled:opacity-50`}
                 title="Listen to translated audio"
               >
                 <Volume2 className="w-4 h-4 text-emerald-600" />
-                {isSpeakingTranslation ? '⏹ Stop' : '🔊 Translation'}
+                {isSpeakingTranslation ? `⏹ Stop ${audioProgressText}` : '🔊 Translation'}
               </button>
 
               <div className="flex gap-1.5">

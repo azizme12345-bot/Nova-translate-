@@ -212,10 +212,17 @@ apiRouter.get('/tts', async (req: Request, res: Response) => {
     else if (lower.includes('ja') || lower.includes('japanese')) langCode = 'ja';
     else if (lower.includes('ko') || lower.includes('korean')) langCode = 'ko';
     else if (lower.includes('ru') || lower.includes('russian')) langCode = 'ru';
+    else if (lower.includes('fa') || lower.includes('persian')) langCode = 'fa';
     else if (lower.includes('it') || lower.includes('italian')) langCode = 'it';
+    else if (lower.includes('pt') || lower.includes('portuguese')) langCode = 'pt';
+    else if (lower.includes('bn') || lower.includes('bengali')) langCode = 'bn';
+    else if (lower.includes('id') || lower.includes('indonesian')) langCode = 'id';
+    else if (lower.includes('nl') || lower.includes('dutch')) langCode = 'nl';
+    else if (lower.includes('ps') || lower.includes('pashto')) langCode = 'ps';
+    else if (lower.includes('sd') || lower.includes('sindhi')) langCode = 'sd';
     else langCode = lang.slice(0, 2);
 
-    const queryText = text.slice(0, 300);
+    const queryText = text.slice(0, 180);
     const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(queryText)}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
 
     const fetchResponse = await fetch(googleTtsUrl, {

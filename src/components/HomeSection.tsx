@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ApiClient, LanguageOption } from '../services/apiClient.ts';
+import { GlobalAudioPlayer, getLanguageSpeechCode } from '../services/audioPlayer.ts';
 import { HistoryItem } from '../types.ts';
 
 interface HomeSectionProps {
@@ -34,18 +35,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   const [isTranslating, setIsTranslating] = useState(false);
   const [outputDirection, setOutputDirection] = useState<'ltr' | 'rtl'>('ltr');
 
-  // Audio Playback State
+  // Audio Playback State with Long-Text Progress
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isInputSpeaking, setIsInputSpeaking] = useState(false);
-  const isSpeakingRef = useRef<boolean>(false);
-  const isInputSpeakingRef = useRef<boolean>(false);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [audioProgressText, setAudioProgressText] = useState('');
 
   // Speech Recognition & Audio Recording State
   const [isListening, setIsListening] = useState(false);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [liveSpokenText, setLiveSpokenText] = useState('');
+
   const isListeningRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -132,9 +132,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   };
 
   const handleClear = () => {
+    stopAllAudio();
+    stopMicrophone();
     setInputText('');
     setOutputText('');
     setDetectedBadge(null);
+    setLiveSpokenText('');
     setStatus('Ready');
   };
 
@@ -171,76 +174,13 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   };
 
   // ==========================================
-  // AUDIO PLAYBACK (TEXT TO SPEECH)
+  // UNLIMITED LONG-TEXT AUDIO PLAYBACK (TTS)
   // ==========================================
   const stopAllAudio = () => {
-    if (audioPlayerRef.current) {
-      try {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current.currentTime = 0;
-      } catch {}
-      audioPlayerRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-    }
-    utteranceRef.current = null;
-    isSpeakingRef.current = false;
+    GlobalAudioPlayer.stop();
     setIsSpeaking(false);
-    isInputSpeakingRef.current = false;
     setIsInputSpeaking(false);
-  };
-
-  const getLanguageSpeechCode = (langName: string): string => {
-    if (!langName) return 'en-US';
-    if (langName.includes('Urdu')) return 'ur-PK';
-    if (langName.includes('English')) return 'en-US';
-    if (langName.includes('Arabic')) return 'ar-SA';
-    if (langName.includes('Hindi')) return 'hi-IN';
-    if (langName.includes('Punjabi')) return 'pa-IN';
-    if (langName.includes('French')) return 'fr-FR';
-    if (langName.includes('German')) return 'de-DE';
-    if (langName.includes('Spanish')) return 'es-ES';
-    if (langName.includes('Turkish')) return 'tr-TR';
-    if (langName.includes('Chinese')) return 'zh-CN';
-    if (langName.includes('Japanese')) return 'ja-JP';
-    if (langName.includes('Russian')) return 'ru-RU';
-    return 'en-US';
-  };
-
-  const playBrowserSpeechFallback = (cleanText: string, langName: string, isInput: boolean) => {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = getLanguageSpeechCode(langName);
-
-      utterance.onstart = () => {
-        if (isInput) {
-          isInputSpeakingRef.current = true;
-          setIsInputSpeaking(true);
-        } else {
-          isSpeakingRef.current = true;
-          setIsSpeaking(true);
-        }
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setIsInputSpeaking(false);
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setIsInputSpeaking(false);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      setIsSpeaking(false);
-      setIsInputSpeaking(false);
-    }
+    setAudioProgressText('');
   };
 
   const playSpeech = (
@@ -255,58 +195,52 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       return;
     }
 
+    if ((isInput && isInputSpeaking) || (!isInput && isSpeaking)) {
+      stopAllAudio();
+      onToast('Audio stopped.');
+      return;
+    }
+
     stopAllAudio();
 
-    try {
-      const audioUrl = ApiClient.getTtsAudioUrl(clean, langName);
-      const audio = new Audio(audioUrl);
-      audioPlayerRef.current = audio;
+    if (isInput) {
+      setIsInputSpeaking(true);
+      if (showToast) onToast('Reading original text aloud...');
+    } else {
+      setIsSpeaking(true);
+      if (showToast) onToast('Reading translation aloud...');
+    }
 
-      audio.onplay = () => {
-        if (isInput) {
-          isInputSpeakingRef.current = true;
-          setIsInputSpeaking(true);
-          if (showToast) onToast('Playing original text aloud...');
+    GlobalAudioPlayer.play(clean, langName, {
+      onStart: () => {
+        if (isInput) setIsInputSpeaking(true);
+        else setIsSpeaking(true);
+      },
+      onProgress: (current, total) => {
+        if (total > 1) {
+          setAudioProgressText(`(${current}/${total})`);
         } else {
-          isSpeakingRef.current = true;
-          setIsSpeaking(true);
-          if (showToast) onToast('Playing translation aloud...');
+          setAudioProgressText('');
         }
-      };
-
-      audio.onended = () => {
-        audioPlayerRef.current = null;
+      },
+      onEnd: () => {
         setIsSpeaking(false);
         setIsInputSpeaking(false);
-      };
-
-      audio.onerror = () => {
-        playBrowserSpeechFallback(clean, langName, isInput);
-      };
-
-      audio.play().catch(() => {
-        playBrowserSpeechFallback(clean, langName, isInput);
-      });
-    } catch {
-      playBrowserSpeechFallback(clean, langName, isInput);
-    }
+        setAudioProgressText('');
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        setIsInputSpeaking(false);
+        setAudioProgressText('');
+      },
+    });
   };
 
   const handleListenInput = () => {
-    if (isInputSpeakingRef.current || (audioPlayerRef.current && isInputSpeaking)) {
-      stopAllAudio();
-      onToast('Audio playback stopped.');
-      return;
-    }
     playSpeech(inputText, fromLang, true, true);
   };
 
   const handleListen = () => {
-    if (isSpeakingRef.current || (audioPlayerRef.current && isSpeaking)) {
-      stopAllAudio();
-      onToast('Audio playback stopped.');
-      return;
-    }
     playSpeech(outputText, toLang, true, false);
   };
 
@@ -326,11 +260,15 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     if (recognitionRef.current) {
       const rec = recognitionRef.current;
       recognitionRef.current = null;
-      rec.onstart = null;
-      rec.onresult = null;
-      rec.onerror = null;
-      rec.onend = null;
-      try { rec.stop(); } catch { try { rec.abort(); } catch {} }
+      try {
+        rec.onstart = null;
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.stop();
+      } catch {
+        try { rec.abort(); } catch {}
+      }
     }
 
     // Request final data and stop MediaRecorder
@@ -350,7 +288,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
     audioChunksRef.current = [];
     liveTranscriptRef.current = '';
-    baseTextRef.current = inputText ? inputText.trim() + ' ' : '';
+    setLiveSpokenText('');
+    baseTextRef.current = inputText ? inputText.trim() : '';
     setRecordingSeconds(0);
 
     let stream: MediaStream;
@@ -359,7 +298,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       streamRef.current = stream;
     } catch (err: any) {
       console.warn('Microphone permission error:', err);
-      onToast('Microphone access denied. Please allow microphone permission in your browser.');
+      onToast('Microphone access denied. Please allow microphone permission in your browser to speak.');
       return;
     }
 
@@ -392,18 +331,29 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       };
 
       recorder.onstop = async () => {
-        // Stop audio tracks cleanly after recording finalized
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
         }
 
-        if (audioChunksRef.current.length === 0) return;
+        const liveCaptured = liveTranscriptRef.current.trim();
+        if (audioChunksRef.current.length === 0) {
+          if (liveCaptured) {
+            const combined = baseTextRef.current ? `${baseTextRef.current} ${liveCaptured}` : liveCaptured;
+            setInputText(combined);
+          }
+          return;
+        }
 
         const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        if (blob.size < 400) return;
+        if (blob.size < 50) {
+          if (liveCaptured) {
+            const combined = baseTextRef.current ? `${baseTextRef.current} ${liveCaptured}` : liveCaptured;
+            setInputText(combined);
+          }
+          return;
+        }
 
-        // If Web Speech API already provided full live text, we can use it or verify with Gemini
         setIsProcessingAudio(true);
         setStatus('Transcribing…');
 
@@ -415,11 +365,20 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               const res = await ApiClient.transcribeAudio(base64Data, blob.type, fromLang);
               if (res && res.text && res.text.trim()) {
                 const finalSpeech = res.text.trim();
-                setInputText(baseTextRef.current + finalSpeech);
+                const combined = baseTextRef.current ? `${baseTextRef.current} ${finalSpeech}` : finalSpeech;
+                setInputText(combined);
+                setLiveSpokenText(finalSpeech);
                 onToast('Voice transcribed into text successfully!');
+              } else if (liveCaptured) {
+                const combined = baseTextRef.current ? `${baseTextRef.current} ${liveCaptured}` : liveCaptured;
+                setInputText(combined);
               }
             } catch (err: any) {
               console.warn('Backend audio transcription notice:', err);
+              if (liveCaptured) {
+                const combined = baseTextRef.current ? `${baseTextRef.current} ${liveCaptured}` : liveCaptured;
+                setInputText(combined);
+              }
             } finally {
               setIsProcessingAudio(false);
               setStatus('Ready');
@@ -427,6 +386,10 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           };
           reader.readAsDataURL(blob);
         } catch {
+          if (liveCaptured) {
+            const combined = baseTextRef.current ? `${baseTextRef.current} ${liveCaptured}` : liveCaptured;
+            setInputText(combined);
+          }
           setIsProcessingAudio(false);
           setStatus('Ready');
         }
@@ -452,27 +415,29 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         recognition.maxAlternatives = 1;
 
         recognition.onresult = (event: any) => {
-          let finalTranscript = '';
-          let interimTranscript = '';
-
+          let accumulated = '';
           for (let i = 0; i < event.results.length; i++) {
-            const item = event.results[i];
-            if (item.isFinal) {
-              finalTranscript += item[0].transcript + ' ';
-            } else {
-              interimTranscript += item[0].transcript;
-            }
+            accumulated += event.results[i][0].transcript + ' ';
           }
 
-          const liveSpeech = (finalTranscript + interimTranscript).trim();
+          const liveSpeech = accumulated.trim();
           if (liveSpeech) {
             liveTranscriptRef.current = liveSpeech;
-            setInputText(baseTextRef.current + liveSpeech);
+            setLiveSpokenText(liveSpeech);
+            const combined = baseTextRef.current ? `${baseTextRef.current} ${liveSpeech}` : liveSpeech;
+            setInputText(combined);
           }
         };
 
         recognition.onerror = (event: any) => {
-          console.warn('Live SpeechRecognition notice:', event?.error);
+          console.warn('Live SpeechRecognition error:', event?.error);
+          // If language-not-supported error, retry with default language
+          if (event?.error === 'language-not-supported' && isListeningRef.current) {
+            try {
+              recognition.lang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+              recognition.start();
+            } catch {}
+          }
         };
 
         recognition.onend = () => {
@@ -556,23 +521,51 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           </select>
         </div>
 
+        {/* Live Active Audio Speaking Banner for Long Text */}
+        {(isSpeaking || isInputSpeaking) && (
+          <div className="mb-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center justify-between shadow-sm animate-pulse">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="text-sm font-bold text-emerald-800 dark:text-emerald-200">
+                🔊 Reading aloud {audioProgressText}... Listen to audio
+              </span>
+            </div>
+            <button
+              onClick={stopAllAudio}
+              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-sm"
+              type="button"
+            >
+              ⏹ Stop Audio
+            </button>
+          </div>
+        )}
+
         {/* Live Active Recording Banner */}
         {isListening && (
-          <div className="mb-3 p-3 bg-red-50 dark:bg-red-950/40 border-2 border-red-400 dark:border-red-600 rounded-2xl flex items-center justify-between shadow-sm animate-pulse">
+          <div className="mb-3 p-4 bg-red-50 dark:bg-red-950/50 border-2 border-red-500 dark:border-red-600 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
             <div className="flex items-center gap-3">
-              <span className="w-4 h-4 rounded-full bg-red-500 animate-ping"></span>
+              <div className="relative flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-red-500 animate-ping absolute"></span>
+                <span className="w-3 h-3 rounded-full bg-red-600 relative"></span>
+              </div>
               <div>
                 <span className="text-sm font-extrabold text-red-700 dark:text-red-300 block">
-                  🎙️ Recording Voice ({recordingSeconds}s)... Speak now!
+                  🎙️ Listening ({recordingSeconds}s)... Speak clearly in {fromLang}
                 </span>
-                <span className="text-xs text-red-500 dark:text-red-400">
-                  Your spoken words are being converted directly into the text box.
+                <span className="text-xs text-red-600 dark:text-red-400">
+                  {liveSpokenText ? (
+                    <span className="font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 px-2 py-0.5 rounded">
+                      "{liveSpokenText}"
+                    </span>
+                  ) : (
+                    'Your spoken words will appear in the text box below in real-time.'
+                  )}
                 </span>
               </div>
             </div>
             <button
               onClick={handleVoiceInput}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-transform active:scale-95"
+              className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap"
               type="button"
             >
               ⏹ Done & Transcribe
@@ -583,7 +576,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         {isProcessingAudio && (
           <div className="mb-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 rounded-xl flex items-center gap-2.5 text-emerald-800 dark:text-emerald-200 text-sm font-semibold">
             <span className="animate-spin text-base">⏳</span>
-            Converting your spoken audio to text with Gemini AI...
+            Refining spoken voice into text with AI...
           </div>
         )}
 
@@ -598,7 +591,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <textarea
                 id="input"
                 maxLength={5000}
-                placeholder="Type text here, or click Speak to talk into your microphone…"
+                placeholder="Type or paste long text, or click 'Speak' to talk into your microphone…"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 style={{ fontSize: fontSizeMap[textSize] }}
@@ -612,7 +605,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <div className="tools">
                 <div className="toolgroup">
                   <button
-                    className={`mini ${isListening ? 'active-pulse' : ''}`}
+                    className={`mini ${isListening ? 'active-pulse bg-red-600 text-white border-red-600' : ''}`}
                     id="mic"
                     onClick={handleVoiceInput}
                     type="button"
@@ -622,14 +615,14 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                     {isListening ? '⏹ Stop Mic' : '🎤 Speak'}
                   </button>
                   <button
-                    className={`mini ${isInputSpeaking ? 'active-pulse' : ''}`}
+                    className={`mini ${isInputSpeaking ? 'active-pulse bg-emerald-600 text-white' : ''}`}
                     id="listen-input"
                     onClick={handleListenInput}
                     type="button"
                     aria-label={isInputSpeaking ? 'Stop speaking' : 'Listen to text'}
                     title={isInputSpeaking ? 'Stop audio' : 'Listen to original text'}
                   >
-                    {isInputSpeaking ? '⏹ Stop' : '🔊 Listen'}
+                    {isInputSpeaking ? `⏹ Stop ${audioProgressText}` : '🔊 Listen'}
                   </button>
                   <button className="mini" id="clear" onClick={handleClear} type="button" title="Clear text">
                     Clear
@@ -638,12 +631,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                 <div className="muted">
                   {isListening ? (
                     <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                      🔴 Recording voice… Speak into mic
+                      🔴 Listening… Speak now
                     </span>
                   ) : isProcessingAudio ? (
                     <span style={{ color: 'var(--accent)', fontWeight: 600 }}>⏳ Transcribing voice…</span>
                   ) : isInputSpeaking ? (
-                    <span style={{ color: 'var(--accent)', fontWeight: 600 }}>🔊 Playing text…</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 600 }}>🔊 Reading text {audioProgressText}…</span>
                   ) : detectedBadge ? (
                     `Detected: ${detectedBadge}`
                   ) : (
@@ -677,14 +670,14 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <div className="tools">
                 <div className="toolgroup">
                   <button
-                    className={`mini ${isSpeaking ? 'active-pulse' : ''}`}
+                    className={`mini ${isSpeaking ? 'active-pulse bg-emerald-600 text-white' : ''}`}
                     id="listen"
                     onClick={handleListen}
                     type="button"
                     aria-label={isSpeaking ? 'Stop speaking' : 'Listen to translation'}
                     title={isSpeaking ? 'Stop audio' : 'Listen to translation'}
                   >
-                    {isSpeaking ? '⏹ Stop' : '🔊 Listen'}
+                    {isSpeaking ? `⏹ Stop ${audioProgressText}` : '🔊 Listen'}
                   </button>
                   <button className="mini" id="copy" onClick={handleCopy} type="button" title="Copy translation">
                     📋 Copy
@@ -693,6 +686,11 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                     ↗ Share
                   </button>
                 </div>
+                {isSpeaking && (
+                  <div className="muted" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                    🔊 Playing translation {audioProgressText}…
+                  </div>
+                )}
               </div>
             </div>
           </div>
