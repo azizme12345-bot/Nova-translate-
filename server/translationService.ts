@@ -49,12 +49,11 @@ function getAIClient(): GoogleGenAI {
   });
 }
 
-// Active supported Flash models with high availability fallback
+// Ultra-fast low-latency Flash models prioritized for sub-second response times
 const FLASH_MODELS = [
-  'gemini-flash-latest',
   'gemini-flash-lite-latest',
-  'gemini-3-flash-preview',
   'gemini-3.1-flash-lite-preview',
+  'gemini-3-flash-preview',
 ];
 
 export interface TranslationRequest {
@@ -399,10 +398,9 @@ Return ONLY valid JSON:
     let lastError: any = null;
 
     const modelsToTry = [
-      'gemini-flash-latest',
       'gemini-flash-lite-latest',
-      'gemini-3-flash-preview',
       'gemini-3.1-flash-lite-preview',
+      'gemini-3-flash-preview',
     ];
 
     for (const model of modelsToTry) {

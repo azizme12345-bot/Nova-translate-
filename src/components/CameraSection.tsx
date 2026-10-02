@@ -502,9 +502,9 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
               <div className={`${viewMode === 'split' ? 'lg:col-span-7' : 'w-full'} space-y-5`}>
                 {/* Crystal-Clear Translation Card */}
                 {viewMode !== 'original_only' && (
-                  <div className="bg-white dark:bg-gray-850 border-2 border-emerald-500/60 dark:border-emerald-500/80 rounded-3xl shadow-md overflow-hidden transition-all">
+                  <div className="workspace border-2 border-emerald-500/80 rounded-3xl shadow-md overflow-hidden transition-all p-0">
                     {/* Header with high contrast */}
-                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/60 border-b border-emerald-100 dark:border-emerald-900/60 flex items-center justify-between flex-wrap gap-2">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/80 border-b border-emerald-200 dark:border-emerald-800 flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span className="text-sm sm:text-base font-extrabold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
@@ -551,17 +551,18 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
                     {/* Main Crystal-Clear Text Body */}
                     <div
                       dir={isTargetRtl ? 'rtl' : 'ltr'}
-                      className={`p-6 sm:p-8 text-gray-900 dark:text-gray-100 whitespace-pre-wrap min-h-[160px] max-h-[500px] overflow-y-auto selection:bg-emerald-200 ${
+                      className={`p-6 sm:p-8 whitespace-pre-wrap min-h-[160px] max-h-[500px] overflow-y-auto selection:bg-emerald-200 ${
                         isTargetRtl ? 'text-right' : 'text-left'
                       } ${fontSizeClasses[fontSize]}`}
                       style={{
+                        color: 'var(--text)',
                         fontFamily: isTargetRtl
                           ? "'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Jameel Noori Nastaleeq', 'Segoe UI', system-ui, sans-serif"
                           : 'inherit',
                       }}
                     >
                       {translatedText || (
-                        <span className="text-gray-400 italic">Translation will appear here...</span>
+                        <span className="italic" style={{ color: 'var(--muted)' }}>Translation will appear here...</span>
                       )}
                     </div>
                   </div>
@@ -569,10 +570,10 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
 
                 {/* Extracted Original Text Card */}
                 {viewMode !== 'translation_only' && (
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-sm overflow-hidden">
-                    <div className="p-3.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200">
+                  <div className="workspace border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden p-0">
+                    <div className="p-3.5 bg-gray-100 dark:bg-gray-800/80 border-b border-[var(--border)] flex items-center justify-between text-xs font-bold" style={{ color: 'var(--text)' }}>
                       <span className="flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-gray-500" />
+                        <FileText className="w-4 h-4 text-emerald-600" />
                         اصل عبارت (Extracted Original Text - {detectedLang || 'Detected'})
                       </span>
                       <button
@@ -587,9 +588,15 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
                     </div>
                     <div
                       dir={isSourceRtl ? 'rtl' : 'ltr'}
-                      className={`p-5 text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium whitespace-pre-wrap max-h-48 overflow-y-auto ${
+                      className={`p-5 text-base sm:text-lg font-bold whitespace-pre-wrap max-h-60 overflow-y-auto ${
                         isSourceRtl ? 'text-right' : 'text-left'
                       }`}
+                      style={{
+                        color: 'var(--text)',
+                        fontFamily: isSourceRtl
+                          ? "'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Jameel Noori Nastaleeq', 'Segoe UI', system-ui, sans-serif"
+                          : 'inherit',
+                      }}
                     >
                       {extractedText || 'Extracting text...'}
                     </div>
@@ -604,7 +611,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
       {/* Fullscreen Reading Modal */}
       {isFullscreenModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-fadeIn">
-          <div className="bg-white dark:bg-gray-900 border-2 border-emerald-500 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-[var(--surface)] border-2 border-emerald-500 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 bg-emerald-50 dark:bg-emerald-950/60 border-b border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -671,10 +678,11 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             {/* Modal Body */}
             <div
               dir={isTargetRtl ? 'rtl' : 'ltr'}
-              className={`p-6 sm:p-10 overflow-y-auto text-gray-900 dark:text-gray-100 whitespace-pre-wrap ${
+              className={`p-6 sm:p-10 overflow-y-auto whitespace-pre-wrap font-semibold ${
                 isTargetRtl ? 'text-right' : 'text-left'
               } ${fontSizeClasses[fontSize]}`}
               style={{
+                color: 'var(--text)',
                 fontFamily: isTargetRtl
                   ? "'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Jameel Noori Nastaleeq', 'Segoe UI', system-ui, sans-serif"
                   : 'inherit',

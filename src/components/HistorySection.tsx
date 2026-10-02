@@ -194,20 +194,20 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
         {history.length === 0 ? (
           <div className="workspace" style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 20px' }}>
             <div className="text-4xl mb-3">📖</div>
-            <h3 className="text-lg font-bold text-gray-700 dark:text-gray-200 mb-1">No translation history yet</h3>
-            <p className="text-sm text-gray-500">Translations you perform will be saved here automatically.</p>
+            <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--text)' }}>No translation history yet</h3>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>Translations you perform will be saved here automatically.</p>
           </div>
         ) : (
           history.map((item) => (
-            <div className="historyitem bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-3.5 transition-all hover:border-emerald-300" key={item.id}>
+            <div className="historyitem bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm mb-3.5 transition-all hover:border-emerald-500" key={item.id}>
               <div className="flex-1">
-                <div className="route text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center justify-between">
+                <div className="route text-xs font-extrabold text-emerald-800 dark:text-emerald-400 mb-2 flex items-center justify-between">
                   <span>{item.from} → {item.to}</span>
-                  <span className="text-gray-400 font-normal">{item.time}</span>
+                  <span className="font-normal" style={{ color: 'var(--muted)' }}>{item.time}</span>
                 </div>
 
                 {/* Original Text Row */}
-                <div className="htxt flex items-center justify-between gap-3 text-gray-900 dark:text-gray-100 font-medium py-1">
+                <div className="htxt flex items-center justify-between gap-3 font-semibold py-1 text-base" style={{ color: 'var(--text)' }}>
                   <span className="break-words flex-1">{item.input}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -230,7 +230,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
                 </div>
 
                 {/* Translation Output Row */}
-                <div className="muted flex items-center justify-between gap-3 text-emerald-900 dark:text-emerald-300 font-medium mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between gap-3 font-extrabold text-base mt-2 pt-2 border-t border-[var(--border)]" style={{ color: 'var(--primary2)' }}>
                   <span className="break-words flex-1">{item.output}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -254,9 +254,9 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
               </div>
 
               {/* Action Buttons: Use in Translator & Delete */}
-              <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800 justify-end">
+              <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-[var(--border)] justify-end">
                 <button
-                  className="mini text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 py-1.5 px-3"
+                  className="mini text-xs font-extrabold text-emerald-800 dark:text-emerald-300 border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 py-1.5 px-3"
                   onClick={() => onUseItem(item)}
                   type="button"
                   title="Load this text and languages back into the main translator"
@@ -264,7 +264,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
                   🔁 Use in Translator
                 </button>
                 <button
-                  className="mini text-xs text-red-500 hover:text-red-700 hover:border-red-300 py-1.5 px-2.5"
+                  className="mini text-xs text-red-600 dark:text-red-400 hover:text-red-700 hover:border-red-300 py-1.5 px-2.5"
                   onClick={() => {
                     onRemoveItem(item.id);
                     onToast('History item removed.');

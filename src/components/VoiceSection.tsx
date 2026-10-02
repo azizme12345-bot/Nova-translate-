@@ -437,23 +437,24 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
         {/* Live Conversation Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Spoken Text Panel */}
-          <div className="panel bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
+          <div className="panel bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
             <div>
-              <div className="panelhead p-3.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between font-bold text-sm text-gray-700 dark:text-gray-200">
+              <div className="panelhead p-3.5 bg-gray-100 dark:bg-gray-800 border-b border-[var(--border)] flex items-center justify-between font-bold text-sm" style={{ color: 'var(--text)' }}>
                 <span>Spoken Text</span>
-                <span className="text-xs font-medium text-gray-400">{fromLang}</span>
+                <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{fromLang}</span>
               </div>
               <div className="p-4">
                 <textarea
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
                   placeholder="Your spoken words or pasted text will appear here in real time…"
-                  className="w-full min-h-[140px] text-gray-800 dark:text-gray-100 bg-transparent text-base border-0 focus:ring-0 p-0 resize-none outline-none"
+                  className="w-full min-h-[140px] bg-transparent text-base font-semibold border-0 focus:ring-0 p-0 resize-none outline-none"
+                  style={{ color: 'var(--text)' }}
                 />
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50/70 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+            <div className="p-3 bg-gray-50/70 dark:bg-gray-800/40 border-t border-[var(--border)] flex items-center justify-between gap-2">
               <button
                 onClick={() => playVoice(transcript, fromLang, true)}
                 type="button"
@@ -474,25 +475,25 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({
           </div>
 
           {/* Translated Text Panel */}
-          <div className="panel bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
+          <div className="panel bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
             <div>
-              <div className="panelhead p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900 flex items-center justify-between font-bold text-sm text-emerald-900 dark:text-emerald-200">
+              <div className="panelhead p-3.5 bg-emerald-50/80 dark:bg-emerald-950/60 border-b border-emerald-200 dark:border-emerald-800 flex items-center justify-between font-bold text-sm text-emerald-950 dark:text-emerald-200">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
                   Translation Output
                 </span>
-                <span className="text-xs font-medium text-emerald-600">{toLang}</span>
+                <span className="text-xs font-semibold text-emerald-600">{toLang}</span>
               </div>
               <div className="p-4">
-                <div className="min-h-[140px] text-gray-900 dark:text-gray-100 text-base font-medium whitespace-pre-wrap">
+                <div className="min-h-[140px] text-base font-semibold whitespace-pre-wrap" style={{ color: 'var(--text)' }}>
                   {translatedText || (
-                    <span className="text-gray-400 italic">Translation will appear here and can be played aloud…</span>
+                    <span className="italic" style={{ color: 'var(--muted)' }}>Translation will appear here and can be played aloud…</span>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="p-3 bg-emerald-50/40 dark:bg-emerald-950/20 border-t border-emerald-100 dark:border-emerald-900 flex items-center justify-between gap-2">
+            <div className="p-3 bg-emerald-50/40 dark:bg-emerald-950/20 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
               <button
                 onClick={() => playVoice(translatedText, toLang, false)}
                 type="button"
