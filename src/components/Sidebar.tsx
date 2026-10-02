@@ -23,6 +23,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           Home
         </button>
         <button
+          className={activePage === 'voice' ? 'active' : ''}
+          onClick={() => onSelectPage('voice')}
+          type="button"
+        >
+          <span className="icon">🎤</span>
+          Voice & Audio
+        </button>
+        <button
           className={activePage === 'history' ? 'active' : ''}
           onClick={() => onSelectPage('history')}
           type="button"

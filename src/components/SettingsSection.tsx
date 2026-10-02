@@ -8,6 +8,8 @@ interface SettingsSectionProps {
   onOpenAbout: () => void;
   onToast: (msg: string) => void;
   backendConfigured: boolean;
+  onClearHistory?: () => void;
+  historyCount?: number;
 }
 
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
@@ -17,51 +19,97 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   onOpenAbout,
   onToast,
   backendConfigured,
+  onClearHistory,
+  historyCount = 0,
 }) => {
-  const toggleTextSize = () => {
-    const nextSize =
-      settings.textSize === 'small' ? 'medium' : settings.textSize === 'medium' ? 'large' : 'small';
-    onUpdateSettings({ textSize: nextSize });
-    onToast(`Text size set to ${nextSize}`);
+  const toggleTextSize = (size: 'small' | 'medium' | 'large') => {
+    onUpdateSettings({ textSize: size });
+    onToast(`Editor font size set to ${size}.`);
+  };
+
+  const handleResetData = () => {
+    if (onClearHistory) {
+      onClearHistory();
+      onToast('All translation history and cache cleared.');
+    } else {
+      localStorage.removeItem('nova_translation_history');
+      onToast('Local data reset.');
+    }
   };
 
   return (
     <section className="section active" id="settings">
       <div className="hero">
         <div>
-          <div className="eyebrow">PREFERENCES</div>
+          <div className="eyebrow">APP PREFERENCES & CONFIGURATION</div>
           <h1>Settings</h1>
-          <p className="subtitle">Control the Nova Translate experience.</p>
+          <p className="subtitle">Customize your translation, voice, and visual experience.</p>
         </div>
       </div>
 
-      <div className="settings">
+      <div className="settings space-y-4 max-w-3xl">
+        {/* Appearance Section */}
+        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mt-2 mb-1 px-1">
+          Appearance & Display
+        </div>
+
         {/* Dark Mode */}
         <div className="setting">
           <div>
             <b>Dark mode</b>
-            <small>Switch between light and dark appearance.</small>
+            <small>Switch between light and dark themes.</small>
           </div>
           <button
             className={`switch ${settings.darkMode ? 'on' : ''}`}
             id="darkSwitch"
             onClick={() => onUpdateSettings({ darkMode: !settings.darkMode })}
             type="button"
+            aria-label="Toggle dark mode"
           >
             <i></i>
           </button>
+        </div>
+
+        {/* Text Size Selector */}
+        <div className="setting flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <b>Editor Font Size</b>
+            <small>Choose the text size for the translation workspace.</small>
+          </div>
+          <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            {(['small', 'medium', 'large'] as const).map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => toggleTextSize(size)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
+                  settings.textSize === size
+                    ? 'bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Translation & Voice Section */}
+        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mt-6 mb-1 px-1">
+          Translation & Audio Features
         </div>
 
         {/* Auto-detect Language */}
         <div className="setting">
           <div>
             <b>Auto-detect language</b>
-            <small>Detect the source language automatically.</small>
+            <small>Automatically recognize the source language of entered text or speech.</small>
           </div>
           <button
             className={`switch ${settings.autoDetect ? 'on' : ''}`}
             onClick={() => onUpdateSettings({ autoDetect: !settings.autoDetect })}
             type="button"
+            aria-label="Toggle auto detect"
           >
             <i></i>
           </button>
@@ -70,72 +118,85 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         {/* Voice Output */}
         <div className="setting">
           <div>
-            <b>Voice output</b>
-            <small>Read translated text aloud automatically.</small>
+            <b>Auto-read translations aloud</b>
+            <small>Automatically play native voice audio when translation completes.</small>
           </div>
           <button
             className={`switch ${settings.voiceOutput ? 'on' : ''}`}
             onClick={() => onUpdateSettings({ voiceOutput: !settings.voiceOutput })}
             type="button"
+            aria-label="Toggle voice output"
           >
             <i></i>
           </button>
         </div>
 
-        {/* Text Size */}
-        <div className="setting" onClick={toggleTextSize} style={{ cursor: 'pointer' }}>
+        {/* Data & Storage Section */}
+        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mt-6 mb-1 px-1">
+          Data & Local Storage
+        </div>
+
+        {/* History Storage & Clear */}
+        <div className="setting flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <b>Text size</b>
-            <small>Click to toggle between Small, Medium and Large editor fonts.</small>
+            <b>Translation History Storage</b>
+            <small>Currently storing {historyCount} saved translations locally on this device.</small>
           </div>
-          <span className="pill" style={{ textTransform: 'capitalize' }}>
-            {settings.textSize}
-          </span>
+          <button
+            onClick={handleResetData}
+            type="button"
+            className="mini text-xs text-red-600 border-red-200 hover:bg-red-50 hover:border-red-400 py-1.5 px-3"
+          >
+            Clear History & Cache
+          </button>
+        </div>
+
+        {/* Backend & Security Section */}
+        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mt-6 mb-1 px-1">
+          Security & System
         </div>
 
         {/* Backend API Connection Status */}
         <div className="setting">
           <div>
-            <b>Backend Security & API</b>
+            <b>Backend AI Engine Status</b>
             <small>
               {backendConfigured
-                ? 'Centralized backend service connected with active Gemini API key.'
-                : 'Backend service active. GEMINI_API_KEY injected via environment.'}
+                ? 'Centralized backend service connected with active Gemini Multimodal API.'
+                : 'Backend service active. API key loaded securely via server environment.'}
             </small>
           </div>
           <span
-            className="pill"
+            className="pill font-semibold"
             style={{
-              background: backendConfigured ? 'rgba(24, 185, 138, 0.15)' : 'var(--surface2)',
-              color: backendConfigured ? 'var(--primary)' : 'var(--muted)',
+              background: backendConfigured ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface2)',
+              color: backendConfigured ? '#059669' : 'var(--muted)',
             }}
           >
-            {backendConfigured ? '● Active' : '● Ready'}
+            {backendConfigured ? '● Active & Secure' : '● Ready'}
           </span>
         </div>
 
-        {/* Privacy */}
+        {/* Privacy Policy */}
         <div
-          className="setting"
+          className="setting cursor-pointer hover:border-emerald-300 transition-colors"
           onClick={onOpenPrivacy}
-          style={{ cursor: 'pointer' }}
         >
           <div>
-            <b>Privacy & Security</b>
-            <small>Zero client-side secrets. All translation runs server-side.</small>
+            <b>Privacy & Zero-Leak Security</b>
+            <small>Read how user data and audio are processed securely without client exposure.</small>
           </div>
           <span style={{ fontSize: '18px', color: 'var(--muted)' }}>›</span>
         </div>
 
-        {/* About */}
+        {/* About App */}
         <div
-          className="setting"
+          className="setting cursor-pointer hover:border-emerald-300 transition-colors"
           onClick={onOpenAbout}
-          style={{ cursor: 'pointer' }}
         >
           <div>
             <b>About Nova Translate</b>
-            <small>AI Translator · Production v1.0</small>
+            <small>Version 1.0 Production Edition · Multilingual AI Platform</small>
           </div>
           <span style={{ fontSize: '18px', color: 'var(--muted)' }}>›</span>
         </div>

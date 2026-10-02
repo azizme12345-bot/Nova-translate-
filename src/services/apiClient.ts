@@ -178,4 +178,34 @@ export class ApiClient {
     }
     return { status: 'offline', geminiConfigured: false };
   }
+
+  /**
+   * Transcribe recorded audio using backend AI
+   */
+  static async transcribeAudio(
+    audioBase64: string,
+    mimeType = 'audio/webm',
+    languageHint?: string
+  ): Promise<{ text: string }> {
+    const res = await fetch('/api/speech-to-text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audioBase64,
+        mimeType,
+        languageHint,
+      }),
+    });
+
+    return await handleApiResponse<{ text: string }>(res);
+  }
+
+  /**
+   * Get direct audio streaming URL for native pronunciation
+   */
+  static getTtsAudioUrl(text: string, language: string): string {
+    return `/api/tts?text=${encodeURIComponent(text.trim().slice(0, 300))}&lang=${encodeURIComponent(language)}`;
+  }
 }

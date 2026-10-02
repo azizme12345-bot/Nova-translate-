@@ -8,7 +8,7 @@ export interface HistoryItem {
   detectedLang?: string;
 }
 
-export type ActivePage = 'home' | 'history' | 'camera' | 'settings';
+export type ActivePage = 'home' | 'voice' | 'history' | 'camera' | 'settings';
 
 export interface AppSettings {
   darkMode: boolean;

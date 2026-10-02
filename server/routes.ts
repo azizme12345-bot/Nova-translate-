@@ -182,3 +182,99 @@ apiRouter.post('/voice-synthesize', async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * Real Audio Text-To-Speech (TTS) streaming proxy endpoint
+ * Crystal-clear native audio for Urdu, English, Hindi, Arabic, etc.
+ */
+apiRouter.get('/tts', async (req: Request, res: Response) => {
+  try {
+    const text = ((req.query.text as string) || '').trim();
+    const lang = ((req.query.lang as string) || 'en').trim();
+
+    if (!text) {
+      res.status(400).send('Text parameter is required.');
+      return;
+    }
+
+    let langCode = 'en';
+    const lower = lang.toLowerCase();
+    if (lower.includes('ur') || lower.includes('urdu')) langCode = 'ur';
+    else if (lower.includes('hi') || lower.includes('hindi')) langCode = 'hi';
+    else if (lower.includes('en') || lower.includes('english')) langCode = 'en';
+    else if (lower.includes('ar') || lower.includes('arabic')) langCode = 'ar';
+    else if (lower.includes('pa') || lower.includes('punjabi')) langCode = 'pa';
+    else if (lower.includes('fr') || lower.includes('french')) langCode = 'fr';
+    else if (lower.includes('de') || lower.includes('german')) langCode = 'de';
+    else if (lower.includes('es') || lower.includes('spanish')) langCode = 'es';
+    else if (lower.includes('tr') || lower.includes('turkish')) langCode = 'tr';
+    else if (lower.includes('zh') || lower.includes('chinese')) langCode = 'zh-CN';
+    else if (lower.includes('ja') || lower.includes('japanese')) langCode = 'ja';
+    else if (lower.includes('ko') || lower.includes('korean')) langCode = 'ko';
+    else if (lower.includes('ru') || lower.includes('russian')) langCode = 'ru';
+    else if (lower.includes('it') || lower.includes('italian')) langCode = 'it';
+    else langCode = lang.slice(0, 2);
+
+    const queryText = text.slice(0, 300);
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(queryText)}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
+
+    const fetchResponse = await fetch(googleTtsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    if (!fetchResponse.ok) {
+      res.status(fetchResponse.status).send('TTS service error.');
+      return;
+    }
+
+    const arrayBuffer = await fetchResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(buffer);
+  } catch (err: any) {
+    console.error('TTS Proxy Error:', err);
+    res.status(500).send(err.message || 'TTS generation failed.');
+  }
+});
+
+/**
+ * Speech-To-Text AI transcription endpoint
+ * Powered by Gemini Flash - handles any audio format & language (Urdu, English, Hindi, Arabic, etc.)
+ */
+apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
+  try {
+    const { audioBase64, mimeType, languageHint } = req.body || {};
+    if (!audioBase64 || typeof audioBase64 !== 'string') {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'audioBase64 is required for speech transcription.',
+        },
+      });
+      return;
+    }
+
+    const result = await withTimeout(
+      TranslationService.transcribeAudio({
+        audioBase64,
+        mimeType: mimeType || 'audio/webm',
+        languageHint,
+      }),
+      25000
+    );
+
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({
+      error: {
+        code: 'TRANSCRIPTION_FAILED',
+        message: err.message || 'Voice transcription failed.',
+      },
+    });
+  }
+});

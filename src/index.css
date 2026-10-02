@@ -381,6 +381,31 @@ textarea {
   border-color: var(--primary2);
 }
 
+.mini.active-pulse {
+  background: rgba(24, 185, 138, 0.16);
+  border-color: var(--accent);
+  color: var(--primary);
+  font-weight: 700;
+  animation: pulse-ring 1.6s infinite;
+}
+
+body.dark .mini.active-pulse {
+  background: rgba(24, 185, 138, 0.25);
+  color: #65f2c7;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 185, 138, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(24, 185, 138, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 185, 138, 0);
+  }
+}
+
 .translatebar {
   display: flex;
   justify-content: flex-end;
@@ -619,7 +644,7 @@ body.dark .route {
   }
   .nav {
     width: 100%;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 2px;
   }
   .nav button {
@@ -628,6 +653,9 @@ body.dark .route {
     padding: 5px 2px;
     font-size: 10px;
     gap: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .nav button.active {
     background: #0c5943;

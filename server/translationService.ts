@@ -344,6 +344,73 @@ Respond with strict JSON matching schema.`,
     };
   }
 
+  /**
+   * Transcribe recorded voice audio to text using Gemini Multimodal Audio
+   */
+  static async transcribeAudio(params: { audioBase64: string; mimeType?: string; languageHint?: string }): Promise<{ text: string }> {
+    const { audioBase64, mimeType = 'audio/webm', languageHint } = params;
+    if (!audioBase64) {
+      throw new Error('Audio data is required for transcription.');
+    }
+
+    const ai = getAIClient();
+    const cleanBase64 = audioBase64.replace(/^data:audio\/[a-z0-9.-]+;base64,/, '');
+
+    const audioPart = {
+      inlineData: {
+        data: cleanBase64,
+        mimeType: mimeType.split(';')[0] || 'audio/webm',
+      },
+    };
+
+    const hint = languageHint ? `The user selected '${languageHint}' as their translation language.` : '';
+    const prompt = `You are an expert multilingual audio transcriber. Listen carefully to this user voice audio and transcribe the exact words spoken into text.
+${hint}
+The user might speak Urdu (e.g. "آپ کیسے ہیں", "کیا حال ہے", "ہاؤ ار یو"), English ("How are you", "Where are you from"), Hindi, Punjabi, Arabic, or another language.
+Transcribe the speech accurately in its natural script.
+Return ONLY valid JSON:
+{
+  "text": "Transcribed speech text"
+}`;
+
+    let response: any = null;
+    let lastError: any = null;
+
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+
+    for (const model of modelsToTry) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: [prompt, audioPart],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                text: { type: Type.STRING },
+              },
+              required: ['text'],
+            },
+          },
+        });
+        if (response?.text) break;
+      } catch (err: any) {
+        lastError = err;
+        continue;
+      }
+    }
+
+    if (!response || !response.text) {
+      throw lastError || new Error('Could not transcribe audio.');
+    }
+
+    const parsed = JSON.parse(response.text);
+    return {
+      text: (parsed.text || '').trim(),
+    };
+  }
+
   static getSupportedLanguages(): LanguageOption[] {
     return SUPPORTED_LANGUAGES;
   }

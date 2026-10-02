@@ -4,6 +4,7 @@ import { Topbar } from './components/Topbar.tsx';
 import { HomeSection } from './components/HomeSection.tsx';
 import { HistorySection } from './components/HistorySection.tsx';
 import { CameraSection } from './components/CameraSection.tsx';
+import { VoiceSection } from './components/VoiceSection.tsx';
 import { SettingsSection } from './components/SettingsSection.tsx';
 import { Toast } from './components/Toast.tsx';
 import { Modals } from './components/Modals.tsx';
@@ -146,12 +147,23 @@ export default function App() {
     setHistory([]);
   };
 
+  const [loadedHistoryItem, setLoadedHistoryItem] = useState<HistoryItem | null>(null);
+
+  const handleUseHistoryItem = (item: HistoryItem) => {
+    setLoadedHistoryItem(item);
+    setActivePage('home');
+  };
+
   const handleUpdateSettings = (newSettings: Partial<AppSettings>) => {
+    handleUpdateSettingsState(newSettings);
+  };
+
+  const handleUpdateSettingsState = (newSettings: Partial<AppSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
   const handleToggleTheme = () => {
-    handleUpdateSettings({ darkMode: !settings.darkMode });
+    handleUpdateSettingsState({ darkMode: !settings.darkMode });
   };
 
   return (
@@ -162,6 +174,7 @@ export default function App() {
         <Topbar
           onToggleTheme={handleToggleTheme}
           onHelp={() => setShowAbout(true)}
+          onOpenSettings={() => setActivePage('settings')}
           onToast={showToast}
         />
 
@@ -175,6 +188,16 @@ export default function App() {
               autoDetectEnabled={settings.autoDetect}
               voiceOutputEnabled={settings.voiceOutput}
               textSize={settings.textSize}
+              loadedItem={loadedHistoryItem}
+              onClearLoadedItem={() => setLoadedHistoryItem(null)}
+            />
+          )}
+
+          {activePage === 'voice' && (
+            <VoiceSection
+              languages={languages}
+              onAddHistory={handleAddHistory}
+              onToast={showToast}
             />
           )}
 
@@ -184,6 +207,7 @@ export default function App() {
               onRemoveItem={handleRemoveHistory}
               onClearAll={handleClearHistory}
               onToast={showToast}
+              onUseItem={handleUseHistoryItem}
             />
           )}
 
@@ -203,6 +227,8 @@ export default function App() {
               onOpenAbout={() => setShowAbout(true)}
               onToast={showToast}
               backendConfigured={backendConfigured}
+              onClearHistory={handleClearHistory}
+              historyCount={history.length}
             />
           )}
         </div>
