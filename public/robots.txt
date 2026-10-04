@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://ais-pre-j7irvuz5mskdy7frzff3qh-930374265986.asia-southeast1.run.app/sitemap.xml
+Sitemap: https://polyglot-ai-assistant.ai.studio/sitemap.xml
