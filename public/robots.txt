@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://polyglot-ai-assistant.ai.studio/sitemap.xml
+Sitemap: https://nova-translate-orpin.vercel.app/sitemap.xml
