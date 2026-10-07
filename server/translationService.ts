@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import { serverTranslationCache } from './cache.ts';
 
 /**
  * Standard list of supported languages in Nova Translate
@@ -22,12 +23,12 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'fr', name: 'French', label: 'French 🇫🇷', nativeName: 'Français', direction: 'ltr' },
   { code: 'de', name: 'German', label: 'German 🇩🇪', nativeName: 'Deutsch', direction: 'ltr' },
   { code: 'es', name: 'Spanish', label: 'Spanish 🇪🇸', nativeName: 'Español', direction: 'ltr' },
+  { code: 'pt', name: 'Portuguese', label: 'Portuguese 🇵🇹', nativeName: 'Português', direction: 'ltr' },
   { code: 'tr', name: 'Turkish', label: 'Turkish 🇹🇷', nativeName: 'Türkçe', direction: 'ltr' },
   { code: 'ru', name: 'Russian', label: 'Russian 🇷🇺', nativeName: 'Русский', direction: 'ltr' },
   { code: 'fa', name: 'Persian', label: 'Persian 🇮🇷', nativeName: 'فارسی', direction: 'rtl' },
   { code: 'ko', name: 'Korean', label: 'Korean 🇰🇷', nativeName: '한국어', direction: 'ltr' },
   { code: 'it', name: 'Italian', label: 'Italian 🇮🇹', nativeName: 'Italiano', direction: 'ltr' },
-  { code: 'pt', name: 'Portuguese', label: 'Portuguese 🇵🇹', nativeName: 'Português', direction: 'ltr' },
   { code: 'bn', name: 'Bengali', label: 'Bengali 🇧🇩', nativeName: 'বাংলা', direction: 'ltr' },
   { code: 'id', name: 'Indonesian', label: 'Indonesian 🇮🇩', nativeName: 'Bahasa Indonesia', direction: 'ltr' },
   { code: 'nl', name: 'Dutch', label: 'Dutch 🇳🇱', nativeName: 'Nederlands', direction: 'ltr' },
@@ -36,7 +37,7 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 ];
 
 /**
- * Initializes GoogleGenAI client securely supporting both AQ. and AIzaSy keys
+ * Initializes GoogleGenAI client securely
  */
 function getAIClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -49,11 +50,11 @@ function getAIClient(): GoogleGenAI {
   });
 }
 
-// Ultra-fast low-latency Flash models prioritized for sub-second response times
-const FLASH_MODELS = [
+// Low-latency Gemini Flash models optimized for sub-2s responses
+const FAST_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-flash-latest',
   'gemini-flash-lite-latest',
-  'gemini-3.1-flash-lite-preview',
-  'gemini-3-flash-preview',
 ];
 
 export interface TranslationRequest {
@@ -64,13 +65,17 @@ export interface TranslationRequest {
 }
 
 export interface TranslationResponse {
+  sourceLanguage: string;
+  targetLanguage: string;
   originalText: string;
   translatedText: string;
-  sourceLanguage: string;
+  confidence: number;
+  alternatives?: string[];
+  details?: string;
   detectedSourceLanguage?: string;
-  targetLanguage: string;
   direction: 'ltr' | 'rtl';
   timestamp: string;
+  fromCache?: boolean;
 }
 
 export interface DetectLanguageResponse {
@@ -92,6 +97,9 @@ export interface OCRTranslationResponse {
   translatedText: string;
   detectedSourceLanguage: string;
   targetLanguage: string;
+  confidence?: number;
+  alternatives?: string[];
+  details?: string;
   timestamp: string;
 }
 
@@ -109,11 +117,11 @@ export interface VoiceSynthesizeResponse {
 }
 
 /**
- * Centralized Backend Translation Service powered by active Gemini Flash
+ * Centralized Backend Translation Service with Official Nova Translate System Prompt
  */
 export class TranslationService {
   /**
-   * Translates text from source language to target language.
+   * Translates text with Server-side Caching & official system instructions
    */
   static async translate(req: TranslationRequest): Promise<TranslationResponse> {
     const rawText = (req.text || '').trim();
@@ -126,6 +134,19 @@ export class TranslationService {
 
     const targetLang = (req.targetLanguage || 'English').trim();
     const sourceLang = (req.sourceLanguage || 'Auto-detect').trim();
+    const tone = req.tone || 'natural';
+
+    // 1. Check Server Cache for instant response
+    const cacheKey = `trans_v2_${sourceLang}_${targetLang}_${tone}_${rawText.toLowerCase()}`;
+    const cached = serverTranslationCache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        fromCache: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
     const isAutoDetect =
       !sourceLang ||
       sourceLang.toLowerCase().includes('auto') ||
@@ -133,41 +154,60 @@ export class TranslationService {
 
     const ai = getAIClient();
 
-    const prompt = `You are the translation engine of Nova Translate.
-Translate the following input text accurately, fluently, and naturally into ${targetLang}.
-Preserve line breaks, markdown, formatting, punctuation, and idioms.
+    const systemInstruction = `You are Nova Translate - A professional translation assistant AI.
 
-Input text:
+CORE INSTRUCTIONS:
+- Translate text accurately between languages
+- Maintain context, nuance, and meaning
+- Keep formatting, numbers, and punctuation intact
+- Provide natural, fluent, native-sounding translations
+- Tone: ${tone}
+- Always respond with valid JSON format strictly matching the schema.
+
+TRANSLATION RULES:
+1. Preserve original meaning
+2. Use natural expressions in target language
+3. Consider cultural context
+4. Maintain tone and style (${tone})
+5. Provide 1-2 realistic alternative translations for ambiguous or rich terms
+6. Always validate output accuracy (95%+ target)`;
+
+    const prompt = `Translate the following input text from ${isAutoDetect ? 'detected source language' : sourceLang} to ${targetLang}:
 """
 ${rawText}
 """`;
 
-    const systemInstruction = `You are a professional AI translator.
-Source language: ${isAutoDetect ? 'Detect automatically' : sourceLang}.
-Target language: ${targetLang}.
-Respond with a strict JSON object.`;
-
     let response: any = null;
     let lastError: any = null;
 
-    for (const model of FLASH_MODELS) {
+    for (const model of FAST_MODELS) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: prompt,
           config: {
             systemInstruction,
-            temperature: 0.2,
+            temperature: 0.1, // low temperature for fast deterministic translation
+            thinkingConfig: {
+              thinkingBudget: 0, // disable thinking overhead for sub-2s execution
+            },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
               properties: {
+                sourceLanguage: { type: Type.STRING },
+                targetLanguage: { type: Type.STRING },
+                originalText: { type: Type.STRING },
                 translatedText: { type: Type.STRING },
-                detectedSourceLanguage: { type: Type.STRING },
-                detectedLanguageCode: { type: Type.STRING },
+                confidence: { type: Type.NUMBER },
+                alternatives: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                },
+                details: { type: Type.STRING },
                 isRTL: { type: Type.BOOLEAN },
               },
-              required: ['translatedText', 'detectedSourceLanguage'],
+              required: ['sourceLanguage', 'targetLanguage', 'translatedText', 'confidence'],
             },
           },
         });
@@ -187,8 +227,13 @@ Respond with a strict JSON object.`;
       parsed = JSON.parse(response.text);
     } catch {
       parsed = {
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+        originalText: rawText,
         translatedText: response.text.trim(),
-        detectedSourceLanguage: sourceLang,
+        confidence: 0.95,
+        alternatives: [],
+        details: '',
         isRTL: /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(response.text),
       };
     }
@@ -198,19 +243,28 @@ Respond with a strict JSON object.`;
       parsed.isRTL ??
       /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalTranslatedText);
 
-    return {
+    const result: TranslationResponse = {
+      sourceLanguage: parsed.sourceLanguage || (isAutoDetect ? 'Auto-detected' : sourceLang),
+      targetLanguage: parsed.targetLanguage || targetLang,
       originalText: rawText,
       translatedText: finalTranslatedText,
-      sourceLanguage: isAutoDetect ? (parsed.detectedSourceLanguage || 'Detected') : sourceLang,
-      detectedSourceLanguage: parsed.detectedSourceLanguage,
-      targetLanguage: targetLang,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.98,
+      alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives.filter((a: any) => typeof a === 'string' && a.trim() && a !== finalTranslatedText) : [],
+      details: (parsed.details || '').trim(),
+      detectedSourceLanguage: parsed.sourceLanguage,
       direction: isTargetRTL ? 'rtl' : 'ltr',
       timestamp: new Date().toISOString(),
+      fromCache: false,
     };
+
+    // Save to Server Cache
+    serverTranslationCache.set(cacheKey, result);
+
+    return result;
   }
 
   /**
-   * Automatically detects language of input text using Flash model
+   * Fast language detection
    */
   static async detect(text: string): Promise<DetectLanguageResponse> {
     const rawText = (text || '').trim();
@@ -219,18 +273,17 @@ Respond with a strict JSON object.`;
     }
 
     const ai = getAIClient();
-    const prompt = `Identify the natural language of the following text:
-"""
-${rawText.slice(0, 1000)}
-"""`;
+    const prompt = `Identify the natural language of: "${rawText.slice(0, 300)}"`;
 
     let response: any = null;
-    for (const model of FLASH_MODELS) {
+    for (const model of FAST_MODELS) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: prompt,
           config: {
+            temperature: 0.1,
+            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -240,7 +293,7 @@ ${rawText.slice(0, 1000)}
                 confidence: { type: Type.NUMBER },
                 direction: { type: Type.STRING },
               },
-              required: ['languageName', 'languageCode', 'confidence', 'direction'],
+              required: ['languageName', 'languageCode'],
             },
           },
         });
@@ -255,13 +308,13 @@ ${rawText.slice(0, 1000)}
       text: rawText,
       detectedLanguage: parsed.languageName || 'Unknown',
       languageCode: parsed.languageCode || 'auto',
-      confidence: parsed.confidence || 0.95,
+      confidence: parsed.confidence || 0.98,
       direction: parsed.direction === 'rtl' ? 'rtl' : 'ltr',
     };
   }
 
   /**
-   * OCR & Visual Translation: Extracts text from image and translates to target language.
+   * Fast OCR & Visual Translation with Nova Prompt
    */
   static async ocrAndTranslate(req: OCRTranslationRequest): Promise<OCRTranslationResponse> {
     if (!req.imageBase64) {
@@ -288,27 +341,19 @@ ${rawText.slice(0, 1000)}
       },
     };
 
-    const textPart = {
-      text: `You are the master OCR & Document Translation engine of Nova Translate.
-Your goal is to extract every piece of text visible in this image with maximum clarity and precision, and provide a crystal-clear, fluent, and naturally formatted translation in ${targetLang}.
-
-Instructions:
-1. Extract ALL text present in the image cleanly. Preserve paragraph breaks, lists, headings, and numbers accurately.
-2. Translate the entire extracted content accurately into ${targetLang} with high readability, correct punctuation, and crystal-clear natural phrasing.
-3. If the target language is Urdu, Arabic, Persian, Pashto, or Sindhi, ensure fluent idiomatic writing and proper phrasing.
-4. If the target language is English or any other language, ensure clear paragraphs and proper capitalization.
-Respond with strict JSON matching the schema.`,
-    };
+    const textPrompt = `You are Nova Translate. Extract text from this image and provide an accurate, fluent translation in ${targetLang}. Return strict JSON.`;
 
     let response: any = null;
     let lastError: any = null;
 
-    for (const model of FLASH_MODELS) {
+    for (const model of FAST_MODELS) {
       try {
         response = await ai.models.generateContent({
           model,
-          contents: [textPart.text, imagePart],
+          contents: [textPrompt, imagePart],
           config: {
+            temperature: 0.2,
+            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -316,6 +361,8 @@ Respond with strict JSON matching the schema.`,
                 extractedText: { type: Type.STRING },
                 translatedText: { type: Type.STRING },
                 detectedSourceLanguage: { type: Type.STRING },
+                confidence: { type: Type.NUMBER },
+                details: { type: Type.STRING },
               },
               required: ['extractedText', 'translatedText', 'detectedSourceLanguage'],
             },
@@ -338,6 +385,8 @@ Respond with strict JSON matching the schema.`,
       translatedText: (parsed.translatedText || '').trim(),
       detectedSourceLanguage: parsed.detectedSourceLanguage || 'Detected',
       targetLanguage: targetLang,
+      confidence: parsed.confidence || 0.95,
+      details: parsed.details || '',
       timestamp: new Date().toISOString(),
     };
   }
@@ -354,10 +403,10 @@ Respond with strict JSON matching the schema.`,
   }
 
   /**
-   * Transcribe recorded voice audio to text using Gemini Multimodal Audio
+   * Lightning-Fast Audio Transcription (Voice to Text in ~2-3s)
    */
   static async transcribeAudio(params: { audioBase64: string; mimeType?: string; languageHint?: string }): Promise<{ text: string }> {
-    const { audioBase64, mimeType = 'audio/webm', languageHint } = params;
+    const { audioBase64, mimeType = 'audio/wav', languageHint } = params;
     if (!audioBase64) {
       throw new Error('Audio data is required for transcription.');
     }
@@ -365,7 +414,7 @@ Respond with strict JSON matching the schema.`,
     const ai = getAIClient();
 
     let cleanBase64 = audioBase64;
-    let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/webm';
+    let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/wav';
 
     if (cleanBase64.includes(';base64,')) {
       const parts = cleanBase64.split(';base64,');
@@ -380,35 +429,24 @@ Respond with strict JSON matching the schema.`,
     const audioPart = {
       inlineData: {
         data: cleanBase64.trim(),
-        mimeType: detectedMime || 'audio/webm',
+        mimeType: detectedMime || 'audio/wav',
       },
     };
 
-    const hint = languageHint ? `The user selected '${languageHint}' as their translation language.` : '';
-    const prompt = `You are an expert multilingual audio transcriber. Listen carefully to this user voice audio and transcribe the exact words spoken into text.
-${hint}
-The user might speak Urdu (e.g. "آپ کیسے ہیں", "کیا حال ہے", "ہاؤ ار یو"), English ("How are you", "Where are you from"), Hindi, Punjabi, Arabic, or another language.
-Transcribe the speech accurately in its natural script.
-Return ONLY valid JSON:
-{
-  "text": "Transcribed speech text"
-}`;
+    const hint = languageHint ? `Language hint: ${languageHint}.` : '';
+    const prompt = `Transcribe the speech in this audio accurately into its natural script. ${hint} Output strict JSON with "text".`;
 
     let response: any = null;
     let lastError: any = null;
 
-    const modelsToTry = [
-      'gemini-flash-lite-latest',
-      'gemini-3.1-flash-lite-preview',
-      'gemini-3-flash-preview',
-    ];
-
-    for (const model of modelsToTry) {
+    for (const model of FAST_MODELS) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: [prompt, audioPart],
           config: {
+            temperature: 0.1,
+            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,

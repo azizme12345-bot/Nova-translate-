@@ -1,9 +1,8 @@
 /**
- * Secure Backend API Client
- * 
- * NOTE: This frontend client ONLY communicates with our own backend server routes (/api/*).
- * It contains NO API keys, NO external AI provider URLs, and NO secrets.
+ * Secure Backend API Client with Instant Multi-Tier Caching & Nova Translate Fields
  */
+
+import { TranslationCache } from './cacheService.ts';
 
 export interface TranslationResult {
   originalText: string;
@@ -11,8 +10,12 @@ export interface TranslationResult {
   sourceLanguage: string;
   detectedSourceLanguage?: string;
   targetLanguage: string;
+  confidence?: number;
+  alternatives?: string[];
+  details?: string;
   direction: 'ltr' | 'rtl';
   timestamp: string;
+  fromCache?: boolean;
 }
 
 export interface LanguageOption {
@@ -28,6 +31,8 @@ export interface OCRResult {
   translatedText: string;
   detectedSourceLanguage: string;
   targetLanguage: string;
+  confidence?: number;
+  details?: string;
   timestamp: string;
 }
 
@@ -40,7 +45,7 @@ export interface DetectedLanguageResult {
 }
 
 /**
- * Safely parses response and handles HTTP error codes and non-JSON payloads gracefully.
+ * Safely parses response and handles HTTP error codes gracefully.
  */
 async function handleApiResponse<T = any>(res: Response): Promise<T> {
   const contentType = res.headers.get('content-type') || '';
@@ -60,45 +65,66 @@ async function handleApiResponse<T = any>(res: Response): Promise<T> {
     return json.data !== undefined ? json.data : json;
   }
 
-  // Handle non-JSON responses (e.g. HTML 413, 502, 504 error pages from proxy/gateways)
   const rawText = await res.text();
   if (res.status === 413 || rawText.includes('Request Entity Too Large') || rawText.includes('Payload Too Large')) {
-    throw new Error('The uploaded image or text exceeds the maximum allowed upload size. Please use a smaller image.');
+    throw new Error('The uploaded file or payload exceeds the allowed server limit. Please use a smaller file.');
   }
 
   if (!res.ok) {
     throw new Error(rawText.slice(0, 150) || `Server error (HTTP ${res.status})`);
   }
 
-  throw new Error(`Unexpected non-JSON response from server (HTTP ${res.status})`);
+  throw new Error(`Unexpected response from server (HTTP ${res.status})`);
 }
 
 export class ApiClient {
   /**
-   * Request text translation from our secure backend endpoint
+   * Request text translation with instant 0ms client-side cache & ultra-fast backend
    */
   static async translateText(
     text: string,
     sourceLanguage: string,
-    targetLanguage: string
+    targetLanguage: string,
+    tone: 'natural' | 'formal' | 'casual' = 'natural'
   ): Promise<TranslationResult> {
+    const cleanText = text.trim();
+    if (!cleanText) {
+      throw new Error('Please enter text to translate.');
+    }
+
+    // 1. Instant Client-Side Cache Lookup (0ms response)
+    const cached = TranslationCache.get(cleanText, sourceLanguage, targetLanguage);
+    if (cached) {
+      return {
+        ...cached,
+        fromCache: true,
+      };
+    }
+
+    // 2. Fast Backend Call
     const res = await fetch('/api/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        text,
+        text: cleanText,
         sourceLanguage,
         targetLanguage,
+        tone,
       }),
     });
 
-    return await handleApiResponse<TranslationResult>(res);
+    const result = await handleApiResponse<TranslationResult>(res);
+
+    // Save to client cache
+    TranslationCache.set(cleanText, sourceLanguage, targetLanguage, result);
+
+    return result;
   }
 
   /**
-   * Request automatic language detection from our backend
+   * Request automatic language detection from backend
    */
   static async detectLanguage(text: string): Promise<DetectedLanguageResult> {
     const res = await fetch('/api/detect', {
@@ -159,7 +185,6 @@ export class ApiClient {
       const data = await handleApiResponse<{ audioBase64?: string; fallbackToBrowserTTS: boolean }>(res);
       return data || { fallbackToBrowserTTS: true };
     } catch {
-      // Fallback seamlessly to client-side SpeechSynthesis
       return { fallbackToBrowserTTS: true };
     }
   }
@@ -180,11 +205,11 @@ export class ApiClient {
   }
 
   /**
-   * Transcribe recorded audio using backend AI
+   * Transcribe recorded audio with fast compact payload
    */
   static async transcribeAudio(
     audioBase64: string,
-    mimeType = 'audio/webm',
+    mimeType = 'audio/wav',
     languageHint?: string
   ): Promise<{ text: string }> {
     const res = await fetch('/api/speech-to-text', {

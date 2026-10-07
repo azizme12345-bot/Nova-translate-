@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivePage } from '../types.ts';
 import { BrandLogo } from './BrandLogo.tsx';
+import { Bookmark, Home, Camera, History, Settings } from 'lucide-react';
 
 interface SidebarProps {
   activePage: ActivePage;
@@ -12,7 +13,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
     <aside className="sidebar">
       <div className="brand cursor-pointer" onClick={() => onSelectPage('home')}>
         <BrandLogo size={42} />
-        <span className="font-extrabold text-lg text-white">Nova Translate</span>
+        <span className="font-extrabold text-lg text-white tracking-tight">Nova Translate</span>
       </div>
       <nav className="nav">
         <button
@@ -20,43 +21,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           onClick={() => onSelectPage('home')}
           type="button"
         >
-          <span className="icon">⌂</span>
-          Home
-        </button>
-        <button
-          className={activePage === 'voice' ? 'active' : ''}
-          onClick={() => onSelectPage('voice')}
-          type="button"
-        >
-          <span className="icon">🎤</span>
-          Voice & Audio
-        </button>
-        <button
-          className={activePage === 'history' ? 'active' : ''}
-          onClick={() => onSelectPage('history')}
-          type="button"
-        >
-          <span className="icon">◷</span>
-          History
+          <Home className="w-4 h-4 icon" />
+          <span>Home</span>
         </button>
         <button
           className={activePage === 'camera' ? 'active' : ''}
           onClick={() => onSelectPage('camera')}
           type="button"
         >
-          <span className="icon">▣</span>
-          Camera
+          <Camera className="w-4 h-4 icon" />
+          <span>Camera</span>
+        </button>
+        <button
+          className={activePage === 'saved' ? 'active' : ''}
+          onClick={() => onSelectPage('saved')}
+          type="button"
+        >
+          <Bookmark className="w-4 h-4 icon" />
+          <span>Saved</span>
+        </button>
+        <button
+          className={activePage === 'history' ? 'active' : ''}
+          onClick={() => onSelectPage('history')}
+          type="button"
+        >
+          <History className="w-4 h-4 icon" />
+          <span>History</span>
         </button>
         <button
           className={activePage === 'settings' ? 'active' : ''}
           onClick={() => onSelectPage('settings')}
           type="button"
         >
-          <span className="icon">⚙</span>
-          Settings
+          <Settings className="w-4 h-4 icon" />
+          <span>Settings</span>
         </button>
       </nav>
-      <div className="sidebottom">AI Translation · v1.0 Production</div>
+      <div className="sidebottom">Nova Translate · AI Professional</div>
     </aside>
   );
 };
