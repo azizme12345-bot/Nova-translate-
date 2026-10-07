@@ -3,8 +3,21 @@ import { TranslationService } from './translationService.ts';
 
 export const apiRouter = Router();
 
-// Helper for timeout handling (25 seconds max execution per AI call)
-function withTimeout<T>(promise: Promise<T>, timeoutMs = 25000): Promise<T> {
+// Helper to extract custom user API key from headers or body
+function getApiKeyFromReq(req: Request): string | undefined {
+  const headerKey = req.headers['x-gemini-api-key'] || req.headers['x-api-key'];
+  if (headerKey && typeof headerKey === 'string' && headerKey.trim()) {
+    return headerKey.trim();
+  }
+  const bodyKey = req.body?.apiKey;
+  if (bodyKey && typeof bodyKey === 'string' && bodyKey.trim()) {
+    return bodyKey.trim();
+  }
+  return undefined;
+}
+
+// Helper for timeout handling (30 seconds max execution per AI call)
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
@@ -17,14 +30,36 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 25000): Promise<T> {
  * Health check endpoint
  */
 apiRouter.get('/health', (req: Request, res: Response) => {
+  const customKey = getApiKeyFromReq(req);
+  const serverKeyConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
   res.json({
     status: 'ok',
     service: 'Nova Translate Secure Backend',
-    version: '1.0.0',
-    geminiConfigured: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY',
+    version: '2.0.0',
+    geminiConfigured: !!customKey || serverKeyConfigured,
+    hasCustomApiKey: !!customKey,
     uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
+});
+
+/**
+ * Validate and test a Google Gemini API Key
+ */
+apiRouter.post('/test-key', async (req: Request, res: Response) => {
+  try {
+    const customApiKey = getApiKeyFromReq(req);
+    const result = await withTimeout(TranslationService.testApiKey(customApiKey), 15000);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'API_KEY_INVALID',
+        message: err.message || 'The provided Gemini API key failed verification. Please check the key.',
+      },
+    });
+  }
 });
 
 /**
@@ -44,7 +79,8 @@ apiRouter.get('/languages', (req: Request, res: Response) => {
  */
 apiRouter.post('/translate', async (req: Request, res: Response) => {
   try {
-    const { text, sourceLanguage, targetLanguage, tone } = req.body || {};
+    const { text, sourceLanguage, targetLanguage, tone, model } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       res.status(400).json({
@@ -67,12 +103,16 @@ apiRouter.post('/translate', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.translate({
-        text,
-        sourceLanguage,
-        targetLanguage: targetLanguage || 'English',
-        tone,
-      })
+      TranslationService.translate(
+        {
+          text,
+          sourceLanguage,
+          targetLanguage: targetLanguage || 'English',
+          tone,
+          model,
+        },
+        customApiKey
+      )
     );
 
     res.json({ success: true, data: result });
@@ -93,6 +133,7 @@ apiRouter.post('/translate', async (req: Request, res: Response) => {
 apiRouter.post('/detect', async (req: Request, res: Response) => {
   try {
     const { text } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
     if (!text || typeof text !== 'string' || !text.trim()) {
       res.status(400).json({
         error: {
@@ -103,7 +144,7 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await withTimeout(TranslationService.detect(text));
+    const result = await withTimeout(TranslationService.detect(text, customApiKey));
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(500).json({
@@ -116,11 +157,13 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
 });
 
 /**
- * Camera / Image OCR + Translation endpoint
+ * Camera / Image OCR + Translation endpoint (Photos, Screenshots, Camera Snaps)
  */
 apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
   try {
     const { imageBase64, mimeType, targetLanguage } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
+
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       res.status(400).json({
         error: {
@@ -132,12 +175,15 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.ocrAndTranslate({
-        imageBase64,
-        mimeType,
-        targetLanguage: targetLanguage || 'English',
-      }),
-      35000 // slightly longer timeout for multimodal vision
+      TranslationService.ocrAndTranslate(
+        {
+          imageBase64,
+          mimeType,
+          targetLanguage: targetLanguage || 'English',
+        },
+        customApiKey
+      ),
+      35000 // multimodal vision timeout
     );
 
     res.json({ success: true, data: result });
@@ -256,6 +302,8 @@ apiRouter.get('/tts', async (req: Request, res: Response) => {
 apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
   try {
     const { audioBase64, mimeType, languageHint } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
+
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       res.status(400).json({
         error: {
@@ -267,11 +315,14 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.transcribeAudio({
-        audioBase64,
-        mimeType: mimeType || 'audio/webm',
-        languageHint,
-      }),
+      TranslationService.transcribeAudio(
+        {
+          audioBase64,
+          mimeType: mimeType || 'audio/webm',
+          languageHint,
+        },
+        customApiKey
+      ),
       25000
     );
 

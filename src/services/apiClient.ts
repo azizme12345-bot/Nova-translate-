@@ -1,5 +1,5 @@
 /**
- * Secure Backend API Client with Instant Multi-Tier Caching & Nova Translate Fields
+ * Secure Backend API Client with Instant Multi-Tier Caching & Custom Gemini API Key Management
  */
 
 import { TranslationCache } from './cacheService.ts';
@@ -44,6 +44,14 @@ export interface DetectedLanguageResult {
   direction: 'ltr' | 'rtl';
 }
 
+export interface ApiKeyTestResult {
+  valid: boolean;
+  model: string;
+  message: string;
+}
+
+const API_KEY_STORAGE_KEY = 'novaGeminiApiKey';
+
 /**
  * Safely parses response and handles HTTP error codes gracefully.
  */
@@ -58,7 +66,7 @@ async function handleApiResponse<T = any>(res: Response): Promise<T> {
       throw new Error(`Server returned an unparseable response (HTTP ${res.status}).`);
     }
 
-    if (!res.ok || !json.success) {
+    if (!res.ok || (json.success === false && json.data === undefined)) {
       throw new Error(json?.error?.message || `Request failed with HTTP status ${res.status}.`);
     }
 
@@ -79,13 +87,84 @@ async function handleApiResponse<T = any>(res: Response): Promise<T> {
 
 export class ApiClient {
   /**
+   * Get active user custom API key from localStorage
+   */
+  static getCustomApiKey(): string {
+    try {
+      return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Save user custom API key to localStorage
+   */
+  static setCustomApiKey(key: string): void {
+    try {
+      const clean = key.trim();
+      if (clean) {
+        localStorage.setItem(API_KEY_STORAGE_KEY, clean);
+      } else {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  /**
+   * Remove custom API key
+   */
+  static clearCustomApiKey(): void {
+    try {
+      localStorage.removeItem(API_KEY_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Build default headers including custom API key if present
+   */
+  private static getHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...extraHeaders,
+    };
+    const customKey = ApiClient.getCustomApiKey();
+    if (customKey) {
+      headers['x-gemini-api-key'] = customKey;
+    }
+    return headers;
+  }
+
+  /**
+   * Test a custom Gemini API Key live
+   */
+  static async testApiKey(keyToTest?: string): Promise<ApiKeyTestResult> {
+    const key = (keyToTest !== undefined ? keyToTest : ApiClient.getCustomApiKey()).trim();
+    const res = await fetch('/api/test-key', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(key ? { 'x-gemini-api-key': key } : {}),
+      },
+      body: JSON.stringify({ apiKey: key }),
+    });
+
+    return await handleApiResponse<ApiKeyTestResult>(res);
+  }
+
+  /**
    * Request text translation with instant 0ms client-side cache & ultra-fast backend
    */
   static async translateText(
     text: string,
     sourceLanguage: string,
     targetLanguage: string,
-    tone: 'natural' | 'formal' | 'casual' = 'natural'
+    tone: 'natural' | 'formal' | 'casual' = 'natural',
+    model?: string
   ): Promise<TranslationResult> {
     const cleanText = text.trim();
     if (!cleanText) {
@@ -104,14 +183,13 @@ export class ApiClient {
     // 2. Fast Backend Call
     const res = await fetch('/api/translate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: ApiClient.getHeaders(),
       body: JSON.stringify({
         text: cleanText,
         sourceLanguage,
         targetLanguage,
         tone,
+        model,
       }),
     });
 
@@ -129,9 +207,7 @@ export class ApiClient {
   static async detectLanguage(text: string): Promise<DetectedLanguageResult> {
     const res = await fetch('/api/detect', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: ApiClient.getHeaders(),
       body: JSON.stringify({ text }),
     });
 
@@ -142,7 +218,9 @@ export class ApiClient {
    * Request supported language list from backend
    */
   static async getSupportedLanguages(): Promise<LanguageOption[]> {
-    const res = await fetch('/api/languages');
+    const res = await fetch('/api/languages', {
+      headers: ApiClient.getHeaders(),
+    });
     const json = await handleApiResponse<{ languages: LanguageOption[] }>(res);
     return json.languages || [];
   }
@@ -153,17 +231,17 @@ export class ApiClient {
   static async ocrAndTranslate(
     imageBase64: string,
     targetLanguage: string,
-    mimeType = 'image/jpeg'
+    mimeType = 'image/jpeg',
+    model?: string
   ): Promise<OCRResult> {
     const res = await fetch('/api/ocr-translate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: ApiClient.getHeaders(),
       body: JSON.stringify({
         imageBase64,
         mimeType,
         targetLanguage,
+        model,
       }),
     });
 
@@ -177,9 +255,7 @@ export class ApiClient {
     try {
       const res = await fetch('/api/voice-synthesize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: ApiClient.getHeaders(),
         body: JSON.stringify({ text, language }),
       });
       const data = await handleApiResponse<{ audioBase64?: string; fallbackToBrowserTTS: boolean }>(res);
@@ -192,9 +268,11 @@ export class ApiClient {
   /**
    * Check backend health and configuration
    */
-  static async checkHealth(): Promise<{ status: string; geminiConfigured: boolean }> {
+  static async checkHealth(): Promise<{ status: string; geminiConfigured: boolean; hasCustomApiKey?: boolean }> {
     try {
-      const res = await fetch('/api/health');
+      const res = await fetch('/api/health', {
+        headers: ApiClient.getHeaders(),
+      });
       if (res.ok) {
         return await res.json();
       }
@@ -210,17 +288,17 @@ export class ApiClient {
   static async transcribeAudio(
     audioBase64: string,
     mimeType = 'audio/wav',
-    languageHint?: string
+    languageHint?: string,
+    model?: string
   ): Promise<{ text: string }> {
     const res = await fetch('/api/speech-to-text', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: ApiClient.getHeaders(),
       body: JSON.stringify({
         audioBase64,
         mimeType,
         languageHint,
+        model,
       }),
     });
 

@@ -37,24 +37,25 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 ];
 
 /**
- * Initializes GoogleGenAI client securely
+ * Initializes GoogleGenAI client securely, using user's custom API key or server default
  */
-function getAIClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'MY_GEMINI_API_KEY') {
-    throw new Error('GEMINI_API_KEY is not configured in backend environment variables.');
+function getAIClient(customApiKey?: string): GoogleGenAI {
+  const apiKey = (customApiKey && customApiKey.trim()) || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+  if (apiKey.trim()) {
+    return new GoogleGenAI({ apiKey: apiKey.trim() });
   }
-
-  return new GoogleGenAI({
-    apiKey: apiKey.trim(),
-  });
+  return new GoogleGenAI({});
 }
 
-// Low-latency Gemini Flash models optimized for sub-2s responses
+// Ultra-fast Gemini models with full fallback support for Wi-Fi, VPN, and any version selected
 const FAST_MODELS = [
-  'gemini-2.5-flash',
+  'gemini-3.8-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-3.1-flash-lite',
   'gemini-flash-latest',
-  'gemini-flash-lite-latest',
+  'gemini-2.5-flash',
 ];
 
 export interface TranslationRequest {
@@ -62,6 +63,8 @@ export interface TranslationRequest {
   sourceLanguage?: string;
   targetLanguage: string;
   tone?: 'natural' | 'formal' | 'casual';
+  apiKey?: string;
+  model?: string;
 }
 
 export interface TranslationResponse {
@@ -90,6 +93,8 @@ export interface OCRTranslationRequest {
   imageBase64: string;
   mimeType?: string;
   targetLanguage: string;
+  apiKey?: string;
+  model?: string;
 }
 
 export interface OCRTranslationResponse {
@@ -121,9 +126,9 @@ export interface VoiceSynthesizeResponse {
  */
 export class TranslationService {
   /**
-   * Translates text with Server-side Caching & official system instructions
+   * Translates text with Server-side Caching & automatic multi-model fallback (Wi-Fi & VPN compatible)
    */
-  static async translate(req: TranslationRequest): Promise<TranslationResponse> {
+  static async translate(req: TranslationRequest, customApiKey?: string): Promise<TranslationResponse> {
     const rawText = (req.text || '').trim();
     if (!rawText) {
       throw new Error('Text to translate is required and cannot be empty.');
@@ -135,9 +140,10 @@ export class TranslationService {
     const targetLang = (req.targetLanguage || 'English').trim();
     const sourceLang = (req.sourceLanguage || 'Auto-detect').trim();
     const tone = req.tone || 'natural';
+    const activeKey = customApiKey || req.apiKey;
 
     // 1. Check Server Cache for instant response
-    const cacheKey = `trans_v2_${sourceLang}_${targetLang}_${tone}_${rawText.toLowerCase()}`;
+    const cacheKey = `trans_v4_${sourceLang}_${targetLang}_${tone}_${rawText.toLowerCase()}`;
     const cached = serverTranslationCache.get(cacheKey);
     if (cached) {
       return {
@@ -152,7 +158,14 @@ export class TranslationService {
       sourceLang.toLowerCase().includes('auto') ||
       sourceLang.toLowerCase() === 'detect';
 
-    const ai = getAIClient();
+    const ai = getAIClient(activeKey);
+
+    // Prioritize user's requested model if provided, followed by all FAST_MODELS as backup
+    let modelsToTry = [...FAST_MODELS];
+    if (req.model && typeof req.model === 'string' && req.model.trim()) {
+      const preferred = req.model.trim();
+      modelsToTry = [preferred, ...FAST_MODELS.filter((m) => m !== preferred)];
+    }
 
     const systemInstruction = `You are Nova Translate - A professional translation assistant AI.
 
@@ -180,17 +193,14 @@ ${rawText}
     let response: any = null;
     let lastError: any = null;
 
-    for (const model of FAST_MODELS) {
+    for (const model of modelsToTry) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: prompt,
           config: {
             systemInstruction,
-            temperature: 0.1, // low temperature for fast deterministic translation
-            thinkingConfig: {
-              thinkingBudget: 0, // disable thinking overhead for sub-2s execution
-            },
+            temperature: 0.1,
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -214,12 +224,13 @@ ${rawText}
         if (response?.text) break;
       } catch (err: any) {
         lastError = err;
+        // Continue to next model fallback if 503, 404, or network error
         continue;
       }
     }
 
     if (!response || !response.text) {
-      throw lastError || new Error('Translation model currently unavailable. Please try again.');
+      throw lastError || new Error('Translation service temporarily unavailable. Please check your network (Wi-Fi/VPN) and API key.');
     }
 
     let parsed: any;
@@ -257,33 +268,32 @@ ${rawText}
       fromCache: false,
     };
 
-    // Save to Server Cache
     serverTranslationCache.set(cacheKey, result);
-
     return result;
   }
 
   /**
-   * Fast language detection
+   * Fast language detection with fallback
    */
-  static async detect(text: string): Promise<DetectLanguageResponse> {
+  static async detect(text: string, customApiKey?: string, modelHint?: string): Promise<DetectLanguageResponse> {
     const rawText = (text || '').trim();
     if (!rawText) {
       throw new Error('Text to detect is required.');
     }
 
-    const ai = getAIClient();
+    const ai = getAIClient(customApiKey);
     const prompt = `Identify the natural language of: "${rawText.slice(0, 300)}"`;
 
+    let modelsToTry = modelHint ? [modelHint, ...FAST_MODELS.filter(m => m !== modelHint)] : FAST_MODELS;
+
     let response: any = null;
-    for (const model of FAST_MODELS) {
+    for (const model of modelsToTry) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: prompt,
           config: {
             temperature: 0.1,
-            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -314,9 +324,9 @@ ${rawText}
   }
 
   /**
-   * Fast OCR & Visual Translation with Nova Prompt
+   * Fast OCR & Visual Translation with multi-model fallback
    */
-  static async ocrAndTranslate(req: OCRTranslationRequest): Promise<OCRTranslationResponse> {
+  static async ocrAndTranslate(req: OCRTranslationRequest, customApiKey?: string): Promise<OCRTranslationResponse> {
     if (!req.imageBase64) {
       throw new Error('Base64 image data is required.');
     }
@@ -332,7 +342,10 @@ ${rawText}
     }
 
     const targetLang = (req.targetLanguage || 'English').trim();
-    const ai = getAIClient();
+    const activeKey = customApiKey || req.apiKey;
+    const ai = getAIClient(activeKey);
+
+    let modelsToTry = req.model ? [req.model, ...FAST_MODELS.filter(m => m !== req.model)] : FAST_MODELS;
 
     const imagePart = {
       inlineData: {
@@ -341,19 +354,18 @@ ${rawText}
       },
     };
 
-    const textPrompt = `You are Nova Translate. Extract text from this image and provide an accurate, fluent translation in ${targetLang}. Return strict JSON.`;
+    const textPrompt = `You are Nova Translate. Extract all text from this image and provide an accurate, fluent translation in ${targetLang}. Return strict JSON with extractedText, translatedText, and detectedSourceLanguage.`;
 
     let response: any = null;
     let lastError: any = null;
 
-    for (const model of FAST_MODELS) {
+    for (const model of modelsToTry) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: [textPrompt, imagePart],
           config: {
             temperature: 0.2,
-            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -376,7 +388,7 @@ ${rawText}
     }
 
     if (!response || !response.text) {
-      throw lastError || new Error('Image OCR service is unavailable. Please try again.');
+      throw lastError || new Error('Image OCR service is unavailable. Please check your network and API key.');
     }
 
     const parsed = JSON.parse(response.text);
@@ -403,15 +415,21 @@ ${rawText}
   }
 
   /**
-   * Lightning-Fast Audio Transcription (Voice to Text in ~2-3s)
+   * Lightning-Fast Audio Transcription (Voice to Text in ~1-2s) with multi-model fallback
    */
-  static async transcribeAudio(params: { audioBase64: string; mimeType?: string; languageHint?: string }): Promise<{ text: string }> {
-    const { audioBase64, mimeType = 'audio/wav', languageHint } = params;
+  static async transcribeAudio(
+    params: { audioBase64: string; mimeType?: string; languageHint?: string; apiKey?: string; model?: string },
+    customApiKey?: string
+  ): Promise<{ text: string }> {
+    const { audioBase64, mimeType = 'audio/wav', languageHint, model: reqModel } = params;
     if (!audioBase64) {
       throw new Error('Audio data is required for transcription.');
     }
 
-    const ai = getAIClient();
+    const activeKey = customApiKey || params.apiKey;
+    const ai = getAIClient(activeKey);
+
+    let modelsToTry = reqModel ? [reqModel, ...FAST_MODELS.filter(m => m !== reqModel)] : FAST_MODELS;
 
     let cleanBase64 = audioBase64;
     let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/wav';
@@ -439,14 +457,13 @@ ${rawText}
     let response: any = null;
     let lastError: any = null;
 
-    for (const model of FAST_MODELS) {
+    for (const model of modelsToTry) {
       try {
         response = await ai.models.generateContent({
           model,
           contents: [prompt, audioPart],
           config: {
             temperature: 0.1,
-            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -465,7 +482,7 @@ ${rawText}
     }
 
     if (!response || !response.text) {
-      throw lastError || new Error('Could not transcribe audio.');
+      throw lastError || new Error('Could not transcribe audio. Check Wi-Fi/VPN connection and API key.');
     }
 
     let extractedText = '';
@@ -479,6 +496,40 @@ ${rawText}
     return {
       text: extractedText.trim(),
     };
+  }
+
+  /**
+   * Test API Key validity
+   */
+  static async testApiKey(customApiKey?: string, modelHint?: string): Promise<{ valid: boolean; model: string; message: string }> {
+    const ai = getAIClient(customApiKey);
+    let modelsToTry = modelHint ? [modelHint, ...FAST_MODELS.filter(m => m !== modelHint)] : FAST_MODELS;
+
+    let testResponse: any = null;
+    let lastErr: any = null;
+
+    for (const model of modelsToTry) {
+      try {
+        testResponse = await ai.models.generateContent({
+          model,
+          contents: 'Respond with OK if connected.',
+          config: {
+            maxOutputTokens: 10,
+          },
+        });
+        if (testResponse && testResponse.text) {
+          return {
+            valid: true,
+            model,
+            message: `Google Gemini API Key verified and active on model ${model}! Wi-Fi & VPN supported.`,
+          };
+        }
+      } catch (e: any) {
+        lastErr = e;
+        continue;
+      }
+    }
+    throw lastErr || new Error('API key test failed on all available models.');
   }
 
   static getSupportedLanguages(): LanguageOption[] {

@@ -28,4 +28,5 @@ export interface AppSettings {
   autoDetect: boolean;
   voiceOutput: boolean;
   textSize: 'small' | 'medium' | 'large';
+  selectedModel?: string;
 }
