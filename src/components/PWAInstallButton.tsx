@@ -32,10 +32,11 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onToast }) =
         className="mini"
         onClick={handleInstallClick}
         title="Install Nova Translate App"
-        style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}
+        style={{ color: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'rgba(2, 132, 199, 0.08)' }}
         type="button"
       >
-        <span>⬇</span> Install App
+        <span style={{ fontSize: '14px', fontWeight: 900, color: '#1E3A8A', background: 'linear-gradient(135deg, #1E3A8A, #06B6D4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>N</span>
+        <span>Install App</span>
       </button>
 
       {showIOSModal && (
