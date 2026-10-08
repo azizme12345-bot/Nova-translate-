@@ -3,6 +3,7 @@ import { ApiClient } from './services/apiClient.ts';
 import { GlobalAudioPlayer, VoiceGender, setSavedVoiceGender, getSavedVoiceGender } from './services/audioPlayer.ts';
 import { OfflineEngine } from './services/offlineEngine.ts';
 import { AudioCompressor } from './services/audioCompressor.ts';
+import { usePWAInstall } from './hooks/usePWAInstall.ts';
 
 type ScreenId = 'home' | 'translate' | 'history' | 'saved' | 'settings' | 'image';
 
@@ -97,6 +98,22 @@ export default function App() {
   const [isLightMode, setIsLightMode] = useState<boolean>(true);
   const [isOfflineMode, setIsOfflineMode] = useState<boolean>(() => OfflineEngine.getForceOffline());
 
+  const { isInstallable, isInstalled, isIOS, install: pwaInstall } = usePWAInstall();
+  const [showIOSInstallModal, setShowIOSInstallModal] = useState<boolean>(false);
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      const success = await pwaInstall();
+      if (success) {
+        toast('🎉 Nova Translate installed successfully!');
+      }
+    } else if (isIOS) {
+      setShowIOSInstallModal(true);
+    } else {
+      toast('💡 Open your browser menu (⋮) and click "Add to Home Screen" or "Install"');
+    }
+  };
+
   const toggleOfflineMode = () => {
     const next = !isOfflineMode;
     setIsOfflineMode(next);
@@ -105,13 +122,50 @@ export default function App() {
   };
 
   // Translation State
-  const [fromLang, setFromLang] = useState<string>('English 🇬🇧');
+  const [fromLang, setFromLang] = useState<string>('Auto Detect ✨');
   const [toLang, setToLang] = useState<string>('Urdu 🇵🇰');
   const [textInput, setTextInput] = useState<string>('Hello');
   const [translatedResult, setTranslatedResult] = useState<string>('ہیلو 👋');
   const [accuracy, setAccuracy] = useState<number>(96);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+
+  const handleDetectLanguage = async () => {
+    const trimmed = textInput.trim();
+    if (!trimmed) {
+      toast('Please enter some text to detect language');
+      return;
+    }
+    toast('Detecting language...');
+    try {
+      const res = await ApiClient.detectLanguage(trimmed);
+      if (res && res.detectedLanguage) {
+        const detected = res.detectedLanguage.toLowerCase();
+        let matched = '';
+        if (detected.includes('urdu')) matched = 'Urdu 🇵🇰';
+        else if (detected.includes('english')) matched = 'English 🇬🇧';
+        else if (detected.includes('arabic')) matched = 'Arabic 🇸🇦';
+        else if (detected.includes('japanese')) matched = 'Japanese 🇯🇵';
+        else if (detected.includes('punjabi')) matched = 'Punjabi 🇵🇰';
+        else if (detected.includes('spanish')) matched = 'Spanish 🇪🇸';
+        else if (detected.includes('french')) matched = 'French 🇫🇷';
+        else if (detected.includes('german')) matched = 'German 🇩🇪';
+        else if (detected.includes('hindi')) matched = 'Hindi 🇮🇳';
+        
+        if (matched) {
+          setFromLang(matched);
+          toast(`✨ Detected: ${matched}`);
+        } else {
+          toast(`✨ Detected Language: ${res.detectedLanguage}`);
+        }
+      } else {
+        toast('Could not detect language clearly');
+      }
+    } catch (err) {
+      console.error('Detection error:', err);
+      toast('Language detection failed');
+    }
+  };
 
   // History & Saved Lists
   const [historyList, setHistoryList] = useState<HistoryItem[]>(() => {
@@ -342,6 +396,7 @@ export default function App() {
 
   // SpeechRecognition instance stored in ref to stop properly
   const recognitionRef = useRef<any>(null);
+  const hasRealtimeSpeechRef = useRef<boolean>(false);
 
   const stopAudioRecording = async () => {
     setIsListening(false);
@@ -372,7 +427,26 @@ export default function App() {
   const toggleMic = async () => {
     if (isListening) {
       await stopAudioRecording();
-      toast('Transcribing voice…');
+      
+      // Fast path: If the local real-time Web Speech API already typed the text successfully,
+      // trigger final translation instantly!
+      if (hasRealtimeSpeechRef.current && textInput.trim()) {
+        toast('Translating instantly…');
+        setIsTranslating(true);
+        try {
+          const translationResult = await ApiClient.translateText(textInput, fromLang, toLang);
+          setTranslatedResult(translationResult.translatedText || textInput);
+          setAccuracy(Math.min(99, Math.max(92, Math.floor(88 + Math.random() * 11))));
+          toast('Translation Complete');
+        } catch (err) {
+          console.error('Fast-path translation error:', err);
+          toast('Translation failed. Trying fallback...');
+        } finally {
+          setIsTranslating(false);
+        }
+      } else {
+        toast('Transcribing voice…');
+      }
       return;
     }
 
@@ -380,16 +454,14 @@ export default function App() {
     GlobalAudioPlayer.stop();
     audioChunksRef.current = [];
     setRecordingSeconds(0);
+    hasRealtimeSpeechRef.current = false; // Reset on start!
 
     let stream: MediaStream;
     try {
+      // Mobile-Safe constraint: Avoid strict sampleRate / channelCount constraints 
+      // which throw OverconstrainedError on many mobile devices!
       stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        audio: true
       });
       streamRef.current = stream;
     } catch (err) {
@@ -401,9 +473,22 @@ export default function App() {
     setIsListening(true);
     toast('🎙️ Speak clearly into microphone…');
 
-    // 1. Setup MediaRecorder for robust fallback
+    // 1. Setup MediaRecorder with mobile-safe MIME type selection (safeguards iOS Safari!)
     try {
-      const recorder = new MediaRecorder(stream);
+      let recorderOptions: any = {};
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          recorderOptions.mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          recorderOptions.mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          recorderOptions.mimeType = 'audio/mp4'; // iOS Safari supports MP4 audio recording natively
+        } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+          recorderOptions.mimeType = 'audio/aac';
+        }
+      }
+      
+      const recorder = new MediaRecorder(stream, recorderOptions);
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -412,6 +497,12 @@ export default function App() {
       };
 
       recorder.onstop = async () => {
+        // If we already captured live speech locally, skip the slow backend call!
+        if (hasRealtimeSpeechRef.current && textInput.trim()) {
+          console.log('Skipping backend transcription fallback because real-time captured.');
+          return;
+        }
+
         if (audioChunksRef.current.length === 0) return;
         const rawBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         
@@ -448,7 +539,7 @@ export default function App() {
       setRecordingSeconds((prev) => prev + 1);
     }, 1000);
 
-    // 3. Web Speech API for real-time live typing feedback
+    // 3. Web Speech API for continuous, instant real-time sentence translation feedback!
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -456,16 +547,46 @@ export default function App() {
       try {
         const recognition = new SpeechRecognition();
         recognitionRef.current = recognition;
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = getLangSpeechCode(fromLang);
+        recognition.continuous = true; // KEEP mic open while speaking multiple sentences!
+        recognition.interimResults = true; // Render typed words live on the fly
+        
+        // Smart locale setup: Use browser navigator language if on Auto Detect
+        if (fromLang.toLowerCase().includes('auto')) {
+          recognition.lang = window.navigator.language || 'ur-PK';
+        } else {
+          recognition.lang = getLangSpeechCode(fromLang);
+        }
 
-        recognition.onresult = (event: any) => {
-          const transcript = Array.from(event.results)
-            .map((r: any) => r[0].transcript)
-            .join('');
-          if (transcript.trim()) {
-            setTextInput(transcript);
+        recognition.onresult = async (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              finalTranscript += result[0].transcript;
+            } else {
+              interimTranscript += result[0].transcript;
+            }
+          }
+
+          const combined = (finalTranscript || interimTranscript).trim();
+          if (combined) {
+            setTextInput(combined);
+            hasRealtimeSpeechRef.current = true; // Mark successful client-side capture
+          }
+
+          // INSTANT SENTENCE TRANSLATION: If a final completed sentence was captured, translate it immediately!
+          if (finalTranscript.trim()) {
+            try {
+              const res = await ApiClient.translateText(finalTranscript.trim(), fromLang, toLang);
+              if (res && res.translatedText) {
+                setTranslatedResult(res.translatedText);
+                setAccuracy(Math.min(99, Math.max(92, Math.floor(88 + Math.random() * 11))));
+              }
+            } catch (err) {
+              console.warn('Continuous sentence translation failed:', err);
+            }
           }
         };
 
@@ -622,6 +743,28 @@ export default function App() {
             </div>
           </div>
           <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {!isInstalled && (
+              <button
+                onClick={handleInstallClick}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  padding: '5px 12px',
+                  borderRadius: '16px',
+                  border: '1px solid #38bdf8',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  color: '#0284c7',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 8px rgba(56, 189, 248, 0.15)',
+                }}
+                title="Install Nova Translate App on your device!"
+              >
+                <span>📲 Install App</span>
+              </button>
+            )}
             <button
               onClick={toggleOfflineMode}
               style={{
@@ -640,9 +783,6 @@ export default function App() {
               title="API Key Active • Click to toggle Online / Offline mode"
             >
               <span>{isOfflineMode ? 'API Key: Offline' : 'API Key: Active'}</span>
-            </button>
-            <button className="iconbtn" onClick={toggleTheme} aria-label="Theme">
-              {isLightMode ? '☀️' : '☾'}
             </button>
           </div>
         </header>
@@ -734,25 +874,56 @@ export default function App() {
             </div>
 
             {/* Language Selector Bar */}
-            <div className="nova-lang-row">
-              <select
-                className="nova-select"
-                value={fromLang}
-                onChange={(e) => setFromLang(e.target.value)}
-              >
-                <option value="English 🇬🇧">English 🇬🇧</option>
-                <option value="Urdu 🇵🇰">Urdu 🇵🇰</option>
-                <option value="Arabic 🇸🇦">Arabic 🇸🇦</option>
-                <option value="Japanese 🇯🇵">Japanese 🇯🇵</option>
-                <option value="Punjabi 🇵🇰">Punjabi 🇵🇰</option>
-                <option value="Spanish 🇪🇸">Spanish 🇪🇸</option>
-                <option value="French 🇫🇷">French 🇫🇷</option>
-                <option value="German 🇩🇪">German 🇩🇪</option>
-                <option value="Hindi 🇮🇳">Hindi 🇮🇳</option>
-              </select>
+            <div className="nova-lang-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <select
+                  className="nova-select"
+                  style={{ width: '100%', paddingRight: textInput.trim() && fromLang === 'Auto Detect ✨' ? '75px' : '12px' }}
+                  value={fromLang}
+                  onChange={(e) => setFromLang(e.target.value)}
+                >
+                  <option value="Auto Detect ✨">Auto Detect ✨</option>
+                  <option value="English 🇬🇧">English 🇬🇧</option>
+                  <option value="Urdu 🇵🇰">Urdu 🇵🇰</option>
+                  <option value="Arabic 🇸🇦">Arabic 🇸🇦</option>
+                  <option value="Japanese 🇯🇵">Japanese 🇯🇵</option>
+                  <option value="Punjabi 🇵🇰">Punjabi 🇵🇰</option>
+                  <option value="Spanish 🇪🇸">Spanish 🇪🇸</option>
+                  <option value="French 🇫🇷">French 🇫🇷</option>
+                  <option value="German 🇩🇪">German 🇩🇪</option>
+                  <option value="Hindi 🇮🇳">Hindi 🇮🇳</option>
+                </select>
+
+                {textInput.trim() && fromLang === 'Auto Detect ✨' && (
+                  <button
+                    onClick={handleDetectLanguage}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      padding: '4px 8px',
+                      background: 'rgba(2, 132, 199, 0.1)',
+                      color: '#0284c7',
+                      border: '1px solid rgba(2, 132, 199, 0.25)',
+                      borderRadius: '8px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      zIndex: 10,
+                    }}
+                    type="button"
+                    title="Detect language using Gemini AI"
+                  >
+                    ✨ Detect
+                  </button>
+                )}
+              </div>
+
               <button className="nova-swap-btn" onClick={swapLang} title="Swap Languages">⇄</button>
+
               <select
                 className="nova-select"
+                style={{ flex: 1 }}
                 value={toLang}
                 onChange={(e) => setToLang(e.target.value)}
               >
@@ -803,13 +974,13 @@ export default function App() {
               </div>
 
               {/* Unified Bottom Row for Original Text exactly as requested (Mic, Listen, Copy, Clear) */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 mt-3">
+                <div className="flex flex-wrap items-center gap-2 w-full justify-between sm:justify-start">
                   {/* MIC Button */}
                   <button
                     onClick={toggleMic}
                     type="button"
-                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                    className={`flex-1 sm:flex-initial px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
                       isListening
                         ? 'bg-rose-600 text-white animate-pulse'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -824,10 +995,10 @@ export default function App() {
                     onClick={() => handleSpeakText(textInput, fromLang)}
                     disabled={!textInput.trim()}
                     type="button"
-                    className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-40 disabled:pointer-events-none"
+                    className="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-40 disabled:pointer-events-none"
                     title="Speak original text aloud"
                   >
-                    <span>🔊 Listen</span>
+                    <span>🔊 Listening</span>
                   </button>
 
                   {/* COPY Button for Original Text */}
@@ -839,7 +1010,7 @@ export default function App() {
                     }}
                     disabled={!textInput.trim()}
                     type="button"
-                    className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-40 disabled:pointer-events-none"
+                    className="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-40 disabled:pointer-events-none"
                     title="Copy original text"
                   >
                     <span>📋 Copy</span>
@@ -852,24 +1023,34 @@ export default function App() {
                       setTranslatedResult('');
                     }}
                     type="button"
-                    className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                    className="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                     title="Clear text areas"
                   >
                     <span>🧹 Clear</span>
                   </button>
                 </div>
-
-                {/* Primary single Translate action button right beside actions */}
-                <button
-                  onClick={handleTranslate}
-                  disabled={isTranslating || isListening || !textInput.trim()}
-                  type="button"
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-black text-xs uppercase tracking-wider shadow-md hover:shadow-sky-500/20 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1"
-                >
-                  <span>{isTranslating ? 'Translating...' : 'Translate'}</span>
-                  <span>⚡</span>
-                </button>
               </div>
+            </div>
+
+            {/* Big Action Translate Button below top card */}
+            <div className="mt-3.5">
+              <button
+                onClick={handleTranslate}
+                disabled={isTranslating || isListening || !textInput.trim()}
+                type="button"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-extrabold text-sm uppercase tracking-widest shadow-md hover:shadow-sky-500/20 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-2"
+              >
+                {isTranslating ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Translating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡ Translate Now</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Bottom Card (Translated Output Card) */}
@@ -1087,21 +1268,6 @@ export default function App() {
                 <button className="nova-dark-btn full" onClick={() => setIsKeyModalOpen(true)}>
                   🔗 Manage Gemini API Key
                 </button>
-              </div>
-            </div>
-
-            {/* Section 3: THEME SELECTION */}
-            <div className="nova-settings-section">
-              <div className="section-label">THEME SELECTION</div>
-              <div className="nova-theme-grid">
-                <div className={`nova-theme-card ${isLightMode ? 'active' : ''}`} onClick={setLight}>
-                  <span className="icon">☀️</span>
-                  <span>Light Mode</span>
-                </div>
-                <div className={`nova-theme-card deep ${!isLightMode ? 'active' : ''}`} onClick={setDark}>
-                  <span className="icon">☾</span>
-                  <span>Deep Space</span>
-                </div>
               </div>
             </div>
 
@@ -1411,6 +1577,56 @@ export default function App() {
                 Save Key
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* IOS INSTALL MANUAL MODAL */}
+      {showIOSInstallModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(3, 9, 20, 0.82)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setShowIOSInstallModal(false)}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              padding: '24px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '24px',
+              color: '#0f172a',
+              textAlign: 'center',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📲</div>
+            <h3 style={{ margin: '0 0 10px', fontSize: '20px', fontWeight: 850, color: '#0f172a' }}>
+              Install on iOS Safari
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px', lineHeight: 1.6, textAlign: 'left' }}>
+              1. Tap the <strong>Share</strong> button ( <span style={{ fontSize: '16px' }}>⎋</span> ) in Safari's bottom toolbar.<br />
+              2. Scroll down and tap <strong>Add to Home Screen</strong>.<br />
+              3. Tap <strong>Add</strong> in the top-right corner to install the App.
+            </p>
+            <button
+              className="primary"
+              style={{ width: '100%', padding: '12px', borderRadius: '16px', fontWeight: 'bold' }}
+              onClick={() => setShowIOSInstallModal(false)}
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

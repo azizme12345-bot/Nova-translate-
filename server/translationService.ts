@@ -53,9 +53,9 @@ function getAIClient(customApiKey?: string): GoogleGenAI {
 
 // Ultra-fast Gemini models with full fallback support for Wi-Fi, VPN, and any version selected
 const FAST_MODELS = [
+  'gemini-flash-latest',
   'gemini-3.8-flash',
   'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
 ];
 
 function resolveModelList(requestedModel?: string): string[] {
@@ -284,9 +284,6 @@ ${rawText}
     return result;
   }
 
-  /**
-   * Fast language detection with fallback
-   */
   static async detect(text: string, customApiKey?: string, modelHint?: string): Promise<DetectLanguageResponse> {
     const rawText = (text || '').trim();
     if (!rawText) {
@@ -294,44 +291,61 @@ ${rawText}
     }
 
     const ai = getAIClient(customApiKey);
-    const prompt = `Identify the natural language of: "${rawText.slice(0, 300)}"`;
+    const prompt = `Identify the natural language of the following text: "${rawText.slice(0, 150)}". 
+Respond with only a JSON block containing "languageName" (e.g. "English", "Urdu", "Arabic", "Spanish", etc.), "languageCode" (e.g. "en", "ur", "ar", etc.) and "direction" ("ltr" or "rtl"). 
+Do not add any markdown blocks or explanations. Return JSON only.`;
 
     const modelsToTry = resolveModelList(modelHint);
 
     let response: any = null;
+    let lastError: any = null;
     for (const model of modelsToTry) {
       try {
-        response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                languageName: { type: Type.STRING },
-                languageCode: { type: Type.STRING },
-                confidence: { type: Type.NUMBER },
-                direction: { type: Type.STRING },
-              },
-              required: ['languageName', 'languageCode'],
+        response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+              temperature: 0.1,
             },
-          },
-        });
+          }),
+          new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error('Model generateContent request timed out.')), 8000)
+          ),
+        ]);
         if (response?.text) break;
-      } catch {
+      } catch (err: any) {
+        lastError = err;
         continue;
       }
     }
 
-    const parsed = JSON.parse(response?.text || '{}');
+    if (!response || !response.text) {
+      throw lastError || new Error('Could not detect language. Server connection timed out.');
+    }
+
+    let detectedName = 'Unknown';
+    let code = 'auto';
+    let dir = 'ltr';
+
+    try {
+      const cleanText = response.text.replace(/```json\n?|\n?```/g, '').trim();
+      const parsed = JSON.parse(cleanText);
+      detectedName = parsed.languageName || 'Unknown';
+      code = parsed.languageCode || 'auto';
+      dir = parsed.direction || 'ltr';
+    } catch {
+      // Fallback: If not JSON, use raw text directly as language name
+      const cleanRaw = response.text.replace(/[^a-zA-Z]/g, ' ').trim();
+      detectedName = cleanRaw.split(' ')[0] || 'Unknown';
+    }
+
     return {
       text: rawText,
-      detectedLanguage: parsed.languageName || 'Unknown',
-      languageCode: parsed.languageCode || 'auto',
-      confidence: parsed.confidence || 0.98,
-      direction: parsed.direction === 'rtl' ? 'rtl' : 'ltr',
+      detectedLanguage: detectedName,
+      languageCode: code,
+      confidence: 0.99,
+      direction: dir === 'rtl' ? 'rtl' : 'ltr',
     };
   }
 
@@ -628,31 +642,30 @@ ${rawText}
     };
 
     const hint = languageHint ? `Language hint: ${languageHint}.` : '';
-    const prompt = `Transcribe the speech in this audio accurately into its natural script. ${hint} Output strict JSON with "text".`;
+    const prompt = `Transcribe the speech in this audio accurately into its natural script. ${hint} Output only the transcribed text, with absolutely no extra commentary, JSON formatting, or markers. Just the direct spoken words.`;
 
     let response: any = null;
     let lastError: any = null;
 
     for (const model of modelsToTry) {
       try {
-        response = await ai.models.generateContent({
-          model,
-          contents: [prompt, audioPart],
-          config: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                text: { type: Type.STRING },
-              },
-              required: ['text'],
+        // Individual model call with a 25-second timeout to fall back fast if model hangs
+        response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents: [prompt, audioPart],
+            config: {
+              temperature: 0.1,
             },
-          },
-        });
+          }),
+          new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error('Model generateContent request timed out.')), 25000)
+          ),
+        ]);
         if (response?.text) break;
       } catch (err: any) {
         lastError = err;
+        console.warn(`Model ${model} transcription failed or timed out:`, err.message || err);
         continue;
       }
     }

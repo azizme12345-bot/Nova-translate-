@@ -370,7 +370,7 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
         },
         customApiKey
       ),
-      25000
+      40000
     );
 
     res.json({ success: true, data: result });
