@@ -13,7 +13,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
     <aside className="sidebar">
       <div className="brand cursor-pointer" onClick={() => onSelectPage('home')}>
         <BrandLogo size={42} />
-        <span className="font-extrabold text-lg text-white tracking-tight">Nova Translate</span>
+        <span className="font-extrabold text-lg text-white tracking-tight">Nova Translator</span>
       </div>
       <nav className="nav">
         <button
@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           <span>Settings</span>
         </button>
       </nav>
-      <div className="sidebottom">Nova Translate · AI Professional</div>
+      <div className="sidebottom">Nova Translator · Pro</div>
     </aside>
   );
 };

@@ -1,84 +1,162 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface NovaLogoProps {
   size?: number;
   className?: string;
 }
 
-export const NovaLogo: React.FC<NovaLogoProps> = ({ size = 48, className = '' }) => {
+/**
+ * Exact Globe + Geometric Network Nodes + Bold Center "N" Logo
+ * Matches the uploaded reference image (Navy #1E3A8A to Cyan #06B6D4 gradient)
+ */
+export const NovaLogo: React.FC<NovaLogoProps> = ({ size = 52, className = '' }) => {
+  const uid = useId().replace(/:/g, '');
+  const globeGradId = `globeGrad_${uid}`;
+  const nGradId = `nGrad_${uid}`;
+  const shadowGradId = `shadowGrad_${uid}`;
+
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 120 120"
+      viewBox="0 0 200 205"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 drop-shadow-md transition-transform hover:scale-105 ${className}`}
+      className={`shrink-0 select-none transition-transform duration-200 hover:scale-105 ${className}`}
+      aria-label="Nova Translate Logo"
     >
       <defs>
-        {/* Exact Navy to Cyan Gradient */}
-        <linearGradient id="globeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1E3A8A" />
-          <stop offset="50%" stopColor="#0F766E" />
-          <stop offset="100%" stopColor="#06B6D4" />
+        {/* Diagonal Gradient: Bottom-Left Deep Navy/Indigo (#2B2467 / #1E3A8A) to Top-Right Bright Cyan (#2CCAD8 / #06B6D4) */}
+        <linearGradient id={globeGradId} x1="15%" y1="85%" x2="85%" y2="15%">
+          <stop offset="0%" stopColor="#2D2363" />
+          <stop offset="32%" stopColor="#1E3A8A" />
+          <stop offset="68%" stopColor="#1B82B5" />
+          <stop offset="100%" stopColor="#2BC9D9" />
         </linearGradient>
 
-        <linearGradient id="nGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#1E3A8A" />
-          <stop offset="100%" stopColor="#172554" />
+        {/* Center "N" Gradient: Deep Navy Blue to Ocean Cyan-Blue */}
+        <linearGradient id={nGradId} x1="15%" y1="85%" x2="85%" y2="15%">
+          <stop offset="0%" stopColor="#2B2568" />
+          <stop offset="45%" stopColor="#1E3A8A" />
+          <stop offset="100%" stopColor="#2376B7" />
         </linearGradient>
 
-        {/* Drop shadow */}
-        <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.3" />
-        </filter>
+        {/* Soft Floor Shadow Gradient under the Globe */}
+        <radialGradient id={shadowGradId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.28" />
+          <stop offset="60%" stopColor="#1E3A8A" stopOpacity="0.10" />
+          <stop offset="100%" stopColor="#1E3A8A" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      <g filter="url(#logoShadow)">
-        {/* Outer Globe Circle with gradient stroke */}
-        <circle cx="60" cy="60" r="50" stroke="url(#globeGrad)" strokeWidth="4.5" fill="none" />
+      {/* Subtle 3D Drop Shadow Ellipse underneath Globe */}
+      <ellipse cx="100" cy="192" rx="56" ry="6" fill={`url(#${shadowGradId})`} />
 
-        {/* Meridian & Parallel Network Lines */}
-        <ellipse cx="60" cy="60" rx="22" ry="50" stroke="url(#globeGrad)" strokeWidth="2.5" fill="none" opacity="0.85" />
-        <ellipse cx="60" cy="60" rx="46" ry="22" stroke="url(#globeGrad)" strokeWidth="2.5" fill="none" opacity="0.85" />
-        <line x1="10" y1="60" x2="110" y2="60" stroke="url(#globeGrad)" strokeWidth="2.5" opacity="0.85" />
-        <line x1="60" y1="10" x2="60" y2="110" stroke="url(#globeGrad)" strokeWidth="2.5" opacity="0.85" />
+      {/* Main Globe Network Group (Centered at 100, 92 with Radius 78) */}
+      <g stroke={`url(#${globeGradId})`} strokeLinecap="round" strokeLinejoin="round">
+        {/* Outer Globe Ring */}
+        <circle cx="100" cy="92" r="78" strokeWidth="6" fill="none" />
 
-        {/* Diagonal Network Connection Arcs */}
-        <path d="M 22 28 Q 60 45 98 28" stroke="url(#globeGrad)" strokeWidth="2" fill="none" opacity="0.75" />
-        <path d="M 22 92 Q 60 75 98 92" stroke="url(#globeGrad)" strokeWidth="2" fill="none" opacity="0.75" />
+        {/* Outer Left & Right Meridian Arcs */}
+        <path
+          d="M 100 14 C 48 28, 30 60, 22 92 C 30 124, 48 156, 100 170"
+          strokeWidth="3.6"
+          fill="none"
+        />
+        <path
+          d="M 100 14 C 152 28, 170 60, 178 92 C 170 124, 152 156, 100 170"
+          strokeWidth="3.6"
+          fill="none"
+        />
 
-        {/* Network Connection Nodes (Small circles on grid intersections) */}
-        <circle cx="60" cy="10" r="3.5" fill="#06B6D4" />
-        <circle cx="60" cy="110" r="3.5" fill="#1E3A8A" />
-        <circle cx="10" cy="60" r="3.5" fill="#1E3A8A" />
-        <circle cx="110" cy="60" r="3.5" fill="#06B6D4" />
-        <circle cx="38" cy="22" r="3" fill="#0F766E" />
-        <circle cx="82" cy="22" r="3" fill="#06B6D4" />
-        <circle cx="38" cy="98" r="3" fill="#1E3A8A" />
-        <circle cx="82" cy="98" r="3" fill="#0F766E" />
-        <circle cx="18" cy="38" r="3" fill="#1E3A8A" />
-        <circle cx="102" cy="38" r="3" fill="#06B6D4" />
-        <circle cx="18" cy="82" r="3" fill="#1E3A8A" />
-        <circle cx="102" cy="82" r="3" fill="#06B6D4" />
+        {/* Inner Left & Right Meridian Curves (Framing the central open space) */}
+        <path
+          d="M 100 14 C 76 26, 50 56, 42 92 C 50 128, 76 158, 100 170"
+          strokeWidth="3.6"
+          fill="none"
+        />
+        <path
+          d="M 100 14 C 124 26, 150 56, 158 92 C 150 128, 124 158, 100 170"
+          strokeWidth="3.6"
+          fill="none"
+        />
 
-        {/* Center Circular Background Pill for "N" */}
-        <circle cx="60" cy="60" r="32" fill="#FFFFFF" fillOpacity="0.92" stroke="url(#globeGrad)" strokeWidth="2" />
+        {/* Top Pole Inner Meridian Spokes (Terminating at the open center window) */}
+        <path d="M 100 14 Q 88 30 84 47" strokeWidth="3.5" fill="none" />
+        <path d="M 100 14 Q 112 30 116 47" strokeWidth="3.5" fill="none" />
 
-        {/* Large Bold "N" Letter in Navy Blue (#1E3A8A) */}
-        <text
-          x="60"
-          y="73"
-          fontFamily="system-ui, -apple-system, 'Poppins', sans-serif"
-          fontSize="42"
-          fontWeight="900"
-          fill="url(#nGrad)"
-          textAnchor="middle"
-          letterSpacing="-1"
-        >
-          N
-        </text>
+        {/* Bottom Pole Inner Meridian Spokes (Terminating at the open center window) */}
+        <path d="M 100 170 Q 88 154 84 137" strokeWidth="3.5" fill="none" />
+        <path d="M 100 170 Q 112 154 116 137" strokeWidth="3.5" fill="none" />
+
+        {/* Upper Latitude Arc */}
+        <path
+          d="M 32 54 Q 64 36 100 36 Q 136 36 168 54"
+          strokeWidth="3.5"
+          fill="none"
+        />
+
+        {/* Lower Latitude Arc */}
+        <path
+          d="M 32 130 Q 64 148 100 148 Q 136 148 168 130"
+          strokeWidth="3.5"
+          fill="none"
+        />
+
+        {/* Left & Right Equatorial Mesh Connections */}
+        <line x1="22" y1="92" x2="53" y2="92" strokeWidth="3.5" />
+        <line x1="22" y1="92" x2="47" y2="66" strokeWidth="3.2" />
+        <line x1="22" y1="92" x2="47" y2="118" strokeWidth="3.2" />
+
+        <line x1="178" y1="92" x2="147" y2="92" strokeWidth="3.5" />
+        <line x1="178" y1="92" x2="153" y2="66" strokeWidth="3.2" />
+        <line x1="178" y1="92" x2="153" y2="118" strokeWidth="3.2" />
+
+        {/* Short Inward Radial Stubs pointing toward the "N" (Exact match to reference photo) */}
+        <line x1="47" y1="66" x2="57" y2="71" strokeWidth="3.5" />
+        <line x1="47" y1="118" x2="57" y2="113" strokeWidth="3.5" />
+        <line x1="153" y1="66" x2="143" y2="71" strokeWidth="3.5" />
+        <line x1="153" y1="118" x2="143" y2="113" strokeWidth="3.5" />
+        <line x1="72" y1="39" x2="76" y2="48" strokeWidth="3.5" />
+        <line x1="128" y1="39" x2="124" y2="48" strokeWidth="3.5" />
+        <line x1="72" y1="145" x2="76" y2="136" strokeWidth="3.5" />
+        <line x1="128" y1="145" x2="124" y2="136" strokeWidth="3.5" />
       </g>
+
+      {/* Network Intersection Nodes (Solid Gradient Circles) */}
+      <g fill={`url(#${globeGradId})`}>
+        {/* Upper Latitude Nodes */}
+        <circle cx="53" cy="46" r="4.8" />
+        <circle cx="72" cy="39" r="5.4" />
+        <circle cx="86" cy="37" r="5.2" />
+        <circle cx="114" cy="37" r="5.2" />
+        <circle cx="128" cy="39" r="5.4" />
+        <circle cx="147" cy="46" r="4.8" />
+
+        {/* Left Side Nodes */}
+        <circle cx="47" cy="66" r="5.4" />
+        <circle cx="42" cy="92" r="5.6" />
+        <circle cx="47" cy="118" r="5.4" />
+
+        {/* Right Side Nodes */}
+        <circle cx="153" cy="66" r="5.4" />
+        <circle cx="158" cy="92" r="5.6" />
+        <circle cx="153" cy="118" r="5.4" />
+
+        {/* Lower Latitude Nodes */}
+        <circle cx="53" cy="138" r="4.8" />
+        <circle cx="72" cy="145" r="5.4" />
+        <circle cx="86" cy="147" r="5.2" />
+        <circle cx="114" cy="147" r="5.2" />
+        <circle cx="128" cy="145" r="5.4" />
+        <circle cx="147" cy="138" r="4.8" />
+      </g>
+
+      {/* Center Bold Geometric "N" */}
+      <path
+        d="M 68 128 L 68 56 L 85 56 L 115 101 L 115 56 L 132 56 L 132 128 L 115 128 L 85 83 L 85 128 Z"
+        fill={`url(#${nGradId})`}
+      />
     </svg>
   );
 };

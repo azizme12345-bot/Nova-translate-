@@ -15,14 +15,14 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <div className="logo">A</div>
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
-              Nova Translate
+              Nova Translator
             </h3>
             <small style={{ color: 'var(--muted)' }}>v1.0 Production Edition</small>
           </div>
         </div>
         <div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>
           <p style={{ margin: '0 0 10px' }}>
-            Nova Translate is an AI-powered translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
+            Nova Translator is a high-performance translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
           </p>
           <p style={{ margin: '0 0 10px' }}>
             <strong>Engine:</strong> Powered by Gemini 1.5 Flash multimodal reasoning on a secure serverless backend.

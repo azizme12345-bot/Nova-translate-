@@ -547,7 +547,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0099FF]/20 text-[#00D4FF] text-xs font-extrabold mb-2 border border-[#0099FF]/30">
             <Sparkles className="w-3.5 h-3.5 text-[#00D4FF]" />
-            NOVA TRANSLATE AI ENGINE
+            NOVA TRANSLATOR ENGINE
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Break Language Barriers

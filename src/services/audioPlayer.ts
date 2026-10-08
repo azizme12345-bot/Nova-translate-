@@ -1,14 +1,38 @@
 /**
- * Robust Multilingual Audio Queue & TTS Player
- * Capable of seamlessly speaking long paragraphs, articles, and prompts (500, 1000+ words)
- * in Urdu, English, Arabic, Hindi, Punjabi, and all supported languages.
+ * Robust Multilingual Audio Queue & TTS Player with Male / Female AI Voice Selection
+ * Capable of speaking short phrases or long paragraphs (500–1000+ words)
+ * in Urdu, English, Arabic, Hindi, Punjabi, and all supported global languages.
  */
+
+import { ApiClient } from './apiClient.ts';
+
+export type VoiceGender = 'female' | 'male';
 
 export interface AudioPlayerCallbacks {
   onStart?: () => void;
   onProgress?: (currentChunk: number, totalChunks: number) => void;
   onEnd?: () => void;
   onError?: (err: any) => void;
+}
+
+const GENDER_STORAGE_KEY = 'novaVoiceGender';
+
+export function getSavedVoiceGender(): VoiceGender {
+  try {
+    const saved = localStorage.getItem(GENDER_STORAGE_KEY);
+    if (saved === 'male' || saved === 'female') return saved;
+  } catch {
+    // ignore
+  }
+  return 'female';
+}
+
+export function setSavedVoiceGender(gender: VoiceGender): void {
+  try {
+    localStorage.setItem(GENDER_STORAGE_KEY, gender);
+  } catch {
+    // ignore
+  }
 }
 
 export function getLanguageSpeechCode(langName: string): string {
@@ -40,14 +64,13 @@ export function getLanguageSpeechCode(langName: string): string {
 }
 
 /**
- * Splits long text (even 1000-5000 words) into clean sentence chunks of <= 180 chars
+ * Splits long text into clean sentence chunks of <= 160 chars
  * preserving Urdu (۔), Arabic (؟،), English (.,!?\n), Hindi (।), etc.
  */
 export function splitTextIntoChunks(text: string, maxChunkLength = 160): string[] {
   if (!text || !text.trim()) return [];
   const clean = text.trim();
 
-  // Split on paragraphs and sentence boundaries first
   const sentenceRegex = /([۔!؟\?\.\n\r\t]+)/g;
   const rawParts = clean.split(sentenceRegex);
 
@@ -72,13 +95,11 @@ export function splitTextIntoChunks(text: string, maxChunkLength = 160): string[
     sentences.push(currentSentence.trim());
   }
 
-  // Now break any sentence that exceeds maxChunkLength by commas, spaces, or words
   const chunks: string[] = [];
   for (const sentence of sentences) {
     if (sentence.length <= maxChunkLength) {
       chunks.push(sentence);
     } else {
-      // Split on clauses/commas or words
       const words = sentence.split(/([\s,،؛]+)/);
       let currentChunk = '';
       for (const word of words) {
@@ -96,21 +117,67 @@ export function splitTextIntoChunks(text: string, maxChunkLength = 160): string[
   return chunks.filter((c) => c.length > 0);
 }
 
+/**
+ * Selects the best matching Male or Female browser SpeechSynthesisVoice for a language
+ */
+function pickBrowserVoice(langCode: string, gender: VoiceGender): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (voices.length === 0) return null;
+
+  const prefix = langCode.split('-')[0].toLowerCase();
+  const langVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(prefix));
+  const pool = langVoices.length > 0 ? langVoices : voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
+
+  const maleKeywords = ['male', 'david', 'mark', 'guy', 'daniel', 'george', 'rishi', 'prabhat', 'asad', 'hamza', 'naayf', 'maged', 'puck', 'fenrir', 'alex', 'fred', 'thomas', 'luca', 'jorge'];
+  const femaleKeywords = ['female', 'zira', 'aria', 'samantha', 'victoria', 'sara', 'heera', 'swara', 'uzma', 'salma', 'kore', 'zephyr', 'google', 'natural', 'amelie', 'monica', 'paulina'];
+
+  const targetKeywords = gender === 'male' ? maleKeywords : femaleKeywords;
+
+  for (const v of pool) {
+    const lowerName = v.name.toLowerCase();
+    if (targetKeywords.some((kw) => lowerName.includes(kw))) {
+      return v;
+    }
+  }
+
+  return pool[0] || null;
+}
+
 class LongTextAudioPlayer {
   private isPlaying = false;
   private currentChunks: string[] = [];
   private currentIndex = 0;
   private currentLang = '';
+  private currentGender: VoiceGender = 'female';
   private currentAudio: HTMLAudioElement | null = null;
   private nextAudio: HTMLAudioElement | null = null;
   private callbacks: AudioPlayerCallbacks = {};
   private chromeResumeInterval: any = null;
 
-  public getIsPlaying(): boolean {
-    return this.isPlaying;
+  constructor() {
+    this.setGender = this.setGender.bind(this);
+    this.setVoiceGender = this.setVoiceGender.bind(this);
+    this.getGender = this.getGender.bind(this);
+    this.getVoiceGender = this.getVoiceGender.bind(this);
+    this.play = this.play.bind(this);
+    this.stop = this.stop.bind(this);
   }
 
-  public stop() {
+  public getIsPlaying = (): boolean => {
+    return this.isPlaying;
+  };
+
+  public setGender = (gender: VoiceGender): void => {
+    this.currentGender = gender;
+    setSavedVoiceGender(gender);
+  };
+
+  public getGender = (): VoiceGender => {
+    return this.currentGender;
+  };
+
+  public stop = (): void => {
     this.isPlaying = false;
     this.currentChunks = [];
     this.currentIndex = 0;
@@ -132,7 +199,7 @@ class LongTextAudioPlayer {
       this.nextAudio = null;
     }
 
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
       } catch {}
@@ -146,38 +213,100 @@ class LongTextAudioPlayer {
     if (this.callbacks.onEnd) {
       this.callbacks.onEnd();
     }
-  }
+  };
+
+  public setVoiceGender = (gender: VoiceGender): void => {
+    this.setGender(gender);
+  };
+
+  public getVoiceGender = (): VoiceGender => {
+    return this.getGender();
+  };
 
   /**
-   * Play any text of arbitrary length (50 words, 500 words, 1000+ words)
+   * Play any text of arbitrary length with Male or Female AI voice support
    */
-  public async play(text: string, langName: string, callbacks: AudioPlayerCallbacks = {}) {
+  public async play(
+    text: string,
+    langName: string,
+    callbacks: AudioPlayerCallbacks = {},
+    gender?: VoiceGender
+  ) {
     this.stop();
 
     const clean = (text || '').trim();
     if (!clean) return;
 
     this.currentLang = langName;
+    this.currentGender = gender || getSavedVoiceGender();
     this.callbacks = callbacks;
-    this.currentChunks = splitTextIntoChunks(clean, 160);
-
-    if (this.currentChunks.length === 0) return;
 
     this.isPlaying = true;
-    this.currentIndex = 0;
-
     if (this.callbacks.onStart) {
       this.callbacks.onStart();
     }
 
-    // Workaround for Chrome's 15-second speech synthesis timeout bug
+    // For short/medium phrases (<= 350 chars), try Gemini 3.8 TTS with Male (Puck) / Female (Kore) voice first if Male is selected or for ultra-natural AI voice
+    if (clean.length <= 350 && this.currentGender === 'male') {
+      try {
+        const synth = await ApiClient.prepareVoiceSynthesis(clean, langName, this.currentGender);
+        if (!this.isPlaying) return;
+        if (synth && synth.audioBase64 && !synth.fallbackToBrowserTTS) {
+          const audio = new Audio(`data:${synth.mimeType || 'audio/wav'};base64,${synth.audioBase64}`);
+          this.currentAudio = audio;
+          audio.onended = () => {
+            if (!this.isPlaying) return;
+            this.stop();
+          };
+          audio.onerror = () => {
+            if (!this.isPlaying) return;
+            this.startChunkedStream(clean);
+          };
+          await audio.play();
+          return;
+        }
+      } catch {
+        // Fallback to chunked stream below
+      }
+    }
+
+    if (!this.isPlaying) return;
+    await this.startChunkedStream(clean);
+  }
+
+  private async startChunkedStream(cleanText: string) {
+    this.currentChunks = splitTextIntoChunks(cleanText, 160);
+    if (this.currentChunks.length === 0) {
+      this.stop();
+      return;
+    }
+
+    this.currentIndex = 0;
+
     this.chromeResumeInterval = setInterval(() => {
-      if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
         window.speechSynthesis.resume();
       }
     }, 5000);
 
     await this.playNextChunk();
+  }
+
+  private applyGenderAcousticTuning(audio: HTMLAudioElement) {
+    try {
+      if (this.currentGender === 'male') {
+        // Disable pitch preservation so lowering playbackRate slightly deepens voice formant into a natural male baritone
+        (audio as any).preservesPitch = false;
+        (audio as any).mozPreservesPitch = false;
+        (audio as any).webkitPreservesPitch = false;
+        audio.playbackRate = 0.88;
+      } else {
+        (audio as any).preservesPitch = true;
+        audio.playbackRate = 1.0;
+      }
+    } catch {
+      // ignore if unsupported
+    }
   }
 
   private async playNextChunk() {
@@ -196,14 +325,13 @@ class LongTextAudioPlayer {
       this.callbacks.onProgress(currentIdx + 1, total);
     }
 
-    // Try playing through server TTS proxy first (with preloading of next chunk)
     const ttsUrl = `/api/tts?text=${encodeURIComponent(chunk)}&lang=${encodeURIComponent(this.currentLang)}`;
 
     try {
       const audio = new Audio(ttsUrl);
+      this.applyGenderAcousticTuning(audio);
       this.currentAudio = audio;
 
-      // Preload next chunk if available
       if (this.currentIndex + 1 < this.currentChunks.length) {
         const nextChunk = this.currentChunks[this.currentIndex + 1];
         const nextUrl = `/api/tts?text=${encodeURIComponent(nextChunk)}&lang=${encodeURIComponent(this.currentLang)}`;
@@ -219,7 +347,6 @@ class LongTextAudioPlayer {
 
       audio.onerror = () => {
         if (!this.isPlaying) return;
-        // Fallback to browser SpeechSynthesis for this chunk
         this.fallbackBrowserChunk(chunk, () => {
           if (!this.isPlaying) return;
           this.currentIndex++;
@@ -245,14 +372,29 @@ class LongTextAudioPlayer {
   }
 
   private fallbackBrowserChunk(chunk: string, onDone: () => void) {
-    if (!('speechSynthesis' in window)) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       onDone();
       return;
     }
 
     try {
       const utterance = new SpeechSynthesisUtterance(chunk);
-      utterance.lang = getLanguageSpeechCode(this.currentLang);
+      const langCode = getLanguageSpeechCode(this.currentLang);
+      utterance.lang = langCode;
+
+      const matchedVoice = pickBrowserVoice(langCode, this.currentGender);
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      // Apply distinct pitch & rate tuning for Male vs Female voice
+      if (this.currentGender === 'male') {
+        utterance.pitch = 0.82;
+        utterance.rate = 0.96;
+      } else {
+        utterance.pitch = 1.08;
+        utterance.rate = 1.0;
+      }
 
       let finished = false;
       const completeOnce = () => {
@@ -265,7 +407,6 @@ class LongTextAudioPlayer {
       utterance.onend = completeOnce;
       utterance.onerror = completeOnce;
 
-      // Safety timeout in case browser TTS hangs on a chunk
       setTimeout(() => {
         if (!finished && this.isPlaying) {
           completeOnce();

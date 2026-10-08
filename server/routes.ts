@@ -161,7 +161,7 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
  */
 apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
   try {
-    const { imageBase64, mimeType, targetLanguage } = req.body || {};
+    const { imageBase64, mimeType, targetLanguage, model } = req.body || {};
     const customApiKey = getApiKeyFromReq(req);
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -180,6 +180,7 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
           imageBase64,
           mimeType,
           targetLanguage: targetLanguage || 'English',
+          model,
         },
         customApiKey
       ),
@@ -198,11 +199,56 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
 });
 
 /**
- * Voice synthesis preparation endpoint
+ * AI Chat & Photo Analysis Assistant endpoint
+ */
+apiRouter.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { message, history, imageBase64, mimeType, targetLanguage, model } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
+
+    if ((!message || typeof message !== 'string' || !message.trim()) && !imageBase64) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'A chat message or image is required.',
+        },
+      });
+      return;
+    }
+
+    const result = await withTimeout(
+      TranslationService.chatWithAI(
+        {
+          message: message || '',
+          history,
+          imageBase64,
+          mimeType,
+          targetLanguage,
+          model,
+        },
+        customApiKey
+      ),
+      35000
+    );
+
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({
+      error: {
+        code: 'CHAT_FAILED',
+        message: err.message || 'AI Chat service encountered an error.',
+      },
+    });
+  }
+});
+
+/**
+ * Voice synthesis preparation endpoint (supports Male / Female AI Voices via Gemini TTS)
  */
 apiRouter.post('/voice-synthesize', async (req: Request, res: Response) => {
   try {
-    const { text, language, voiceName } = req.body || {};
+    const { text, language, voiceName, gender } = req.body || {};
+    const customApiKey = getApiKeyFromReq(req);
     if (!text || typeof text !== 'string') {
       res.status(400).json({
         error: {
@@ -214,7 +260,7 @@ apiRouter.post('/voice-synthesize', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.synthesizeVoice({ text, language, voiceName }),
+      TranslationService.synthesizeVoice({ text, language, voiceName, gender }, customApiKey),
       15000
     );
 

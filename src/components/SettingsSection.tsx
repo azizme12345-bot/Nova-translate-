@@ -159,7 +159,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         {/* Backend API Connection Status */}
         <div className="setting">
           <div>
-            <b>Backend AI Engine Status</b>
+            <b>Backend Translation Engine Status</b>
             <small>
               {backendConfigured
                 ? 'Centralized backend service connected with active Gemini Multimodal API.'
@@ -195,8 +195,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           onClick={onOpenAbout}
         >
           <div>
-            <b>About Nova Translate</b>
-            <small>Version 1.0 Production Edition · Multilingual AI Platform</small>
+            <b>About Nova Translator</b>
+            <small>Version 1.0 Production Edition · Multilingual Platform</small>
           </div>
           <span style={{ fontSize: '18px', color: 'var(--muted)' }}>›</span>
         </div>

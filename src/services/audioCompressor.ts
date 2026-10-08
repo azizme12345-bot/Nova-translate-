@@ -39,6 +39,13 @@ export class AudioCompressor {
   }
 
   /**
+   * Alias method for backward compatibility
+   */
+  static async compressBlobToBase64Wav(blob: Blob): Promise<{ base64: string; mimeType: string; sizeKb: number }> {
+    return this.compressAudioBlob(blob);
+  }
+
+  /**
    * Converts AudioBuffer to 16kHz 16-bit Mono WAV
    */
   private static audioBufferToWav(buffer: AudioBuffer): Blob {

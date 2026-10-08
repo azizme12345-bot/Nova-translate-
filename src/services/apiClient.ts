@@ -13,6 +13,7 @@ export interface TranslationResult {
   confidence?: number;
   alternatives?: string[];
   details?: string;
+  pronunciation?: string;
   direction: 'ltr' | 'rtl';
   timestamp: string;
   fromCache?: boolean;
@@ -160,19 +161,34 @@ export class ApiClient {
    * Request text translation with instant 0ms client-side cache & ultra-fast backend
    */
   static async translateText(
-    text: string,
-    sourceLanguage: string,
-    targetLanguage: string,
+    textOrOptions: string | { text: string; sourceLanguage?: string; targetLanguage?: string; tone?: 'natural' | 'formal' | 'casual'; model?: string },
+    sourceLanguage?: string,
+    targetLanguage?: string,
     tone: 'natural' | 'formal' | 'casual' = 'natural',
     model?: string
   ): Promise<TranslationResult> {
-    const cleanText = text.trim();
+    let cleanText = '';
+    let srcLang = sourceLanguage || 'Auto Detect';
+    let tgtLang = targetLanguage || 'Urdu';
+    let tTone = tone;
+    let tModel = model;
+
+    if (typeof textOrOptions === 'object' && textOrOptions !== null) {
+      cleanText = (textOrOptions.text || '').trim();
+      srcLang = textOrOptions.sourceLanguage || srcLang;
+      tgtLang = textOrOptions.targetLanguage || tgtLang;
+      tTone = textOrOptions.tone || tTone;
+      tModel = textOrOptions.model || tModel;
+    } else {
+      cleanText = (textOrOptions || '').trim();
+    }
+
     if (!cleanText) {
       throw new Error('Please enter text to translate.');
     }
 
     // 1. Instant Client-Side Cache Lookup (0ms response)
-    const cached = TranslationCache.get(cleanText, sourceLanguage, targetLanguage);
+    const cached = TranslationCache.get(cleanText, srcLang, tgtLang);
     if (cached) {
       return {
         ...cached,
@@ -186,17 +202,17 @@ export class ApiClient {
       headers: ApiClient.getHeaders(),
       body: JSON.stringify({
         text: cleanText,
-        sourceLanguage,
-        targetLanguage,
-        tone,
-        model,
+        sourceLanguage: srcLang,
+        targetLanguage: tgtLang,
+        tone: tTone,
+        model: tModel,
       }),
     });
 
     const result = await handleApiResponse<TranslationResult>(res);
 
     // Save to client cache
-    TranslationCache.set(cleanText, sourceLanguage, targetLanguage, result);
+    TranslationCache.set(cleanText, srcLang, tgtLang, result);
 
     return result;
   }
@@ -229,19 +245,33 @@ export class ApiClient {
    * Send image to backend for OCR extraction and translation
    */
   static async ocrAndTranslate(
-    imageBase64: string,
-    targetLanguage: string,
+    imageOrOptions: string | { imageBase64: string; targetLanguage?: string; mimeType?: string; model?: string },
+    targetLanguage?: string,
     mimeType = 'image/jpeg',
     model?: string
   ): Promise<OCRResult> {
+    let base64 = '';
+    let tgtLang = targetLanguage || 'Urdu';
+    let mime = mimeType;
+    let mod = model;
+
+    if (typeof imageOrOptions === 'object' && imageOrOptions !== null) {
+      base64 = imageOrOptions.imageBase64 || '';
+      tgtLang = imageOrOptions.targetLanguage || tgtLang;
+      mime = imageOrOptions.mimeType || mime;
+      mod = imageOrOptions.model || mod;
+    } else {
+      base64 = imageOrOptions || '';
+    }
+
     const res = await fetch('/api/ocr-translate', {
       method: 'POST',
       headers: ApiClient.getHeaders(),
       body: JSON.stringify({
-        imageBase64,
-        mimeType,
-        targetLanguage,
-        model,
+        imageBase64: base64,
+        mimeType: mime,
+        targetLanguage: tgtLang,
+        model: mod,
       }),
     });
 
@@ -249,16 +279,40 @@ export class ApiClient {
   }
 
   /**
-   * Backend voice synthesis preparation
+   * AI Chat & Multimodal Photo Analysis
    */
-  static async prepareVoiceSynthesis(text: string, language?: string): Promise<{ audioBase64?: string; fallbackToBrowserTTS: boolean }> {
+  static async chatWithAI(params: {
+    message: string;
+    history?: Array<{ role: 'user' | 'assistant'; text: string }>;
+    imageBase64?: string;
+    mimeType?: string;
+    targetLanguage?: string;
+    model?: string;
+  }): Promise<{ reply: string; timestamp: string }> {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: ApiClient.getHeaders(),
+      body: JSON.stringify(params),
+    });
+
+    return await handleApiResponse<{ reply: string; timestamp: string }>(res);
+  }
+
+  /**
+   * Backend voice synthesis preparation (supports Male / Female AI Voice)
+   */
+  static async prepareVoiceSynthesis(
+    text: string,
+    language?: string,
+    gender: 'male' | 'female' = 'female'
+  ): Promise<{ audioBase64?: string; mimeType?: string; fallbackToBrowserTTS: boolean }> {
     try {
       const res = await fetch('/api/voice-synthesize', {
         method: 'POST',
         headers: ApiClient.getHeaders(),
-        body: JSON.stringify({ text, language }),
+        body: JSON.stringify({ text, language, gender }),
       });
-      const data = await handleApiResponse<{ audioBase64?: string; fallbackToBrowserTTS: boolean }>(res);
+      const data = await handleApiResponse<{ audioBase64?: string; mimeType?: string; fallbackToBrowserTTS: boolean }>(res);
       return data || { fallbackToBrowserTTS: true };
     } catch {
       return { fallbackToBrowserTTS: true };
@@ -286,23 +340,58 @@ export class ApiClient {
    * Transcribe recorded audio with fast compact payload
    */
   static async transcribeAudio(
-    audioBase64: string,
+    audioOrOptions: string | { audioBase64: string; mimeType?: string; sourceLanguage?: string; targetLanguage?: string; languageHint?: string; model?: string },
     mimeType = 'audio/wav',
     languageHint?: string,
     model?: string
-  ): Promise<{ text: string }> {
+  ): Promise<{ text: string; transcript: string; translatedText?: string }> {
+    let base64 = '';
+    let mime = mimeType;
+    let hint = languageHint;
+    let mod = model;
+    let tgtLang = '';
+
+    if (typeof audioOrOptions === 'object' && audioOrOptions !== null) {
+      base64 = audioOrOptions.audioBase64 || '';
+      mime = audioOrOptions.mimeType || mime;
+      hint = audioOrOptions.sourceLanguage || audioOrOptions.languageHint || hint;
+      tgtLang = audioOrOptions.targetLanguage || '';
+      mod = audioOrOptions.model || mod;
+    } else {
+      base64 = audioOrOptions || '';
+    }
+
     const res = await fetch('/api/speech-to-text', {
       method: 'POST',
       headers: ApiClient.getHeaders(),
       body: JSON.stringify({
-        audioBase64,
-        mimeType,
-        languageHint,
-        model,
+        audioBase64: base64,
+        mimeType: mime,
+        languageHint: hint,
+        targetLanguage: tgtLang,
+        model: mod,
       }),
     });
 
-    return await handleApiResponse<{ text: string }>(res);
+    const raw = await handleApiResponse<{ text?: string; transcript?: string; translatedText?: string }>(res);
+    const textVal = raw.transcript || raw.text || '';
+    return {
+      text: textVal,
+      transcript: textVal,
+      translatedText: raw.translatedText,
+    };
+  }
+
+  /**
+   * Alias method for speechToText
+   */
+  static async speechToText(
+    audioOrOptions: string | { audioBase64: string; mimeType?: string; sourceLanguage?: string; targetLanguage?: string; languageHint?: string; model?: string },
+    mimeType = 'audio/wav',
+    languageHint?: string,
+    model?: string
+  ): Promise<{ text: string; transcript: string; translatedText?: string }> {
+    return this.transcribeAudio(audioOrOptions, mimeType, languageHint, model);
   }
 
   /**

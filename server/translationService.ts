@@ -41,22 +41,38 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
  */
 function getAIClient(customApiKey?: string): GoogleGenAI {
   const apiKey = (customApiKey && customApiKey.trim()) || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
-  if (apiKey.trim()) {
-    return new GoogleGenAI({ apiKey: apiKey.trim() });
-  }
-  return new GoogleGenAI({});
+  return new GoogleGenAI({
+    ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
 }
 
 // Ultra-fast Gemini models with full fallback support for Wi-Fi, VPN, and any version selected
 const FAST_MODELS = [
   'gemini-3.8-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
   'gemini-3.1-flash-lite',
   'gemini-flash-latest',
-  'gemini-2.5-flash',
 ];
+
+function resolveModelList(requestedModel?: string): string[] {
+  if (!requestedModel || !requestedModel.trim()) {
+    return [...FAST_MODELS];
+  }
+  const m = requestedModel.trim().toLowerCase();
+  let mapped = requestedModel.trim();
+  if (m.includes('lite')) {
+    mapped = 'gemini-3.1-flash-lite';
+  } else if (m.includes('latest')) {
+    mapped = 'gemini-flash-latest';
+  } else if (m.includes('1.5') || m.includes('2.0') || m.includes('2.5') || m.includes('3.8')) {
+    mapped = 'gemini-3.8-flash';
+  }
+  return [mapped, ...FAST_MODELS.filter((item) => item !== mapped)];
+}
 
 export interface TranslationRequest {
   text: string;
@@ -161,11 +177,7 @@ export class TranslationService {
     const ai = getAIClient(activeKey);
 
     // Prioritize user's requested model if provided, followed by all FAST_MODELS as backup
-    let modelsToTry = [...FAST_MODELS];
-    if (req.model && typeof req.model === 'string' && req.model.trim()) {
-      const preferred = req.model.trim();
-      modelsToTry = [preferred, ...FAST_MODELS.filter((m) => m !== preferred)];
-    }
+    const modelsToTry = resolveModelList(req.model);
 
     const systemInstruction = `You are Nova Translate - A professional translation assistant AI.
 
@@ -284,7 +296,7 @@ ${rawText}
     const ai = getAIClient(customApiKey);
     const prompt = `Identify the natural language of: "${rawText.slice(0, 300)}"`;
 
-    let modelsToTry = modelHint ? [modelHint, ...FAST_MODELS.filter(m => m !== modelHint)] : FAST_MODELS;
+    const modelsToTry = resolveModelList(modelHint);
 
     let response: any = null;
     for (const model of modelsToTry) {
@@ -345,7 +357,7 @@ ${rawText}
     const activeKey = customApiKey || req.apiKey;
     const ai = getAIClient(activeKey);
 
-    let modelsToTry = req.model ? [req.model, ...FAST_MODELS.filter(m => m !== req.model)] : FAST_MODELS;
+    const modelsToTry = resolveModelList(req.model);
 
     const imagePart = {
       inlineData: {
@@ -404,13 +416,176 @@ ${rawText}
   }
 
   /**
-   * Voice synthesis backend preparation
+   * AI Chat & Multimodal Photo Analysis Assistant
    */
-  static async synthesizeVoice(req: VoiceSynthesizeRequest): Promise<VoiceSynthesizeResponse> {
+  static async chatWithAI(
+    req: {
+      message: string;
+      history?: Array<{ role: 'user' | 'assistant'; text: string }>;
+      imageBase64?: string;
+      mimeType?: string;
+      targetLanguage?: string;
+      model?: string;
+      apiKey?: string;
+    },
+    customApiKey?: string
+  ): Promise<{
+    reply: string;
+    translatedReply?: string;
+    detectedLanguage?: string;
+    timestamp: string;
+  }> {
+    const rawMessage = (req.message || '').trim();
+    if (!rawMessage && !req.imageBase64) {
+      throw new Error('Message or image is required for AI Chat.');
+    }
+
+    const activeKey = customApiKey || req.apiKey;
+    const ai = getAIClient(activeKey);
+    const modelsToTry = resolveModelList(req.model);
+    const targetLang = req.targetLanguage || 'English';
+
+    const systemInstruction = `You are NOVA Translate AI Pro — an ultra-fast, intelligent multilingual translation, language tutor, and visual photo analysis assistant.
+- Help the user with translations, idioms, grammar explanations, conversation practice, or analyzing text/objects in photos.
+- Be concise, accurate, and crystal clear.
+- If the user asks to translate or speaks in a specific language, provide natural translations (especially Urdu, English, Arabic, Hindi, etc.) and helpful pronunciation tips when relevant.
+- Preferred target language context: ${targetLang}.`;
+
+    const contents: any[] = [];
+
+    if (req.history && Array.isArray(req.history)) {
+      const recentHistory = req.history.slice(-8);
+      for (const item of recentHistory) {
+        if (item.text && item.text.trim()) {
+          contents.push({
+            role: item.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: item.text.trim() }],
+          });
+        }
+      }
+    }
+
+    const userParts: any[] = [];
+    if (req.imageBase64) {
+      let cleanBase64 = req.imageBase64.trim();
+      let detectedMime = req.mimeType || 'image/jpeg';
+      if (cleanBase64.startsWith('data:')) {
+        const parts = cleanBase64.split(',');
+        if (parts.length > 1) {
+          const match = parts[0].match(/data:(image\/[a-zA-Z0-9.+_-]+)/);
+          if (match) detectedMime = match[1];
+          cleanBase64 = parts[1];
+        }
+      }
+      userParts.push({
+        inlineData: {
+          mimeType: detectedMime,
+          data: cleanBase64,
+        },
+      });
+    }
+
+    userParts.push({
+      text: rawMessage || `Analyze this image, extract any visible text, and translate/explain it in ${targetLang}.`,
+    });
+
+    contents.push({
+      role: 'user',
+      parts: userParts,
+    });
+
+    let response: any = null;
+    let lastError: any = null;
+
+    for (const model of modelsToTry) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.3,
+          },
+        });
+        if (response?.text) break;
+      } catch (err: any) {
+        lastError = err;
+        continue;
+      }
+    }
+
+    if (!response || !response.text) {
+      throw lastError || new Error('AI Chat failed to respond. Please check your connection.');
+    }
+
+    return {
+      reply: response.text.trim(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Voice synthesis using Gemini 3.8 Flash Lite TTS with Male (Puck) / Female (Kore) voice support
+   */
+  static async synthesizeVoice(
+    req: VoiceSynthesizeRequest & { gender?: 'male' | 'female'; apiKey?: string },
+    customApiKey?: string
+  ): Promise<VoiceSynthesizeResponse> {
+    const cleanText = (req.text || '').trim().slice(0, 600);
+    if (!cleanText) {
+      return {
+        mimeType: 'audio/wav',
+        fallbackToBrowserTTS: true,
+        message: 'Empty text',
+      };
+    }
+
+    const gender = (req.gender || 'female').toLowerCase();
+    // Prebuilt voices: 'Kore' (Female clear), 'Zephyr' (Female warm), 'Puck' (Male clear), 'Fenrir' (Male deep)
+    const selectedVoice = req.voiceName || (gender === 'male' ? 'Puck' : 'Kore');
+
+    try {
+      const activeKey = customApiKey || req.apiKey;
+      const ai = getAIClient(activeKey);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash-lite-tts',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: cleanText,
+              },
+            ],
+          },
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: selectedVoice },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        return {
+          audioBase64: base64Audio,
+          mimeType: 'audio/wav',
+          fallbackToBrowserTTS: false,
+        };
+      }
+    } catch {
+      // Fallback gracefully if TTS model is unavailable or quota reached
+    }
+
     return {
       mimeType: 'audio/wav',
       fallbackToBrowserTTS: true,
-      message: 'Browser SpeechSynthesis will render audio locally.',
+      message: 'Using high-speed native speech synthesis fallback.',
     };
   }
 
@@ -429,7 +604,7 @@ ${rawText}
     const activeKey = customApiKey || params.apiKey;
     const ai = getAIClient(activeKey);
 
-    let modelsToTry = reqModel ? [reqModel, ...FAST_MODELS.filter(m => m !== reqModel)] : FAST_MODELS;
+    const modelsToTry = resolveModelList(reqModel || 'gemini-3.5-transcribe');
 
     let cleanBase64 = audioBase64;
     let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/wav';
@@ -503,7 +678,7 @@ ${rawText}
    */
   static async testApiKey(customApiKey?: string, modelHint?: string): Promise<{ valid: boolean; model: string; message: string }> {
     const ai = getAIClient(customApiKey);
-    let modelsToTry = modelHint ? [modelHint, ...FAST_MODELS.filter(m => m !== modelHint)] : FAST_MODELS;
+    const modelsToTry = resolveModelList(modelHint);
 
     let testResponse: any = null;
     let lastErr: any = null;

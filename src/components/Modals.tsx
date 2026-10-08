@@ -26,7 +26,7 @@ export const Modals: React.FC<ModalsProps> = ({
             </h3>
             <div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>
               <p style={{ margin: '0 0 10px' }}>
-                <strong>No Secrets on Client:</strong> Nova Translate adheres to strict zero-leak client architecture. All API requests route securely through our backend server. No API keys or AI provider credentials are ever shipped to the browser.
+                <strong>No Secrets on Client:</strong> Nova Translator adheres to strict zero-leak client architecture. All API requests route securely through our backend server. No API keys or provider credentials are ever shipped to the browser.
               </p>
               <p style={{ margin: '0 0 10px' }}>
                 <strong>Data Minimization:</strong> Translation history is stored locally in your browser’s localStorage. You can clear your translation logs at any time from the History page.
@@ -51,14 +51,14 @@ export const Modals: React.FC<ModalsProps> = ({
               <BrandLogo size={52} />
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
-                  Nova Translate
+                  Nova Translator
                 </h3>
                 <small style={{ color: 'var(--muted)' }}>v1.0 Production Edition</small>
               </div>
             </div>
             <div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>
               <p style={{ margin: '0 0 10px' }}>
-                Nova Translate is an AI-powered translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
+                Nova Translator is a high-performance translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
               </p>
               <p style={{ margin: '0 0 10px' }}>
                 <strong>Engine:</strong> Powered by Gemini 1.5 Flash multimodal reasoning on a secure serverless backend.

@@ -121,7 +121,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     setScannedImage(base64Image);
     setIsLoading(true);
     stopAllAudio();
-    onToast('Scanning image with AI OCR & translating clearly...');
+    onToast('Scanning image with OCR & translating clearly...');
 
     try {
       const ocr = await ApiClient.ocrAndTranslate(base64Image, targetLang);
@@ -346,7 +346,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
               Extracting text and translating clearly into {targetLang}...
             </span>
             <span className="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 max-w-md">
-              Please wait a moment while the AI OCR engine scans every word in high detail.
+              Please wait a moment while the OCR engine scans every word in high detail.
             </span>
           </div>
         )}
