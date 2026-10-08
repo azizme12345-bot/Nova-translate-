@@ -354,6 +354,7 @@ ${rawText}
     }
 
     const targetLang = (req.targetLanguage || 'English').trim();
+    const sourceLangStr = (req as any).sourceLanguage || 'Auto-detected language';
     const activeKey = customApiKey || req.apiKey;
     const ai = getAIClient(activeKey);
 
@@ -366,7 +367,7 @@ ${rawText}
       },
     };
 
-    const textPrompt = `You are Nova Translate. Extract all text from this image and provide an accurate, fluent translation in ${targetLang}. Return strict JSON with extractedText, translatedText, and detectedSourceLanguage.`;
+    const textPrompt = `Extract ALL text from this image completely, including headings, paragraphs, lists, and small text, preserving reading order and line breaks. Then translate the full text from ${sourceLangStr} to ${targetLang}. Return strict JSON with extractedText (the complete original text), translatedText (the complete translated text), and detectedSourceLanguage.`;
 
     let response: any = null;
     let lastError: any = null;

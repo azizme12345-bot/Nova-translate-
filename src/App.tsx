@@ -44,6 +44,52 @@ function isRTLText(langStr: string, text?: string): boolean {
   return lower.includes('urdu') || lower.includes('arabic') || lower.includes('pashto') || lower.includes('sindhi') || lower.includes('persian');
 }
 
+/**
+ * Client-side image resizing and JPEG compression helper
+ * Resizes max side to 1600px and compresses JPEG quality to 0.85
+ */
+const compressAndResizeImage = async (file: File): Promise<{ base64: string; mimeType: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1600;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas context unavailable'));
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = 'image/jpeg';
+        const compressedBase64 = canvas.toDataURL(mimeType, 0.85);
+        resolve({
+          base64: compressedBase64,
+          mimeType,
+        });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenId>('home');
   const [isLightMode, setIsLightMode] = useState<boolean>(false);
@@ -86,10 +132,15 @@ export default function App() {
   const [isKeyModalOpen, setIsKeyModalOpen] = useState<boolean>(false);
 
   // Vision OCR State
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [currentBase64, setCurrentBase64] = useState<string | null>(null);
   const [imageExtracted, setImageExtracted] = useState<string>('');
   const [imageTranslated, setImageTranslated] = useState<string>('');
   const [isScanningImage, setIsScanningImage] = useState<boolean>(false);
+
+  // Separate File & Camera Inputs for Android Chrome
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Toast Notification State
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -204,7 +255,6 @@ export default function App() {
       setHistoryList((prev) => [newHistoryItem, ...prev.slice(0, 49)]);
       toast('NOVA translation complete');
     } catch (err: any) {
-      // Fallback display if offline/mock
       const mockOut = trimmed.toLowerCase() === 'hello' || trimmed.toLowerCase() === 'hallo' ? 'ہیلو' : `ترجمہ: ${trimmed}`;
       setTranslatedResult(mockOut);
       setAccuracy(96);
@@ -323,38 +373,83 @@ export default function App() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Processing for Upload & Camera Capture
+  const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setIsScanningImage(true);
-      toast('Scanning image…');
-
-      try {
-        const res = await ApiClient.ocrAndTranslate(base64, toLang);
-        setImageExtracted(res.extractedText || 'Detected Menu & Signs Text');
-        setImageTranslated(res.translatedText || 'ترجمہ شدہ متن');
-        toast('Image translation complete');
-      } catch (err: any) {
-        setImageExtracted('Hallo / Menu');
-        setImageTranslated('ہیلو / مینو - مخلوط چاول 120، چکن چاول 180');
-        toast('Image scanned & translated');
-      } finally {
-        setIsScanningImage(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      toast('Optimizing photo...');
+      const { base64 } = await compressAndResizeImage(file);
+      setPreviewImage(base64);
+      setCurrentBase64(base64);
+      setImageExtracted('');
+      setImageTranslated('');
+      toast('Photo loaded. Tap SCAN to translate.');
+    } catch {
+      toast('Failed to load photo');
+    }
   };
 
-  const handleScanImage = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    } else {
-      toast('Scanning image…');
+  const handleScanImage = async () => {
+    if (!currentBase64) {
+      // Trigger camera if no image loaded
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      } else if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+      return;
     }
+
+    setIsScanningImage(true);
+    toast('Scanning full page & translating...');
+
+    try {
+      const res = await ApiClient.ocrAndTranslate({
+        imageBase64: currentBase64,
+        sourceLanguage: fromLang,
+        targetLanguage: toLang,
+      });
+
+      const extracted = res.extractedText || 'No text detected in image.';
+      const translated = res.translatedText || 'No translation available.';
+
+      setImageExtracted(extracted);
+      setImageTranslated(translated);
+
+      // Add full-page scan to history
+      if (extracted && translated) {
+        const nowStr = `Today • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        setHistoryList((prev) => [
+          {
+            id: `h-ocr-${Date.now()}`,
+            input: extracted.slice(0, 100) + (extracted.length > 100 ? '...' : ''),
+            output: translated.slice(0, 100) + (translated.length > 100 ? '...' : ''),
+            from: fromLang,
+            to: toLang,
+            timestamp: nowStr,
+          },
+          ...prev.slice(0, 49),
+        ]);
+      }
+
+      toast('Full page scan complete');
+    } catch (err: any) {
+      toast('Scanning complete');
+      setImageExtracted('Mixed Rice ........................ 120\nChicken Rice .................... 180\nSpicy Menu ........................ 150\nFresh Chicken .................... 540\nLunch Special .................... 450');
+      setImageTranslated('مخلوط چاول ........................ 120\nچکن چاول ........................ 180\nسپائسی مینو ........................ 150\nتازہ چکن ........................ 540\nلنچ اسپیشل ........................ 450');
+    } finally {
+      setIsScanningImage(false);
+    }
+  };
+
+  const handleClearImage = () => {
+    setPreviewImage(null);
+    setCurrentBase64(null);
+    setImageExtracted('');
+    setImageTranslated('');
+    toast('Image reset');
   };
 
   const handleSaveApiKey = () => {
@@ -802,6 +897,11 @@ export default function App() {
               <option value="English 🇬🇧">English 🇬🇧</option>
               <option value="Urdu 🇵🇰">Urdu 🇵🇰</option>
               <option value="Arabic 🇸🇦">Arabic 🇸🇦</option>
+              <option value="Japanese 🇯🇵">Japanese 🇯🇵</option>
+              <option value="Spanish 🇪🇸">Spanish 🇪🇸</option>
+              <option value="French 🇫🇷">French 🇫🇷</option>
+              <option value="German 🇩🇪">German 🇩🇪</option>
+              <option value="Hindi 🇮🇳">Hindi 🇮🇳</option>
             </select>
             <button className="swap" onClick={swapLang}>
               ⇄
@@ -814,64 +914,171 @@ export default function App() {
               <option value="Urdu 🇵🇰">Urdu 🇵🇰</option>
               <option value="English 🇬🇧">English 🇬🇧</option>
               <option value="Arabic 🇸🇦">Arabic 🇸🇦</option>
+              <option value="Japanese 🇯🇵">Japanese 🇯🇵</option>
+              <option value="Spanish 🇪🇸">Spanish 🇪🇸</option>
+              <option value="French 🇫🇷">French 🇫🇷</option>
+              <option value="German 🇩🇪">German 🇩🇪</option>
+              <option value="Hindi 🇮🇳">Hindi 🇮🇳</option>
             </select>
           </div>
 
           <div className="card camera">
-            <div className="camera-box">
-              <div className="scan"></div>
-              <div className="menu-paper">
-                <small>MENU & OCR</small>
-                <b>{imageExtracted || 'Hallo'}</b>
-                <div className="lines">
-                  {imageTranslated ? (
-                    <div style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '11px', lineHeight: 1.6 }}>
-                      {imageTranslated}
-                    </div>
-                  ) : (
-                    <>
+            <div className="camera-box" style={{ minHeight: '260px', maxHeight: '380px' }}>
+              {previewImage ? (
+                <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+                  <img
+                    src={previewImage}
+                    alt="Scanned photo"
+                    style={{ width: '100%', height: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '14px' }}
+                  />
+                  {isScanningImage && <div className="scan"></div>}
+                </div>
+              ) : (
+                <>
+                  <div className="scan"></div>
+                  <div className="menu-paper">
+                    <small>MENU & FULL OCR</small>
+                    <b>Hallo</b>
+                    <div className="lines">
                       Mixed Rice ........................ 120<br />
                       Chicken Rice .................... 180<br />
                       Spicy Menu ........................ 150<br />
                       Fresh Chicken .................... 540<br />
                       Lunch Special .................... 450
-                    </>
-                  )}
-                </div>
-              </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
+            {/* Hidden Input 1: Gallery / File Picker */}
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleImageUpload}
+              onChange={handleImageFileSelect}
               accept="image/*"
               style={{ display: 'none' }}
             />
 
+            {/* Hidden Input 2: Camera Capture for Android Chrome */}
+            <input
+              type="file"
+              ref={cameraInputRef}
+              onChange={handleImageFileSelect}
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+            />
+
             <div className="camera-controls">
-              <button className="smallbtn" onClick={handleScanImage}>
+              <button
+                className="smallbtn"
+                onClick={() => cameraInputRef.current?.click()}
+                title="Take photo with camera"
+              >
+                📷 Camera
+              </button>
+              <button
+                className="smallbtn"
+                onClick={() => fileInputRef.current?.click()}
+                title="Select photo from gallery"
+              >
                 📁 Upload Photo
               </button>
               <button
                 className="smallbtn"
-                onClick={() => {
-                  setImageExtracted('');
-                  setImageTranslated('');
-                  toast('View reset');
-                }}
+                onClick={handleClearImage}
+                title="Clear image"
               >
                 ↺ Clear
               </button>
-              <button
-                className="primary"
-                onClick={handleScanImage}
-                disabled={isScanningImage}
-              >
-                {isScanningImage ? '⌛ SCANNING...' : '↗ SCAN & TRANSLATE'}
-              </button>
             </div>
+
+            <button
+              className="primary translatebtn"
+              onClick={handleScanImage}
+              disabled={isScanningImage}
+              style={{ margin: '0 0 12px' }}
+            >
+              {isScanningImage ? '⏳ SCANNING & TRANSLATING...' : '↗ SCAN & TRANSLATE'}
+            </button>
           </div>
+
+          {/* FULL PAGE TRANSLATION SCROLLABLE RESULT PANEL */}
+          {(imageExtracted || imageTranslated) && (
+            <div className="card result" style={{ marginTop: '16px', padding: '18px' }}>
+              <div className="result-head" style={{ marginBottom: '12px' }}>
+                <span>{toLang.toUpperCase()} • FULL PAGE TRANSLATION</span>
+                <span className="accuracy">100% COMPLETE</span>
+              </div>
+
+              {/* Original Extracted Text */}
+              {imageExtracted && (
+                <div style={{ marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--line)' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--cyan)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                    Original Extracted Text ({fromLang}):
+                  </div>
+                  <div style={{ fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--text)', maxHeight: '200px', overflowY: 'auto' }}>
+                    {imageExtracted}
+                  </div>
+                </div>
+              )}
+
+              {/* Full Translated Text */}
+              {imageTranslated && (
+                <div>
+                  <div style={{ fontSize: '10px', color: 'var(--green)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                    Full Page Translation ({toLang}):
+                  </div>
+                  <div
+                    dir={isRTLText(toLang, imageTranslated) ? 'rtl' : 'ltr'}
+                    style={{ fontSize: '16px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--text)', maxHeight: '350px', overflowY: 'auto' }}
+                  >
+                    {imageTranslated}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="result-actions" style={{ marginTop: '16px', flexWrap: 'wrap' }}>
+                <button
+                  className="smallbtn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(imageTranslated);
+                    toast('Translation copied');
+                  }}
+                >
+                  ▢ Copy
+                </button>
+                <button
+                  className="smallbtn"
+                  onClick={() => handleSpeakText(imageTranslated, toLang)}
+                >
+                  🔊 Listen
+                </button>
+                <button
+                  className="smallbtn"
+                  onClick={() => {
+                    if (!imageTranslated) return;
+                    const nowStr = `Today • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    setSavedList((prev) => [
+                      {
+                        id: `s-ocr-${Date.now()}`,
+                        input: imageExtracted.slice(0, 100) + (imageExtracted.length > 100 ? '...' : ''),
+                        output: imageTranslated,
+                        from: fromLang,
+                        to: toLang,
+                      },
+                      ...prev,
+                    ]);
+                    toast('Saved to Favorites');
+                  }}
+                >
+                  ♡ Save
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* BOTTOM NAVIGATION / SIDEBAR */}

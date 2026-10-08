@@ -99,7 +99,7 @@ body.light .app {
 
 .phone {
   width: min(440px, 100vw);
-  height: min(920px, 100dvh);
+  height: 100dvh;
   background: var(--bg);
   position: relative;
   overflow: hidden;
@@ -133,9 +133,16 @@ body.light .app {
     grid-column: 1;
     grid-row: 2;
     position: static;
+    transform: none;
+    width: auto;
+    bottom: auto;
+    left: auto;
     height: auto;
     border-top: 0;
     border-right: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
     display: flex;
     flex-direction: column;
     padding: 18px 12px;
@@ -253,8 +260,8 @@ body.light .topbar {
 .screen {
   display: none;
   flex: 1;
-  overflow: auto;
-  padding: 22px 16px 95px;
+  overflow-y: auto;
+  padding: 22px 16px calc(115px + env(safe-area-inset-bottom, 0px));
   scrollbar-width: none;
 }
 
@@ -264,6 +271,45 @@ body.light .topbar {
 
 .screen.active {
   display: block;
+}
+
+.bottom {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 24px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  height: 64px;
+  background: rgba(12, 23, 41, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  z-index: 50;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+body.light .bottom {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.nav {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.15s ease;
 }
 
 h1 {
@@ -845,64 +891,10 @@ textarea[dir="rtl"],
   font-size: 10px;
 }
 
-.bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 78px;
-  background: rgba(7, 16, 31, 0.88);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  z-index: 5;
-}
-
-body.light .bottom {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.nav {
-  position: relative;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 9px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.nav b {
-  font-size: 20px;
-  font-weight: 500;
-}
-
-.nav.active {
-  color: var(--text);
-}
-
-.nav.active:after {
-  content: "";
-  position: absolute;
-  bottom: 7px;
-  width: 22px;
-  height: 3px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--cyan), var(--blue));
-  box-shadow: 0 0 10px rgba(88, 221, 255, 0.5);
-}
-
 .toast {
-  position: absolute;
+  position: fixed;
   left: 50%;
-  bottom: 92px;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%) translateY(15px);
   background: #102237;
   color: #fff;

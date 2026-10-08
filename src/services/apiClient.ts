@@ -245,19 +245,22 @@ export class ApiClient {
    * Send image to backend for OCR extraction and translation
    */
   static async ocrAndTranslate(
-    imageOrOptions: string | { imageBase64: string; targetLanguage?: string; mimeType?: string; model?: string },
+    imageOrOptions: string | { imageBase64: string; sourceLanguage?: string; targetLanguage?: string; mimeType?: string; model?: string },
     targetLanguage?: string,
     mimeType = 'image/jpeg',
-    model?: string
+    model?: string,
+    sourceLanguage?: string
   ): Promise<OCRResult> {
     let base64 = '';
     let tgtLang = targetLanguage || 'Urdu';
+    let srcLang = sourceLanguage;
     let mime = mimeType;
     let mod = model;
 
     if (typeof imageOrOptions === 'object' && imageOrOptions !== null) {
       base64 = imageOrOptions.imageBase64 || '';
       tgtLang = imageOrOptions.targetLanguage || tgtLang;
+      srcLang = imageOrOptions.sourceLanguage || srcLang;
       mime = imageOrOptions.mimeType || mime;
       mod = imageOrOptions.model || mod;
     } else {
@@ -270,6 +273,7 @@ export class ApiClient {
       body: JSON.stringify({
         imageBase64: base64,
         mimeType: mime,
+        sourceLanguage: srcLang,
         targetLanguage: tgtLang,
         model: mod,
       }),

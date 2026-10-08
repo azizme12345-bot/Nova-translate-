@@ -161,7 +161,7 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
  */
 apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
   try {
-    const { imageBase64, mimeType, targetLanguage, model } = req.body || {};
+    const { imageBase64, mimeType, sourceLanguage, targetLanguage, model } = req.body || {};
     const customApiKey = getApiKeyFromReq(req);
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -179,9 +179,10 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
         {
           imageBase64,
           mimeType,
+          sourceLanguage,
           targetLanguage: targetLanguage || 'English',
           model,
-        },
+        } as any,
         customApiKey
       ),
       35000 // multimodal vision timeout
