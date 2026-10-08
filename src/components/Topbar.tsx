@@ -12,9 +12,8 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ onToggleTheme, onHelp, onOpenSettings, onToast }) => {
   return (
     <header className="topbar">
-      <div className="mobilebrand flex items-center gap-2 font-bold text-lg text-emerald-950 dark:text-emerald-100">
-        <BrandLogo size={36} />
-        <span>Nova Translate</span>
+      <div className="mobilebrand flex items-center gap-2">
+        <BrandLogo size={36} showText={true} />
       </div>
       <div></div>
       <div className="top-actions">

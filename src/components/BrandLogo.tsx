@@ -16,8 +16,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 42, className = '',
       <NovaLogo size={size} className="shrink-0" />
 
       {showText && (
-        <span className="font-extrabold text-xl tracking-tight text-white flex items-center gap-1">
-          Nova <span className="text-[#06B6D4]">Translate</span>
+        <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-1">
+          NOVA <span className="text-[#0284c7] dark:text-[#38bdf8]">Translator</span>
         </span>
       )}
     </div>

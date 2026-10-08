@@ -481,6 +481,21 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
           const liveSpeech = accumulated.trim();
           if (liveSpeech) {
+            // Smart Voice Controls
+            const cmd = liveSpeech.toLowerCase();
+            if (cmd === 'clear' || cmd === 'صاف کرو' || cmd === 'صفایا') {
+              handleClear();
+              onToast('🎙️ Voice Command: Cleared');
+              stopMicrophone();
+              return;
+            }
+            if (cmd === 'swap' || cmd === 'بدلو' || cmd === 'تبدیل کرو') {
+              handleSwap();
+              onToast('🎙️ Voice Command: Swapped');
+              stopMicrophone();
+              return;
+            }
+
             liveTranscriptRef.current = liveSpeech;
             setLiveSpokenText(liveSpeech);
             const combined = baseTextRef.current ? `${baseTextRef.current} ${liveSpeech}` : liveSpeech;
@@ -543,16 +558,16 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       />
 
       {/* Hero Banner with Modern Nova Gradient */}
-      <div className="hero-banner bg-gradient-to-r from-[#0099FF]/20 via-[#00D4FF]/15 to-transparent border border-[#2a3d5a] rounded-3xl p-6 sm:p-7 mb-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="hero-banner bg-gradient-to-r from-sky-500/10 via-cyan-500/10 to-transparent border border-slate-200 dark:border-[#2a3d5a] rounded-3xl p-6 sm:p-7 mb-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-[#102038]">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0099FF]/20 text-[#00D4FF] text-xs font-extrabold mb-2 border border-[#0099FF]/30">
-            <Sparkles className="w-3.5 h-3.5 text-[#00D4FF]" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 dark:bg-[#0099FF]/20 text-[#0284c7] dark:text-[#00D4FF] text-xs font-extrabold mb-2 border border-sky-500/20 dark:border-[#0099FF]/30">
+            <Sparkles className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#00D4FF]" />
             NOVA TRANSLATOR ENGINE
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Break Language Barriers
           </h2>
-          <p className="text-slate-300 text-xs sm:text-sm max-w-lg mt-1">
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm max-w-lg mt-1">
             Type, speak, or upload images for instant, high-accuracy natural translations in 100+ languages.
           </p>
         </div>
@@ -561,17 +576,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           <button
             onClick={() => onNavigate('camera')}
             type="button"
-            className="px-4 py-2.5 rounded-xl bg-[#1a2847] hover:bg-[#2a3d5a] text-white border border-[#2a3d5a] text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1a2847] dark:hover:bg-[#2a3d5a] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2a3d5a] text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
           >
-            <Camera className="w-4 h-4 text-[#00D4FF]" />
+            <Camera className="w-4 h-4 text-sky-600 dark:text-[#00D4FF]" />
             Camera OCR
           </button>
           <button
             onClick={() => onNavigate('saved')}
             type="button"
-            className="px-4 py-2.5 rounded-xl bg-[#1a2847] hover:bg-[#2a3d5a] text-white border border-[#2a3d5a] text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1a2847] dark:hover:bg-[#2a3d5a] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2a3d5a] text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
           >
-            <Bookmark className="w-4 h-4 text-cyan-400" />
+            <Bookmark className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             Saved
           </button>
         </div>
@@ -579,17 +594,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       <div className="workspace max-w-4xl mx-auto space-y-4">
         {/* Language Bar & Tone Selector */}
-        <div className="bg-[#1a2847] p-4 rounded-2xl border border-[#2a3d5a] shadow-sm space-y-3">
+        <div className="bg-white dark:bg-[#1a2847] p-4 rounded-2xl border border-slate-200 dark:border-[#2a3d5a] shadow-sm space-y-3">
           <div className="langrow flex items-center justify-between gap-3">
             <div className="flex-1">
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Source Language</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">Source Language</label>
               <select
-                className="select w-full bg-[#0a1628] border-[#2a3d5a] text-white font-medium rounded-xl"
+                className="select w-full bg-slate-50 dark:bg-[#0a1628] border-slate-200 dark:border-[#2a3d5a] text-slate-900 dark:text-white font-medium rounded-xl"
                 id="from"
                 value={fromLang}
                 onChange={(e) => setFromLang(e.target.value)}
               >
-                {autoDetectEnabled && <option value="Auto-detect 🌐">Auto-detect 🌐</option>}
+                {autoDetectEnabled && <option value="Auto-detect 🌐">Auto Detect ✨</option>}
                 {languages.map((l) => (
                   <option key={l.code} value={l.label}>
                     {l.label}
@@ -599,7 +614,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             </div>
 
             <button
-              className="swap mt-5 p-2.5 rounded-full bg-[#0a1628] hover:bg-[#0099FF]/20 text-[#00D4FF] border border-[#2a3d5a] transition-all"
+              className="swap mt-5 p-2.5 rounded-full bg-slate-100 dark:bg-[#0a1628] hover:bg-sky-50 dark:hover:bg-[#0099FF]/20 text-sky-600 dark:text-[#00D4FF] border border-slate-200 dark:border-[#2a3d5a] transition-all"
               id="swap"
               onClick={handleSwap}
               title="Swap Languages"
@@ -609,9 +624,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             </button>
 
             <div className="flex-1">
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Target Language</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">Target Language</label>
               <select
-                className="select w-full bg-[#0a1628] border-[#2a3d5a] text-white font-medium rounded-xl"
+                className="select w-full bg-slate-50 dark:bg-[#0a1628] border-slate-200 dark:border-[#2a3d5a] text-slate-900 dark:text-white font-medium rounded-xl"
                 id="to"
                 value={toLang}
                 onChange={(e) => setToLang(e.target.value)}
@@ -626,9 +641,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           </div>
 
           {/* Tone Selector Chips */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#2a3d5a]/60">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Sparkles className="w-3.5 h-3.5 text-[#00D4FF]" />
+          <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-[#2a3d5a]/60">
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+              <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-[#00D4FF]" />
               <span>Translation Style:</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -639,8 +654,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   onClick={() => setTone(t)}
                   className={`text-xs px-3 py-1 rounded-lg font-bold transition-all ${
                     tone === t
-                      ? 'bg-gradient-to-r from-[#0099FF] to-[#00D4FF] text-slate-950 shadow-sm'
-                      : 'bg-[#0a1628] text-slate-300 hover:text-white border border-[#2a3d5a]'
+                      ? 'bg-sky-500 dark:bg-gradient-to-r dark:from-[#0099FF] dark:to-[#00D4FF] text-white dark:text-slate-950 shadow-sm'
+                      : 'bg-slate-100 dark:bg-[#0a1628] text-slate-700 dark:text-slate-300 hover:text-slate-900 border border-slate-200 dark:border-[#2a3d5a]'
                   }`}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -652,16 +667,16 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
         {/* Audio Speaking Notification */}
         {(isSpeaking || isInputSpeaking) && (
-          <div className="p-3 bg-blue-500/10 border border-[#0099FF]/40 rounded-2xl flex items-center justify-between shadow-sm animate-pulse">
+          <div className="p-3 bg-sky-50 dark:bg-blue-500/10 border border-sky-300 dark:border-[#0099FF]/40 rounded-2xl flex items-center justify-between shadow-sm animate-pulse">
             <div className="flex items-center gap-2.5">
-              <span className="w-3 h-3 rounded-full bg-[#00D4FF] animate-ping"></span>
-              <span className="text-xs sm:text-sm font-bold text-white">
+              <span className="w-3 h-3 rounded-full bg-sky-500 dark:bg-[#00D4FF] animate-ping"></span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
                 🔊 Reading aloud {audioProgressText}...
               </span>
             </div>
             <button
               onClick={stopAllAudio}
-              className="px-3 py-1 bg-[#0099FF] hover:bg-blue-600 text-white text-xs font-bold rounded-lg shadow-sm"
+              className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-sm"
               type="button"
             >
               ⏹ Stop
@@ -671,49 +686,60 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
         {/* Live Active Recording Notification */}
         {isListening && (
-          <div className="p-4 bg-rose-500/10 border-2 border-rose-500/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+          <div className="p-4 bg-rose-500/10 border-2 border-rose-500/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-pulse">
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center">
-                <span className="w-4 h-4 rounded-full bg-rose-500 animate-ping absolute"></span>
-                <span className="w-3 h-3 rounded-full bg-rose-600 relative"></span>
+              <div className="p-2.5 rounded-full bg-rose-600/30 border border-rose-500/50 flex items-center justify-center text-rose-500 dark:text-rose-300">
+                <Mic className="w-6 h-6 text-rose-500 dark:text-rose-300 animate-bounce" />
               </div>
               <div>
-                <span className="text-sm font-extrabold text-rose-300 block">
-                  🎙️ Recording Speech ({recordingSeconds}s)… Speak now
+                <span className="text-sm font-extrabold text-rose-600 dark:text-rose-300 flex items-center gap-2">
+                  <span>🎙️ Voice Input Active ({recordingSeconds}s)</span>
+                  <div className="inline-flex items-center gap-0.5 h-3">
+                    <span className="w-1 h-3 bg-rose-500 rounded-full animate-pulse"></span>
+                    <span className="w-1 h-2 bg-rose-400 rounded-full animate-ping"></span>
+                    <span className="w-1 h-3.5 bg-rose-500 rounded-full animate-pulse"></span>
+                  </div>
                 </span>
-                <span className="text-xs text-rose-200/80">
-                  {liveSpokenText ? `"${liveSpokenText}"` : 'Listening and transcribing in real-time...'}
+                <span className="text-xs text-rose-700 dark:text-rose-200/90 block mt-0.5 font-medium">
+                  {liveSpokenText ? `"${liveSpokenText}"` : 'Listening... Speak clearly into microphone'}
                 </span>
               </div>
             </div>
             <button
               onClick={handleVoiceInput}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
               type="button"
             >
-              <MicOff className="w-4 h-4" /> Stop & Transcribe
+              <MicOff className="w-4 h-4" /> Stop & Translate
             </button>
           </div>
         )}
 
         {isProcessingAudio && (
-          <div className="p-3 bg-[#1a2847] border border-[#0099FF]/40 rounded-xl flex items-center gap-2.5 text-[#00D4FF] text-xs sm:text-sm font-semibold">
+          <div className="p-3 bg-sky-50 dark:bg-[#1a2847] border border-sky-200 dark:border-[#0099FF]/40 rounded-xl flex items-center gap-2.5 text-sky-700 dark:text-[#00D4FF] text-xs sm:text-sm font-semibold">
             <span className="animate-spin text-base">⚡</span>
             Transcribing audio with compressed 16kHz payload (~2s)...
           </div>
         )}
 
         {/* Editor Grid */}
-        <div className="editorgrid grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="editorgrid grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+          {/* Scanning Laser Animation Overlay when translating */}
+          {isTranslating && (
+            <div className="absolute -top-2 left-0 right-0 z-20 pointer-events-none">
+              <div className="h-1 w-full bg-gradient-to-r from-transparent via-sky-500 dark:via-[#00D4FF] to-transparent animate-pulse shadow-[0_0_15px_#00D4FF]"></div>
+            </div>
+          )}
+
           {/* Source Text Panel */}
-          <div className="panel bg-[#1a2847] border border-[#2a3d5a] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
+          <div className="panel bg-white dark:bg-[#1a2847] border border-slate-200 dark:border-[#2a3d5a] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
             <div>
-              <div className="panelhead p-3.5 bg-[#0a1628] border-b border-[#2a3d5a] flex items-center justify-between font-bold text-xs text-slate-300">
+              <div className="panelhead p-3.5 bg-slate-50 dark:bg-[#0a1628] border-b border-slate-200 dark:border-[#2a3d5a] flex items-center justify-between font-bold text-xs text-slate-700 dark:text-slate-300">
                 <span className="flex items-center gap-1.5">
-                  <Keyboard className="w-3.5 h-3.5 text-[#00D4FF]" />
+                  <Keyboard className="w-3.5 h-3.5 text-sky-600 dark:text-[#00D4FF]" />
                   Original Text ({fromLang})
                 </span>
-                <span id="count" className="text-slate-400">{inputText.length} / 5000</span>
+                <span id="count" className="text-slate-500 dark:text-slate-400">{inputText.length} / 5000</span>
               </div>
               <div className="p-4">
                 <textarea
@@ -723,7 +749,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   style={{ fontSize: fontSizeMap[textSize] }}
-                  className="w-full min-h-[160px] bg-transparent border-0 focus:ring-0 p-0 resize-none outline-none font-medium text-white placeholder-slate-500"
+                  className="w-full min-h-[160px] bg-transparent border-0 focus:ring-0 p-0 resize-none outline-none font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
@@ -734,31 +760,33 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               </div>
             </div>
 
-            <div className="p-3 bg-[#0a1628] border-t border-[#2a3d5a] flex items-center justify-between gap-2">
+            <div className="p-3 bg-slate-50 dark:bg-[#0a1628] border-t border-slate-200 dark:border-[#2a3d5a] flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <button
-                  className={`mini px-3 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    isListening ? 'bg-rose-600 text-white border-rose-500' : 'text-slate-300 hover:text-white hover:border-[#0099FF]'
+                  className={`px-3.5 py-2 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition-all shadow-sm active:scale-95 ${
+                    isListening
+                      ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/30 animate-pulse'
+                      : 'bg-sky-500/10 dark:bg-gradient-to-r dark:from-[#0099FF]/20 dark:to-[#00D4FF]/20 border-sky-500/30 dark:border-[#0099FF]/40 text-sky-700 dark:text-[#00D4FF] hover:bg-sky-500/20'
                   }`}
                   id="mic"
                   onClick={handleVoiceInput}
                   type="button"
                   title="Speak into microphone"
                 >
-                  <Mic className="w-3.5 h-3.5 text-[#00D4FF]" />
-                  {isListening ? '⏹ Stop' : '🎤 Speak'}
+                  <Mic className="w-4 h-4 text-sky-600 dark:text-[#00D4FF]" />
+                  <span>{isListening ? '⏹ Stop' : '🎙️ Speak'}</span>
                 </button>
                 <button
-                  className="mini px-3 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold text-slate-300 hover:text-white hover:border-[#0099FF] flex items-center gap-1.5"
+                  className="mini px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:border-sky-500 flex items-center gap-1.5"
                   onClick={() => onNavigate('camera')}
                   type="button"
                   title="Camera OCR"
                 >
-                  <Camera className="w-3.5 h-3.5 text-[#00D4FF]" />
+                  <Camera className="w-3.5 h-3.5 text-sky-600 dark:text-[#00D4FF]" />
                   Camera
                 </button>
                 <button
-                  className="mini px-2.5 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold text-slate-400 hover:text-white"
+                  className="mini px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900"
                   id="clear"
                   onClick={handleClear}
                   type="button"
@@ -767,34 +795,36 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   Clear
                 </button>
               </div>
-              <div className="text-xs text-[#00D4FF] font-medium">
-                {detectedBadge ? `Detected: ${detectedBadge}` : ''}
+              <div className="text-xs text-sky-600 dark:text-[#00D4FF] font-medium">
+                {detectedBadge ? `✨ ${detectedBadge}` : ''}
               </div>
             </div>
           </div>
 
           {/* Translation Output Panel */}
-          <div className="panel bg-[#1a2847] border border-[#2a3d5a] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
+          <div className="panel bg-white dark:bg-[#1a2847] border border-slate-200 dark:border-[#2a3d5a] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between relative">
             <div>
-              <div className="panelhead p-3.5 bg-[#0a1628] border-b border-[#2a3d5a] flex items-center justify-between font-bold text-xs text-white">
-                <span className="flex items-center gap-1.5 text-[#00D4FF]">
+              <div className="panelhead p-3.5 bg-slate-50 dark:bg-[#0a1628] border-b border-slate-200 dark:border-[#2a3d5a] flex items-center justify-between font-bold text-xs text-slate-800 dark:text-white">
+                <span className="flex items-center gap-1.5 text-sky-600 dark:text-[#00D4FF]">
                   <Sparkles className="w-3.5 h-3.5" />
                   Translation ({toLang})
                 </span>
                 <div className="flex items-center gap-2">
                   {confidence !== null && outputText && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
-                      {Math.round(confidence * 100)}% Accuracy
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold">
+                      {Math.round(confidence * 100)}% Match
                     </span>
                   )}
-                  <span id="status" className="text-slate-400">
+                  <span id="status" className="text-slate-500 dark:text-slate-400">
                     {status}
                   </span>
                 </div>
               </div>
               <div className="p-4 space-y-3">
                 <div
-                  className="output min-h-[120px] font-medium whitespace-pre-wrap text-white leading-relaxed"
+                  className={`output min-h-[120px] font-medium whitespace-pre-wrap text-slate-900 dark:text-white leading-relaxed transition-all duration-300 ${
+                    isTranslating ? 'opacity-40 blur-[0.5px]' : 'opacity-100'
+                  }`}
                   id="output"
                   style={{
                     fontSize: fontSizeMap[textSize],
@@ -802,14 +832,14 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   }}
                 >
                   {outputText || (
-                    <span className="text-slate-500 italic">Your accurate translation will appear here…</span>
+                    <span className="text-slate-400 dark:text-slate-500 italic">Your accurate translation will appear here…</span>
                   )}
                 </div>
 
                 {/* Details & Cultural Context note if present */}
                 {details && outputText && (
-                  <div className="p-2.5 rounded-xl bg-[#0a1628] border border-[#2a3d5a] text-xs text-slate-300 flex items-start gap-2">
-                    <Info className="w-4 h-4 text-[#00D4FF] shrink-0 mt-0.5" />
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#0a1628] border border-slate-200 dark:border-[#2a3d5a] text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-sky-600 dark:text-[#00D4FF] shrink-0 mt-0.5" />
                     <span>{details}</span>
                   </div>
                 )}
@@ -817,8 +847,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                 {/* Alternative Translations Chips */}
                 {alternatives.length > 0 && outputText && (
                   <div className="space-y-1.5 pt-1">
-                    <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                      <Layers className="w-3 h-3 text-[#00D4FF]" />
+                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Layers className="w-3 h-3 text-sky-600 dark:text-[#00D4FF]" />
                       <span>Alternative Phrasings:</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -827,7 +857,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                           key={idx}
                           type="button"
                           onClick={() => handleSelectAlternative(alt)}
-                          className="text-xs px-2.5 py-1 rounded-lg bg-[#0a1628] hover:bg-[#0099FF]/20 text-slate-300 hover:text-white border border-[#2a3d5a] transition-all text-left"
+                          className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-100 dark:bg-[#0a1628] dark:hover:bg-[#0099FF]/20 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-[#2a3d5a] transition-all text-left"
                         >
                           "{alt}"
                         </button>
@@ -838,11 +868,11 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               </div>
             </div>
 
-            <div className="p-3 bg-[#0a1628] border-t border-[#2a3d5a] flex items-center justify-between gap-2">
+            <div className="p-3 bg-slate-50 dark:bg-[#0a1628] border-t border-slate-200 dark:border-[#2a3d5a] flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <button
-                  className={`mini px-3 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    isSpeaking ? 'bg-[#0099FF] text-white' : 'text-slate-300 hover:text-white hover:border-[#0099FF]'
+                  className={`mini px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    isSpeaking ? 'bg-sky-600 text-white' : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:border-sky-500'
                   } disabled:opacity-40`}
                   id="listen"
                   onClick={() => playSpeech(outputText, toLang, true, false)}
@@ -850,22 +880,22 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   disabled={!outputText}
                   title="Listen to translation"
                 >
-                  <Volume2 className="w-3.5 h-3.5 text-[#00D4FF]" />
+                  <Volume2 className="w-3.5 h-3.5 text-sky-600 dark:text-[#00D4FF]" />
                   {isSpeaking ? `⏹ Stop ${audioProgressText}` : '🔊 Listen'}
                 </button>
                 <button
-                  className="mini px-2.5 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold text-slate-300 hover:text-white hover:border-[#0099FF] flex items-center gap-1 disabled:opacity-40"
+                  className="mini px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:border-sky-500 flex items-center gap-1 disabled:opacity-40"
                   id="copy"
                   onClick={handleCopy}
                   type="button"
                   disabled={!outputText}
                   title="Copy translation"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? 'Copied' : 'Copy'}
                 </button>
                 <button
-                  className="mini px-2.5 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold text-slate-300 hover:text-white hover:border-[#0099FF] flex items-center gap-1 disabled:opacity-40"
+                  className="mini px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:border-sky-500 flex items-center gap-1 disabled:opacity-40"
                   id="share"
                   onClick={handleShare}
                   type="button"
@@ -875,22 +905,22 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   <Share2 className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  className={`mini px-2.5 py-1.5 rounded-xl border border-[#2a3d5a] bg-[#1a2847] text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-all ${
-                    isSaved ? 'text-amber-400 border-amber-400/40 bg-amber-400/10' : 'text-slate-300 hover:text-white hover:border-[#0099FF]'
+                  className={`mini px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a3d5a] bg-white dark:bg-[#1a2847] text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-all ${
+                    isSaved ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:border-sky-500'
                   }`}
                   onClick={handleSaveTranslation}
                   type="button"
                   disabled={!outputText}
                   title="Save to Bookmarked Phrases"
                 >
-                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-400 text-amber-400' : ''}`} />
+                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
                   {isSaved ? 'Saved' : 'Save'}
                 </button>
               </div>
 
               {latencyMs !== null && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00D4FF] bg-[#0099FF]/15 px-2 py-0.5 rounded-full border border-[#0099FF]/30">
-                  <Zap className="w-3 h-3 text-yellow-400" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-700 dark:text-[#00D4FF] bg-sky-100 dark:bg-[#0099FF]/15 px-2 py-0.5 rounded-full border border-sky-300 dark:border-[#0099FF]/30">
+                  <Zap className="w-3 h-3 text-amber-500" />
                   {isCached ? '0ms Cache' : `${(latencyMs / 1000).toFixed(2)}s`}
                 </span>
               )}
@@ -901,13 +931,13 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         {/* Action Translate Bar */}
         <div className="translatebar flex justify-center pt-2">
           <button
-            className="w-full sm:w-auto px-12 py-4 rounded-2xl bg-gradient-to-r from-[#0099FF] to-[#00D4FF] text-slate-950 font-extrabold text-base shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+            className="w-full sm:w-auto px-12 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 dark:from-[#0099FF] dark:to-[#00D4FF] text-white dark:text-slate-950 font-extrabold text-base shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
             id="translate"
             onClick={handleTranslate}
             disabled={isTranslating || isProcessingAudio || !inputText.trim()}
             type="button"
           >
-            <Zap className="w-4 h-4 fill-slate-950" />
+            <Zap className={`w-4 h-4 fill-current ${isTranslating ? 'animate-bounce' : ''}`} />
             {isTranslating ? 'Translating in ~1s…' : 'Translate Now'}
           </button>
         </div>

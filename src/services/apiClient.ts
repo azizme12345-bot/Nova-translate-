@@ -3,6 +3,7 @@
  */
 
 import { TranslationCache } from './cacheService.ts';
+import { OfflineEngine } from './offlineEngine.ts';
 
 export interface TranslationResult {
   originalText: string;
@@ -196,25 +197,35 @@ export class ApiClient {
       };
     }
 
-    // 2. Fast Backend Call
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: ApiClient.getHeaders(),
-      body: JSON.stringify({
-        text: cleanText,
-        sourceLanguage: srcLang,
-        targetLanguage: tgtLang,
-        tone: tTone,
-        model: tModel,
-      }),
-    });
+    // Check if device is offline or force offline mode is set
+    if (!OfflineEngine.isOnline()) {
+      return OfflineEngine.translateOffline(cleanText, srcLang, tgtLang);
+    }
 
-    const result = await handleApiResponse<TranslationResult>(res);
+    try {
+      // 2. Fast Backend Call
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: ApiClient.getHeaders(),
+        body: JSON.stringify({
+          text: cleanText,
+          sourceLanguage: srcLang,
+          targetLanguage: tgtLang,
+          tone: tTone,
+          model: tModel,
+        }),
+      });
 
-    // Save to client cache
-    TranslationCache.set(cleanText, srcLang, tgtLang, result);
+      const result = await handleApiResponse<TranslationResult>(res);
 
-    return result;
+      // Save to client cache
+      TranslationCache.set(cleanText, srcLang, tgtLang, result);
+
+      return result;
+    } catch (err: any) {
+      console.warn('Backend request failed, falling back to Offline Engine:', err);
+      return OfflineEngine.translateOffline(cleanText, srcLang, tgtLang);
+    }
   }
 
   /**

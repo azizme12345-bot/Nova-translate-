@@ -162,10 +162,15 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         let width = img.width;
         let height = img.height;
 
-        const MAX_WIDTH = 1400;
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
+        const MAX_DIM = 1600;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
         }
 
         canvas.width = width;
@@ -174,7 +179,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
           processImage(compressedBase64);
         }
       };

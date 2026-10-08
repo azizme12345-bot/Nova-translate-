@@ -34,7 +34,7 @@ apiRouter.get('/health', (req: Request, res: Response) => {
   const serverKeyConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
   res.json({
     status: 'ok',
-    service: 'Nova Translate Secure Backend',
+    service: 'Nova Translator Secure Backend',
     version: '2.0.0',
     geminiConfigured: !!customKey || serverKeyConfigured,
     hasCustomApiKey: !!customKey,

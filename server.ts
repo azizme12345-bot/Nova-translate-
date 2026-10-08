@@ -81,7 +81,7 @@ async function bootstrap() {
   }
 
   app.listen(port, '0.0.0.0', () => {
-    console.log(`Nova Translate Backend server listening on http://0.0.0.0:${port}`);
+    console.log(`Nova Translator Backend server listening on http://0.0.0.0:${port}`);
     console.log(`API endpoints available at http://0.0.0.0:${port}/api/`);
   });
 }
