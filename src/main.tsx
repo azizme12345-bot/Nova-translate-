@@ -1,6 +1,12 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  (window as any).deferredPrompt = e;
+});
 
 // Intercept browser sandbox mic notices so AI Studio runner doesn't flag them
 window.addEventListener('unhandledrejection', (event) => {
@@ -17,5 +23,8 @@ window.addEventListener('error', (event) => {
   }
 });
 
-createRoot(document.getElementById('root')!).render(<App />);
-
+createRoot(document.getElementById('root')!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);

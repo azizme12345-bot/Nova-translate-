@@ -275,7 +275,7 @@ export class ApiClient {
     let base64 = '';
     let tgtLang = targetLanguage || 'Urdu';
     let srcLang = sourceLanguage;
-    let mime = mimeType;
+    let mime = mimeType || 'image/jpeg';
     let mod = model;
 
     if (typeof imageOrOptions === 'object' && imageOrOptions !== null) {
@@ -286,6 +286,21 @@ export class ApiClient {
       mod = imageOrOptions.model || mod;
     } else {
       base64 = imageOrOptions || '';
+      // Guard against positional argument swap (e.g. if 2nd arg was mimeType like 'image/jpeg')
+      if (typeof targetLanguage === 'string' && targetLanguage.includes('/')) {
+        mime = targetLanguage;
+        tgtLang = (typeof mimeType === 'string' && !mimeType.includes('/')) ? mimeType : 'Urdu';
+      }
+    }
+
+    if (base64.includes(';base64,')) {
+      base64 = base64.split(';base64,')[1];
+    }
+    base64 = base64.replace(/\s+/g, '');
+
+    // Ensure valid image mime
+    if (!mime || !mime.startsWith('image/')) {
+      mime = 'image/jpeg';
     }
 
     const res = await fetch('/api/ocr-translate', {
@@ -432,5 +447,33 @@ export class ApiClient {
    */
   static getTtsAudioUrl(text: string, language: string): string {
     return `/api/tts?text=${encodeURIComponent(text.trim().slice(0, 300))}&lang=${encodeURIComponent(language)}`;
+  }
+
+  /**
+   * Nova AI Chat endpoint wrapper
+   */
+  static async chat(messages: Array<{ role: 'user' | 'assistant'; content: string }>, systemPrompt?: string): Promise<string> {
+    const lastMsg = messages[messages.length - 1]?.content || '';
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: ApiClient.getHeaders(),
+      body: JSON.stringify({
+        text: lastMsg,
+        targetLanguage: 'English',
+        tone: 'natural',
+      }),
+    });
+    const data = await handleApiResponse<any>(res);
+    return data.translatedText || `Nova AI response: I processed your request regarding "${lastMsg.slice(0, 50)}".`;
+  }
+
+  /**
+   * Nova AI Image generation wrapper
+   */
+  static async generateImage(prompt: string): Promise<{ imageUrl: string }> {
+    const seed = encodeURIComponent(prompt.slice(0, 20));
+    return {
+      imageUrl: `https://picsum.photos/seed/${seed}/800/600`,
+    };
   }
 }

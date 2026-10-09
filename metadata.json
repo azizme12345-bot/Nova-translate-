@@ -1,5 +1,5 @@
 {
-  "name": "Nova Translator",
+  "name": "Nova Translate",
   "description": "Fast, simple, and natural translation for text, voice, and images across 100+ languages.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

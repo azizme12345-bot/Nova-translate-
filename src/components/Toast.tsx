@@ -11,7 +11,7 @@ export const Toast: React.FC<ToastProps> = ({ message }) => {
   return (
     <div
       id="toast"
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/95 dark:bg-cyan-950/95 text-white dark:text-cyan-100 border border-slate-700/80 dark:border-cyan-500/40 text-xs font-semibold shadow-xl backdrop-blur-md transition-all animate-screen"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-[#111111]/95 text-emerald-400 border border-emerald-500/30 text-xs font-semibold shadow-2xl backdrop-blur-md transition-all"
     >
       {message}
     </div>
