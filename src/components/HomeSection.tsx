@@ -7,7 +7,10 @@ import { HistoryItem, SavedItem, ActivePage } from '../types.ts';
 interface HomeSectionProps {
   activeScreen?: 'home' | 'translate';
   languages: LanguageOption[];
+  history?: HistoryItem[];
   onAddHistory: (item: HistoryItem) => void;
+  onDeleteHistoryItem?: (id: string) => void;
+  onClearHistory?: () => void;
   onAddSaved: (item: SavedItem) => void;
   onNavigate: (page: ActivePage) => void;
   onToast: (msg: string) => void;
@@ -21,7 +24,10 @@ interface HomeSectionProps {
 
 export const HomeSection: React.FC<HomeSectionProps> = ({
   languages,
+  history = [],
   onAddHistory,
+  onDeleteHistoryItem,
+  onClearHistory,
   onAddSaved,
   onNavigate,
   onToast,
@@ -41,6 +47,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   const [speakingField, setSpeakingField] = useState<'source' | 'target' | null>(null);
   const [isSplit, setIsSplit] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showDrawerHistory, setShowDrawerHistory] = useState(false);
   const [voiceGender, setVoiceGender] = useState<VoiceGender>(() => getSavedVoiceGender());
 
   // Refs for speech recognition & recorder
@@ -200,7 +207,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           handleSpeak(finalOut, tgtLang, 'target');
         }
       } catch (err: any) {
-        const fallbackMsg = err.message || 'Translation failed. Please check your Gemini API Key.';
+        const fallbackMsg = err.message || 'ترجمہ کرنے میں خرابی پیش آئی۔ براہ کرم دوبارہ کوشش کریں۔';
         setOutputText(fallbackMsg);
         onToast(fallbackMsg);
       } finally {
@@ -802,23 +809,103 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3">
-              {/* API Key Modal Shortcut */}
-              <button
-                type="button"
-                onClick={() => {
-                  setDrawerOpen(false);
-                  if (onOpenApiKeyModal) onOpenApiKeyModal();
-                }}
-                className="flex items-center gap-3 p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl text-emerald-900 font-semibold text-sm transition text-left"
-              >
-                <span className="text-lg">🔑</span>
-                <div>
-                  <div>Gemini API Key</div>
-                  <div className="text-[11px] text-emerald-700 font-normal">
-                    {ApiClient.getCustomApiKey() ? 'Custom Key Active' : 'Configure Custom Key'}
-                  </div>
+              {/* Compact History Feature right at the top of Drawer */}
+              <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                <div className="flex items-center justify-between p-3 bg-emerald-50/70">
+                  <button
+                    type="button"
+                    onClick={() => setShowDrawerHistory(!showDrawerHistory)}
+                    className="flex items-center gap-2 text-emerald-900 font-bold text-sm flex-1 text-left cursor-pointer"
+                  >
+                    <span>📜</span>
+                    <span>History (ہسٹری) ({history.length})</span>
+                    <span className="text-xs ml-auto">{showDrawerHistory ? '▲' : '▼'}</span>
+                  </button>
+                  {history.length > 0 && onClearHistory && (
+                    <button
+                      type="button"
+                      onClick={onClearHistory}
+                      className="text-[11px] text-red-600 hover:underline font-semibold ml-2 cursor-pointer"
+                      title="پوری ہسٹری ڈیلیٹ کریں"
+                    >
+                      Clear All
+                    </button>
+                  )}
                 </div>
-              </button>
+
+                {showDrawerHistory && (
+                  <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-2 border-t border-gray-200 bg-white">
+                    {history.length === 0 ? (
+                      <div className="text-xs text-gray-400 text-center py-3">
+                        ابھی کوئی ہسٹری موجود نہیں ہے
+                      </div>
+                    ) : (
+                      history.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-2 rounded-lg border border-gray-100 bg-gray-50 flex flex-col gap-1.5 text-xs shadow-2xs"
+                        >
+                          <div className="text-gray-700 font-medium line-clamp-1">{item.input}</div>
+                          <div className="text-emerald-800 font-bold line-clamp-1">{item.output}</div>
+                          <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFromLang(item.from || 'English 🇬🇧');
+                                setToLang(item.to || 'Urdu 🇵🇰');
+                                setInputText(item.input);
+                                setOutputText(item.output);
+                                setDrawerOpen(false);
+                                onToast('ہسٹری سے چیٹ دوبارہ لوڈ ہو گئی');
+                              }}
+                              className="bg-[#2e7d32] text-white px-2 py-0.5 rounded text-[11px] font-bold hover:bg-emerald-700 transition cursor-pointer"
+                            >
+                              🔄 Use
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${item.input}\n${item.output}`);
+                                onToast('کاپی ہو گیا!');
+                              }}
+                              className="bg-white border border-gray-300 text-gray-700 px-2 py-0.5 rounded text-[11px] font-semibold hover:bg-gray-100 transition cursor-pointer"
+                            >
+                              📋 Copy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onAddSaved({
+                                  id: item.id,
+                                  from: item.from,
+                                  to: item.to,
+                                  input: item.input,
+                                  output: item.output,
+                                  timestamp: '♡ Saved',
+                                });
+                              }}
+                              className="bg-white border border-gray-300 text-emerald-700 px-1.5 py-0.5 rounded text-[11px] font-semibold hover:bg-emerald-50 transition cursor-pointer"
+                              title="سیو کریں"
+                            >
+                              ♡ Save
+                            </button>
+                            {onDeleteHistoryItem && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteHistoryItem(item.id)}
+                                className="text-red-500 hover:text-red-700 px-1 py-0.5 rounded text-[11px] font-bold cursor-pointer"
+                                title="ڈیلیٹ کریں"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Voice Gender Setting */}
               <div className="p-3 bg-gray-50 rounded-xl flex justify-between items-center text-sm">

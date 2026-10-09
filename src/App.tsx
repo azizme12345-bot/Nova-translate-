@@ -84,6 +84,25 @@ export default function App() {
     [showToast]
   );
 
+  const handleDeleteHistoryItem = useCallback((id: string) => {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem('nova_translation_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast('ہسٹری آئٹم ڈیلیٹ ہو گیا');
+  }, [showToast]);
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+    try {
+      localStorage.removeItem('nova_translation_history');
+    } catch {}
+    showToast('ہسٹری صاف کر دی گئی');
+  }, [showToast]);
+
   const handleUseInTranslator = (sourceText: string, translatedText: string, from: string, to: string) => {
     setLoadedItem({
       id: Date.now().toString(),
@@ -102,7 +121,10 @@ export default function App() {
         {activeView === 'translate' && (
           <HomeSection
             languages={DEFAULT_LANGUAGES}
+            history={history}
             onAddHistory={handleAddHistory}
+            onDeleteHistoryItem={handleDeleteHistoryItem}
+            onClearHistory={handleClearHistory}
             onAddSaved={handleAddSaved}
             onNavigate={setActiveView}
             onToast={showToast}

@@ -454,8 +454,8 @@ Respond ONLY with a valid JSON object in this format:
 
     if (!res || !res.text) {
       return {
-        extractedText: 'کوٹہ مکمل ہو چکا ہے (Quota Exceeded)۔ براہ کرم مینو میں نئی Gemini API Key درج کریں۔',
-        translatedText: 'آپ کی موجودہ API Key کی یومیہ حد پوری ہو چکی ہے۔ براہ کرم بائیں مینو (≡) سے نئی Gemini API Key شامل کریں۔',
+        extractedText: 'تصویر سے تحریر پڑھنے میں عارضی تاخیر۔ براہ کرم دوبارہ کوشش کریں۔',
+        translatedText: 'براہ کرم چند لمحوں بعد دوبارہ کوشش کریں یا واضح تصویر منتخب کریں۔',
         detectedSourceLanguage: sourceLanguage || 'Auto-detected',
         targetLanguage,
         timestamp: new Date().toISOString(),
