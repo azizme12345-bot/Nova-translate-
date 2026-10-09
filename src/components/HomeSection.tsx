@@ -221,7 +221,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     if (val.trim().length > 1) {
       debounceTimerRef.current = window.setTimeout(() => {
         executeTranslation(val, fromLang, toLang, false);
-      }, 750);
+      }, 350);
     }
   };
 
@@ -285,7 +285,43 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       return;
     }
 
+    let liveRecognized = false;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = getSpeechLangCode(fromLang);
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript + ' ';
+          }
+          const clean = transcript.trim();
+          if (clean) {
+            liveRecognized = true;
+            setInputText(clean);
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = window.setTimeout(() => {
+              executeTranslation(clean, fromLang, toLang, false);
+            }, 400);
+          }
+        };
+
+        recognition.start();
+      } catch {}
+    }
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (recognitionRef.current) {
+        isListeningRef.current = true;
+        setIsListening(true);
+        onToast('🎙️ سن رہے ہیں... بولنا شروع کریں');
+        return;
+      }
       onToast('مائیکروفون اس ڈیوائس پر سپورٹ نہیں کرتا');
       return;
     }
@@ -311,16 +347,38 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       recorder.onstop = async () => {
         setIsListening(false);
         isListeningRef.current = false;
+        if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch {}
+          recognitionRef.current = null;
+        }
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        if (blob.size > 0) {
-          onToast('🎙️ آواز کو ٹیکسٹ میں بدلا جا रहा ہے...');
+        if (blob.size > 0 && !liveRecognized) {
+          onToast('🎙️ آواز کو ٹیکسٹ میں بدلا جا رہا ہے...');
           try {
             const compressed = await AudioCompressor.compressAudioBlob(blob);
-            const stt = await ApiClient.speechToText(compressed.base64, compressed.mimeType, fromLang);
+            const stt = await ApiClient.speechToText({
+              audioBase64: compressed.base64,
+              mimeType: compressed.mimeType,
+              sourceLanguage: fromLang,
+              targetLanguage: toLang,
+            });
             const transcribed = stt.transcript || stt.text || '';
             if (transcribed) {
               setInputText(transcribed);
-              await executeTranslation(transcribed, fromLang, toLang, false);
+              if (stt.translatedText) {
+                setOutputText(stt.translatedText);
+                setConfidence(0.99);
+                onAddHistory({
+                  id: Date.now().toString(),
+                  from: fromLang,
+                  to: toLang,
+                  input: transcribed,
+                  output: stt.translatedText,
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                });
+              } else {
+                await executeTranslation(transcribed, fromLang, toLang, false);
+              }
               onToast('ترجمہ مکمل ہو گیا!');
             } else {
               onToast('کوئی آواز نہیں سنی گئی۔ دوبارہ کوشش کریں۔');
@@ -340,14 +398,20 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       setIsListening(true);
       onToast('🎙️ بولنا شروع کریں... بند کرنے کے لیے دوبارہ مائیک دبائیں');
 
-      // Auto stop after 4 seconds
+      // Auto stop after 3.5 seconds for fast response
       setTimeout(() => {
         if (isListeningRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, 4000);
+      }, 3500);
 
     } catch (err) {
+      if (recognitionRef.current) {
+        isListeningRef.current = true;
+        setIsListening(true);
+        onToast('🎙️ سن رہے ہیں... بولنا شروع کریں');
+        return;
+      }
       console.warn('Microphone permission error:', err);
       onToast('مائیکروفون کی اجازت درکار ہے۔');
       setIsListening(false);

@@ -135,7 +135,7 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
 
 apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
   try {
-    const { audioBase64, mimeType, languageHint } = req.body || {};
+    const { audioBase64, mimeType, languageHint, targetLanguage } = req.body || {};
     const customApiKey = getApiKeyFromReq(req);
 
     if (!audioBase64 || typeof audioBase64 !== 'string') {
@@ -149,6 +149,7 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
           audioBase64,
           mimeType: mimeType || 'audio/webm',
           languageHint,
+          targetLanguage,
         },
         customApiKey
       ),

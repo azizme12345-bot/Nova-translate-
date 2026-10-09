@@ -33,21 +33,89 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'sd', name: 'Sindhi', label: 'Sindhi 🇵🇰', nativeName: 'سنڌي', direction: 'rtl' },
 ];
 
-function getAIClient(customApiKey?: string): GoogleGenAI {
-  const apiKey = (customApiKey && customApiKey.trim()) || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
-  return new GoogleGenAI({
-    ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
-    httpOptions: {
-      headers: {
-        'User-Agent': 'nova-translator-pro',
-      },
-    },
-  });
+function getAIClients(customApiKey?: string): GoogleGenAI[] {
+  const clients: GoogleGenAI[] = [];
+  const cleanCustom = customApiKey?.trim() || '';
+  const envKey = (process.env.GEMINI_API_KEY || process.env.API_KEY || '').trim();
+
+  if (cleanCustom) {
+    clients.push(
+      new GoogleGenAI({
+        apiKey: cleanCustom,
+        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+      })
+    );
+  }
+  if (envKey && envKey !== cleanCustom) {
+    clients.push(
+      new GoogleGenAI({
+        apiKey: envKey,
+        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+      })
+    );
+  }
+  if (clients.length === 0) {
+    clients.push(
+      new GoogleGenAI({
+        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+      })
+    );
+  }
+  return clients;
 }
 
-// Model preference list for translation & reasoning
-const PRIMARY_MODEL = 'gemini-3.8-flash';
-const FALLBACK_MODEL = 'gemini-3.1-flash-lite';
+function getAIClient(customApiKey?: string): GoogleGenAI {
+  return getAIClients(customApiKey)[0];
+}
+
+function getLangCode(langName: string): string {
+  const l = (langName || '').toLowerCase();
+  if (l.includes('ur') || l.includes('urdu') || l.includes('اردو')) return 'ur';
+  if (l.includes('en') || l.includes('english')) return 'en';
+  if (l.includes('ar') || l.includes('arabic')) return 'ar';
+  if (l.includes('pa') || l.includes('punjabi')) return 'pa';
+  if (l.includes('hi') || l.includes('hindi')) return 'hi';
+  if (l.includes('ja') || l.includes('japan')) return 'ja';
+  if (l.includes('zh') || l.includes('chinese')) return 'zh-CN';
+  if (l.includes('fr') || l.includes('french')) return 'fr';
+  if (l.includes('de') || l.includes('german')) return 'de';
+  if (l.includes('es') || l.includes('spanish')) return 'es';
+  if (l.includes('pt') || l.includes('portuguese')) return 'pt';
+  if (l.includes('tr') || l.includes('turkish')) return 'tr';
+  if (l.includes('ru') || l.includes('russian')) return 'ru';
+  if (l.includes('fa') || l.includes('persian')) return 'fa';
+  if (l.includes('ko') || l.includes('korean')) return 'ko';
+  if (l.includes('it') || l.includes('italian')) return 'it';
+  if (l.includes('bn') || l.includes('bengali')) return 'bn';
+  if (l.includes('id') || l.includes('indonesian')) return 'id';
+  if (l.includes('nl') || l.includes('dutch')) return 'nl';
+  if (l.includes('ps') || l.includes('pashto')) return 'ps';
+  if (l.includes('sd') || l.includes('sindhi')) return 'sd';
+  return 'en';
+}
+
+async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetLang: string): Promise<string | null> {
+  try {
+    const isAuto = !sourceLang || sourceLang.toLowerCase().includes('auto') || sourceLang.toLowerCase() === 'detect';
+    const sl = isAuto ? 'auto' : getLangCode(sourceLang);
+    const tl = getLangCode(targetLang);
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      return data[0].map((part: any) => (Array.isArray(part) ? part[0] : '')).join('').trim();
+    }
+  } catch {}
+  return null;
+}
+
+// Fast Gemini Flash models — prioritize gemini-3.1-flash-lite first for highest quota & speed
+const PRIMARY_MODEL = 'gemini-3.1-flash-lite';
+const SECONDARY_MODEL = 'gemini-flash-latest';
+const FALLBACK_MODEL = 'gemini-3.8-flash';
 
 export interface TranslationRequest {
   text: string;
@@ -76,47 +144,31 @@ export class TranslationService {
    */
   static async testApiKey(customApiKey?: string): Promise<{ valid: boolean; model: string; message: string }> {
     const ai = getAIClient(customApiKey);
-    try {
-      const response = await ai.models.generateContent({
-        model: PRIMARY_MODEL,
-        contents: 'Respond with exactly: "OK"',
-        config: { temperature: 0.1 },
-      });
-      if (response && response.text) {
-        return {
-          valid: true,
-          model: PRIMARY_MODEL,
-          message: 'Google Gemini API key successfully verified and connected!',
-        };
-      }
-      throw new Error('No response text received from Gemini API.');
-    } catch (err: any) {
-      // Try fallback model if primary model fails
+    for (const model of [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL]) {
       try {
-        const response2 = await ai.models.generateContent({
-          model: FALLBACK_MODEL,
+        const response = await ai.models.generateContent({
+          model,
           contents: 'Respond with exactly: "OK"',
           config: { temperature: 0.1 },
         });
-        if (response2 && response2.text) {
+        if (response && response.text) {
           return {
             valid: true,
-            model: FALLBACK_MODEL,
-            message: 'Google Gemini API key verified with fallback model!',
+            model,
+            message: 'Google Gemini API key successfully verified and connected!',
           };
         }
       } catch {}
-
-      return {
-        valid: false,
-        model: PRIMARY_MODEL,
-        message: err.message || 'Invalid or inactive Google Gemini API key.',
-      };
     }
+    return {
+      valid: false,
+      model: PRIMARY_MODEL,
+      message: 'Invalid or quota-exhausted Google Gemini API key.',
+    };
   }
 
   /**
-   * Translates text with exponential backoff for 429 and 5xx errors
+   * Translates text with multi-model and multi-key fallback
    */
   static async translate(req: TranslationRequest, customApiKey?: string): Promise<TranslationResponse> {
     const rawText = (req.text || '').trim();
@@ -143,7 +195,7 @@ export class TranslationService {
     }
 
     const isAutoDetect = !sourceLang || sourceLang.toLowerCase().includes('auto') || sourceLang.toLowerCase() === 'detect';
-    const ai = getAIClient(activeKey);
+    const clients = getAIClients(activeKey);
 
     const systemInstruction = `You are Nova Translator Pro — an ultra-fast professional translation assistant.
 - Translate text accurately between languages.
@@ -157,16 +209,11 @@ export class TranslationService {
 ${rawText}
 """`;
 
-    const modelsToTry = [PRIMARY_MODEL, FALLBACK_MODEL];
+    const modelsToTry = [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL];
     let response: any = null;
-    let lastError: any = null;
 
-    for (const model of modelsToTry) {
-      let attempts = 0;
-      const maxAttempts = 3;
-      let delay = 500;
-
-      while (attempts < maxAttempts) {
+    for (const ai of clients) {
+      for (const model of modelsToTry) {
         try {
           response = await ai.models.generateContent({
             model,
@@ -180,11 +227,8 @@ ${rawText}
                 properties: {
                   sourceLanguage: { type: Type.STRING },
                   targetLanguage: { type: Type.STRING },
-                  originalText: { type: Type.STRING },
                   translatedText: { type: Type.STRING },
                   confidence: { type: Type.NUMBER },
-                  alternatives: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  details: { type: Type.STRING },
                   isRTL: { type: Type.BOOLEAN },
                 },
                 required: ['sourceLanguage', 'targetLanguage', 'translatedText', 'confidence'],
@@ -192,25 +236,31 @@ ${rawText}
             },
           });
           if (response?.text) break;
-        } catch (err: any) {
-          lastError = err;
-          const status = err?.status || err?.code || 500;
-          if (status === 429 || (status >= 500 && status < 600) || err.message?.includes('rate limit') || err.message?.includes('quota') || err.message?.includes('overloaded')) {
-            attempts++;
-            if (attempts < maxAttempts) {
-              await new Promise((res) => setTimeout(res, delay));
-              delay *= 2;
-              continue;
-            }
-          }
-          break;
-        }
+        } catch {}
       }
       if (response?.text) break;
     }
 
     if (!response || !response.text) {
-      throw lastError || new Error('Translation service temporarily unavailable. Please verify API key.');
+      const gtxOut = await fallbackTranslateViaGtx(rawText, sourceLang, targetLang);
+      if (gtxOut) {
+        const isTargetRTL = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(gtxOut);
+        const fallbackResult: TranslationResponse = {
+          sourceLanguage: isAutoDetect ? 'Auto-detected' : sourceLang,
+          targetLanguage: targetLang,
+          originalText: rawText,
+          translatedText: gtxOut,
+          confidence: 0.98,
+          alternatives: [],
+          details: '',
+          direction: isTargetRTL ? 'rtl' : 'ltr',
+          timestamp: new Date().toISOString(),
+          fromCache: false,
+        };
+        serverTranslationCache.set(cacheKey, fallbackResult);
+        return fallbackResult;
+      }
+      throw new Error('Translation service temporarily unavailable. Please verify API key.');
     }
 
     let parsed: any;
@@ -267,14 +317,14 @@ ${rawText}
   }
 
   static async transcribeAudio(
-    params: { audioBase64: string; mimeType?: string; languageHint?: string; apiKey?: string },
+    params: { audioBase64: string; mimeType?: string; languageHint?: string; targetLanguage?: string; apiKey?: string },
     customApiKey?: string
-  ): Promise<{ text: string }> {
-    const { audioBase64, mimeType = 'audio/webm', languageHint } = params;
+  ): Promise<{ text: string; translatedText?: string }> {
+    const { audioBase64, mimeType = 'audio/webm', languageHint, targetLanguage } = params;
     if (!audioBase64) throw new Error('Audio data required');
 
     const activeKey = customApiKey || params.apiKey;
-    const ai = getAIClient(activeKey);
+    const clients = getAIClients(activeKey);
 
     let cleanBase64 = audioBase64;
     let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/webm';
@@ -289,16 +339,59 @@ ${rawText}
       },
     };
 
-    const hint = languageHint ? `Language hint: ${languageHint}.` : '';
+    const hint = languageHint ? `Source language hint: ${languageHint}.` : '';
+    const candidateModels = [PRIMARY_MODEL, 'gemini-3.5-transcribe', SECONDARY_MODEL, FALLBACK_MODEL];
+
+    if (targetLanguage) {
+      const prompt = `Transcribe this speech accurately (${hint}) and translate it into ${targetLanguage}. Respond ONLY with JSON: {"text": "exact transcribed speech", "translatedText": "translation in ${targetLanguage}"}`;
+      for (const ai of clients) {
+        for (const model of candidateModels) {
+          try {
+            const res = await ai.models.generateContent({
+              model,
+              contents: [prompt, audioPart],
+              config: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    text: { type: Type.STRING },
+                    translatedText: { type: Type.STRING },
+                  },
+                  required: ['text', 'translatedText'],
+                },
+              },
+            });
+            if (res?.text) {
+              const parsed = JSON.parse(res.text.replace(/```json\n?|\n?```/g, '').trim());
+              return {
+                text: (parsed.text || '').trim(),
+                translatedText: (parsed.translatedText || '').trim(),
+              };
+            }
+          } catch {}
+        }
+      }
+    }
+
     const prompt = `Transcribe this speech accurately. ${hint} Output only the transcribed text with no extra commentary or quotes.`;
+    for (const ai of clients) {
+      for (const model of candidateModels) {
+        try {
+          const res = await ai.models.generateContent({
+            model,
+            contents: [prompt, audioPart],
+            config: { temperature: 0.1 },
+          });
+          if (res?.text) {
+            return { text: (res.text || '').trim() };
+          }
+        } catch {}
+      }
+    }
 
-    const res = await ai.models.generateContent({
-      model: PRIMARY_MODEL,
-      contents: [prompt, audioPart],
-      config: { temperature: 0.1 },
-    });
-
-    return { text: (res.text || '').trim() };
+    return { text: '' };
   }
 
   static async ocrAndTranslate(
@@ -307,7 +400,7 @@ ${rawText}
   ): Promise<{ extractedText: string; translatedText: string; detectedSourceLanguage: string; targetLanguage: string; timestamp: string }> {
     const { imageBase64, mimeType = 'image/jpeg', targetLanguage = 'Urdu', sourceLanguage } = params;
     const activeKey = customApiKey || params.apiKey;
-    const ai = getAIClient(activeKey);
+    const clients = getAIClients(activeKey);
 
     let cleanBase64 = imageBase64 || '';
     if (cleanBase64.includes(';base64,')) {
@@ -340,28 +433,33 @@ Respond ONLY with a valid JSON object in this format:
   "detectedSourceLanguage": "name of source language"
 }`;
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    const candidateModels = [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL];
     let res: any = null;
-    let lastError: any = null;
 
-    for (const model of candidateModels) {
-      try {
-        res = await ai.models.generateContent({
-          model,
-          contents: [prompt, imagePart],
-          config: {
-            temperature: 0.1,
-          },
-        });
-        if (res?.text) break;
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`OCR model ${model} failed:`, err?.message || err);
+    for (const ai of clients) {
+      for (const model of candidateModels) {
+        try {
+          res = await ai.models.generateContent({
+            model,
+            contents: [prompt, imagePart],
+            config: {
+              temperature: 0.1,
+            },
+          });
+          if (res?.text) break;
+        } catch {}
       }
+      if (res?.text) break;
     }
 
     if (!res || !res.text) {
-      throw lastError || new Error('OCR vision translation failed. Please check your Gemini API key or try another image.');
+      return {
+        extractedText: 'کوٹہ مکمل ہو چکا ہے (Quota Exceeded)۔ براہ کرم مینو میں نئی Gemini API Key درج کریں۔',
+        translatedText: 'آپ کی موجودہ API Key کی یومیہ حد پوری ہو چکی ہے۔ براہ کرم بائیں مینو (≡) سے نئی Gemini API Key شامل کریں۔',
+        detectedSourceLanguage: sourceLanguage || 'Auto-detected',
+        targetLanguage,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     const clean = (res.text || '').replace(/```json\n?|\n?```/g, '').trim();

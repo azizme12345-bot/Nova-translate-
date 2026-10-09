@@ -27,6 +27,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleSwap = () => {
     const temp = sourceLang;
@@ -156,6 +157,13 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         capture="environment"
         className="hidden"
       />
+      <input
+        type="file"
+        ref={galleryInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
 
       {/* Header matching green bar */}
       <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md">
@@ -212,6 +220,14 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             ))}
           </select>
         </div>
+
+        <button
+          type="button"
+          onClick={() => galleryInputRef.current?.click()}
+          className="text-[#2e7d32] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+        >
+          📁 Import File
+        </button>
       </div>
 
       {/* Main Viewfinder / Scanner Area */}
@@ -227,13 +243,22 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
                 کوئی بھی تحریر، سائن بورڈ یا دستاویز کی تصویر لیں اور اس کا فوری ترجمہ حاصل کریں۔
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-[#2e7d32] hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition flex items-center gap-2 text-sm w-full justify-center"
-            >
-              📸 Take Another Photo
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-[#2e7d32] hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold shadow-md transition flex items-center gap-2 text-sm flex-1 justify-center cursor-pointer"
+              >
+                📸 Take Another Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 px-5 py-3 rounded-xl font-bold shadow-sm transition flex items-center gap-2 text-sm flex-1 justify-center cursor-pointer"
+              >
+                📁 Import File
+              </button>
+            </div>
           </div>
         )}
 
@@ -257,15 +282,22 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
           </div>
         )}
 
-        {/* Retake Button when image scanned */}
+        {/* Retake & Import File Buttons when image scanned */}
         {scannedImage && !isLoading && (
-          <div className="flex items-center justify-center gap-3 py-1">
+          <div className="flex items-center justify-center gap-3 py-1 flex-wrap">
             <button
               type="button"
               onClick={handleRetake}
-              className="bg-[#2e7d32] hover:bg-emerald-700 text-white text-xs sm:text-sm px-6 py-3 rounded-full font-bold shadow transition flex items-center gap-2"
+              className="bg-[#2e7d32] hover:bg-emerald-700 text-white text-xs sm:text-sm px-5 py-2.5 rounded-full font-bold shadow transition flex items-center gap-2 cursor-pointer"
             >
               📸 Take Another Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs sm:text-sm px-5 py-2.5 rounded-full font-bold shadow-sm transition flex items-center gap-2 cursor-pointer"
+            >
+              📁 Import File
             </button>
           </div>
         )}
