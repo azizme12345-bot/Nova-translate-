@@ -1,4 +1,4 @@
-const CACHE_NAME = 'english-urdu-translator-v1';
+const CACHE_NAME = 'english-urdu-translator-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

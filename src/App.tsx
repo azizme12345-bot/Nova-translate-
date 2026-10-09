@@ -147,12 +147,9 @@ export default function App() {
         {activeView === 'history' && (
           <HistorySection
             history={history}
-            onClearHistory={() => {
-              setHistory([]);
-              localStorage.removeItem('nova_translation_history');
-              showToast('History cleared');
-            }}
-            onUseInTranslator={handleUseInTranslator}
+            onRemoveItem={handleDeleteHistoryItem}
+            onClearAll={handleClearHistory}
+            onUseItem={(item) => handleUseInTranslator(item.input, item.output, item.from, item.to)}
             onBack={() => setActiveView('translate')}
             onToast={showToast}
           />
@@ -167,8 +164,14 @@ export default function App() {
               localStorage.setItem('nova_saved_items', JSON.stringify(updated));
               showToast('Removed from favorites');
             }}
-            onUseInTranslator={handleUseInTranslator}
+            onClearAllSaved={() => {
+              setSavedItems([]);
+              localStorage.removeItem('nova_saved_items');
+              showToast('Favorites cleared');
+            }}
+            onUseItem={(item) => handleUseInTranslator(item.input, item.output, item.from, item.to)}
             onBack={() => setActiveView('translate')}
+            onToast={showToast}
           />
         )}
       </main>
@@ -186,6 +189,7 @@ export default function App() {
         <CallTranslateModal
           isOpen={showCallModal}
           onClose={() => setShowCallModal(false)}
+          languages={DEFAULT_LANGUAGES}
           onToast={showToast}
         />
       )}
