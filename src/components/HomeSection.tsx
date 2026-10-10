@@ -189,7 +189,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       setIsTranslating(true);
       try {
-        const res = await ApiClient.translateText(trimmed, srcLang, tgtLang, 'natural');
+        const res = await ApiClient.translateText(trimmed, srcLang, tgtLang, 'natural', 'gemini-1.5-flash');
         const finalOut = res.translatedText || '';
         setOutputText(finalOut);
         setConfidence(res.confidence || 0.99);
@@ -412,15 +412,13 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         }
       }, 3500);
 
-    } catch (err) {
-      if (recognitionRef.current) {
-        isListeningRef.current = true;
-        setIsListening(true);
-        onToast('🎙️ سن رہے ہیں... بولنا شروع کریں');
-        return;
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        onToast('مائیکروفون کی اجازت درکار ہے۔ براہ کرم براؤزر سیٹنگز میں اسے آن کریں۔');
+      } else {
+        console.warn('Microphone error:', err);
+        onToast('مائیکروفون استعمال کرنے میں خرابی۔');
       }
-      console.warn('Microphone permission error:', err);
-      onToast('مائیکروفون کی اجازت درکار ہے۔');
       setIsListening(false);
       isListeningRef.current = false;
     }
@@ -785,6 +783,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           </div>
         </div>
       </form>
+
+      {/* SEO Description */}
+      <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-700">
+        <h2 className="font-bold text-lg mb-2">Nova AI Translation</h2>
+        <p className="text-sm leading-relaxed">
+          Nova Translate provides fast, natural, and accurate AI-powered translations.
+          Easily translate text, voice, and images in over 100+ languages, including English, Urdu, Arabic, Japanese, Punjabi, Spanish, French, German, and Hindi.
+          Perfect for real-time communication, learning, and travel.
+        </p>
+      </div>
+
 
       {/* Side Slide-Over Drawer for Menu & Options (replaces clutter on top) */}
       {drawerOpen && (
