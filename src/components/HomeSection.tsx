@@ -304,7 +304,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
         recognition.onresult = (event: any) => {
           let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript + ' ';
           }
           const clean = transcript.trim();
@@ -314,7 +314,19 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = window.setTimeout(() => {
               executeTranslation(clean, fromLang, toLang, false);
-            }, 400);
+            }, 500);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('Speech recognition error:', event.error);
+        };
+
+        recognition.onend = () => {
+          if (isListeningRef.current && recognitionRef.current) {
+            try {
+              recognition.start();
+            } catch {}
           }
         };
 
@@ -405,12 +417,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       setIsListening(true);
       onToast('🎙️ بولنا شروع کریں... بند کرنے کے لیے دوبارہ مائیک دبائیں');
 
-      // Auto stop after 3.5 seconds for fast response
-      setTimeout(() => {
-        if (isListeningRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-        }
-      }, 3500);
+      // Continuous listening without auto-stop
+
 
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
