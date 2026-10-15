@@ -59,6 +59,22 @@ app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 60 }));
 // Mount centralized API router
 app.use('/api', apiRouter);
 
+// Explicit routes for robots.txt and sitemap.xml
+app.get('/robots.txt', (req: Request, res: Response) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nAllow: /\nSitemap: https://nova-translate-orpin.vercel.app/sitemap.xml\n');
+});
+
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  res.type('application/xml');
+  const sitemapPath = path.resolve(isProd ? 'dist' : 'public', 'sitemap.xml');
+  if (fs.existsSync(sitemapPath)) {
+    res.sendFile(sitemapPath);
+  } else {
+    res.status(404).send('Sitemap not found');
+  }
+});
+
 // Start server with Vite middleware in development or static files in production
 async function bootstrap() {
   if (!isProd) {

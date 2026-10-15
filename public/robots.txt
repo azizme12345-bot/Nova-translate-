@@ -1,6 +1,3 @@
-# Robots.txt for Nova Translate AI Translator App
 User-agent: *
 Allow: /
-Disallow: /api/
-
 Sitemap: https://nova-translate-orpin.vercel.app/sitemap.xml
