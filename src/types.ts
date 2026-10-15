@@ -31,7 +31,7 @@ export interface ChatEntry {
   timestamp: string;
 }
 
-export type ActivePage = 'home' | 'translate' | 'chat' | 'vision' | 'image' | 'camera' | 'history' | 'saved' | 'settings';
+export type ActivePage = 'home' | 'translate' | 'text-translation' | 'voice-translation' | 'languages' | 'about' | 'chat' | 'vision' | 'image' | 'camera' | 'history' | 'saved' | 'settings';
 
 export interface AppSettings {
   darkMode: boolean;

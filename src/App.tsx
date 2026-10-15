@@ -5,6 +5,11 @@ import { HomeSection } from './components/HomeSection.tsx';
 import { CameraSection } from './components/CameraSection.tsx';
 import { HistorySection } from './components/HistorySection.tsx';
 import { SavedSection } from './components/SavedSection.tsx';
+import { LanguagesSection } from './components/LanguagesSection.tsx';
+import { TextTranslationSection } from './components/TextTranslationSection.tsx';
+import { VoiceTranslationSection } from './components/VoiceTranslationSection.tsx';
+import { AboutSection } from './components/AboutSection.tsx';
+import { Footer } from './components/Footer.tsx';
 import { Toast } from './components/Toast.tsx';
 import { ApiKeyModal } from './components/ApiKeyModal.tsx';
 import { CallTranslateModal } from './components/CallTranslateModal.tsx';
@@ -23,7 +28,15 @@ const DEFAULT_LANGUAGES: LanguageOption[] = [
 
 export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<ActivePage>('translate');
+  const [activeView, setActiveView] = useState<ActivePage>(() => {
+    const path = window.location.pathname;
+    if (path === '/text-translation') return 'text-translation';
+    if (path === '/voice-translation') return 'voice-translation';
+    if (path === '/camera-translation') return 'image';
+    if (path === '/languages') return 'languages';
+    if (path === '/about') return 'about';
+    return 'translate';
+  });
   const [loadedItem, setLoadedItem] = useState<HistoryItem | null>(null);
 
   // Modals state
@@ -46,6 +59,20 @@ export default function App() {
     } catch {}
     return [];
   });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/text-translation') setActiveView('text-translation');
+      else if (path === '/voice-translation') setActiveView('voice-translation');
+      else if (path === '/camera-translation') setActiveView('image');
+      else if (path === '/languages') setActiveView('languages');
+      else if (path === '/about') setActiveView('about');
+      else setActiveView('translate');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -113,6 +140,7 @@ export default function App() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
     setActiveView('translate');
+    window.history.pushState({}, '', '/');
   };
 
   return (
@@ -126,7 +154,15 @@ export default function App() {
             onDeleteHistoryItem={handleDeleteHistoryItem}
             onClearHistory={handleClearHistory}
             onAddSaved={handleAddSaved}
-            onNavigate={setActiveView}
+            onNavigate={(page) => {
+              if (page === 'image') window.history.pushState({}, '', '/camera-translation');
+              else if (page === 'languages') window.history.pushState({}, '', '/languages');
+              else if (page === 'about') window.history.pushState({}, '', '/about');
+              else if (page === 'text-translation') window.history.pushState({}, '', '/text-translation');
+              else if (page === 'voice-translation') window.history.pushState({}, '', '/voice-translation');
+              else window.history.pushState({}, '', '/');
+              setActiveView(page);
+            }}
             onToast={showToast}
             loadedItem={loadedItem}
             onClearLoadedItem={() => setLoadedItem(null)}
@@ -138,9 +174,39 @@ export default function App() {
         {activeView === 'image' && (
           <CameraSection
             languages={DEFAULT_LANGUAGES}
-            onBack={() => setActiveView('translate')}
+            onBack={() => { window.history.pushState({}, '', '/'); setActiveView('translate'); }}
             onToast={showToast}
             onAddHistory={handleAddHistory}
+          />
+        )}
+
+        {activeView === 'text-translation' && (
+          <TextTranslationSection
+            onBack={() => setActiveView('translate')}
+            onNavigate={setActiveView}
+          />
+        )}
+
+        {activeView === 'voice-translation' && (
+          <VoiceTranslationSection
+            onBack={() => setActiveView('translate')}
+            onNavigate={setActiveView}
+          />
+        )}
+
+        {activeView === 'languages' && (
+          <LanguagesSection
+            languages={DEFAULT_LANGUAGES}
+            onBack={() => setActiveView('translate')}
+            onNavigate={setActiveView}
+            onToast={showToast}
+          />
+        )}
+
+        {activeView === 'about' && (
+          <AboutSection
+            onBack={() => setActiveView('translate')}
+            onNavigate={setActiveView}
           />
         )}
 
@@ -150,7 +216,6 @@ export default function App() {
             onRemoveItem={handleDeleteHistoryItem}
             onClearAll={handleClearHistory}
             onUseItem={(item) => handleUseInTranslator(item.input, item.output, item.from, item.to)}
-            onBack={() => setActiveView('translate')}
             onToast={showToast}
           />
         )}
@@ -170,11 +235,12 @@ export default function App() {
               showToast('Favorites cleared');
             }}
             onUseItem={(item) => handleUseInTranslator(item.input, item.output, item.from, item.to)}
-            onBack={() => setActiveView('translate')}
             onToast={showToast}
           />
         )}
       </main>
+
+      <Footer onNavigate={setActiveView} />
 
       {/* Modals */}
       {showApiKeyModal && (
