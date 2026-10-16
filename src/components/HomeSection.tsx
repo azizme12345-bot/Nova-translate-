@@ -802,27 +802,108 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         </div>
       </form>
 
-      {/* SEO Description */}
-      <div className="px-4 py-5 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-700">
-        <div className="flex items-center gap-3 mb-2">
+      {/* SEO Description & Comprehensive Guide to Fix Thin Content */}
+      <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-700 space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
           <img
             src="/app-logo.jpg"
             alt="Nova Translator Logo"
-            width={36}
-            height={36}
-            className="w-9 h-9 rounded-xl shadow-xs object-cover border border-emerald-600/20 shrink-0"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-xl shadow-xs object-cover border border-emerald-600/20 shrink-0"
             loading="lazy"
           />
           <div>
-            <h2 className="font-bold text-base sm:text-lg text-gray-900 leading-tight">Nova AI Translation</h2>
-            <span className="text-xs text-gray-500 font-medium">Fast, Accurate & Multilingual</span>
+            <h2 className="font-extrabold text-lg sm:text-xl text-gray-900 leading-tight">Nova AI Translation: The Ultimate Multilingual Platform</h2>
+            <span className="text-xs text-emerald-700 font-semibold">Powered by Google Gemini 1.5 Flash Advanced AI Engine</span>
           </div>
         </div>
-        <p className="text-sm leading-relaxed">
-          Nova Translate provides fast, natural, and accurate AI-powered translations.
-          Easily translate text, voice, and images in over 100+ languages, including English, Urdu, Arabic, Japanese, Punjabi, Spanish, French, German, and Hindi.
-          Perfect for real-time communication, learning, and travel.
-        </p>
+
+        <div className="text-sm leading-relaxed space-y-3">
+          <p>
+            Welcome to <strong>Nova Translator</strong>, the next-generation artificial intelligence translation platform designed to eliminate global communication barriers. Whether you are translating daily text messages, conducting international business, studying foreign languages, or traveling across the globe, our platform delivers instant, context-aware, and natural translations across 100+ languages including English, Urdu, Arabic, Spanish, French, German, Japanese, and Hindi.
+          </p>
+
+          <h3 className="font-bold text-base text-gray-900 pt-2">1. Why Gemini AI Translation Outperforms Traditional Methods</h3>
+          <p>
+            Traditional translation software relies heavily on rigid statistical phrase-matching or legacy neural machine translation (NMT) models that often produce robotic, literal word-for-word translations. In contrast, Nova Translator is powered by <strong>Google Gemini AI</strong>, an advanced large language model trained on vast multilingual corpora. Gemini analyzes the entire contextual flow, semantic intent, cultural idioms, and emotional tone of the source text. This allows our translator to generate human-quality translations that preserve the original author&apos;s exact meaning, style, and nuance.
+          </p>
+
+          <h3 className="font-bold text-base text-gray-900 pt-2">2. Comprehensive Use Cases for Every Need</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="font-bold text-emerald-800 mb-1">💼 For Business & Commerce</h4>
+              <p className="text-xs text-gray-600">
+                Streamline international partnerships, localize contracts, and provide flawless customer support across global markets with secure, high-speed API translations.
+              </p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="font-bold text-emerald-800 mb-1">🎓 For Students & Researchers</h4>
+              <p className="text-xs text-gray-600">
+                Translate academic journals, historical documents, and technical literature accurately while maintaining precise domain-specific terminology.
+              </p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="font-bold text-emerald-800 mb-1">✈️ For Travelers & Explorers</h4>
+              <p className="text-xs text-gray-600">
+                Instantly understand foreign street signs, restaurant menus, and local conversations using our real-time voice translation and camera OCR scanning features.
+              </p>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-base text-gray-900 pt-3">3. Commonly Translated Phrases Reference Table</h3>
+          <p className="text-xs text-gray-500">Explore frequently translated phrases across popular language pairs on Nova Translator:</p>
+          
+          <div className="overflow-x-auto border border-gray-200 rounded-lg mt-2">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-emerald-50 text-emerald-900 border-b border-gray-200 font-bold">
+                  <th className="p-2.5">English (Source)</th>
+                  <th className="p-2.5">Urdu (اردو)</th>
+                  <th className="p-2.5">Arabic (العربية)</th>
+                  <th className="p-2.5">Spanish (Español)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-700">
+                <tr>
+                  <td className="p-2.5 font-medium">Hello, how can I help you today?</td>
+                  <td className="p-2.5 font-urdu">ہیلو، آج میں آپ کی کیا مدد کر سکتا ہوں؟</td>
+                  <td className="p-2.5">مرحباً، كيف يمكنني مساعدتك اليوم؟</td>
+                  <td className="p-2.5">Hola, ¿cómo puedo ayudarte hoy?</td>
+                </tr>
+                <tr className="bg-gray-50/50">
+                  <td className="p-2.5 font-medium">Where is the nearest hotel?</td>
+                  <td className="p-2.5 font-urdu">قریب ترین ہوٹل کہاں ہے؟</td>
+                  <td className="p-2.5">أين أقرب فندق؟</td>
+                  <td className="p-2.5">¿Dónde está el hotel más cercano?</td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 font-medium">How much does this cost?</td>
+                  <td className="p-2.5 font-urdu">اس کی قیمت کیا ہے؟</td>
+                  <td className="p-2.5">كم تكلفة هذا؟</td>
+                  <td className="p-2.5">¿Cuánto cuesta esto?</td>
+                </tr>
+                <tr className="bg-gray-50/50">
+                  <td className="p-2.5 font-medium">Thank you very much for your assistance.</td>
+                  <td className="p-2.5 font-urdu">آپ کی مدد کا بہت شکریہ۔</td>
+                  <td className="p-2.5">شكرا جزيلا على مساعدتك.</td>
+                  <td className="p-2.5">Muchas gracias por tu ayuda.</td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 font-medium">Can you please speak slowly?</td>
+                  <td className="p-2.5 font-urdu">کیا آپ براہ مہربانی آہستہ بول سکتے ہیں؟</td>
+                  <td className="p-2.5">هل يمكنك التحدث ببطء من فضلك؟</td>
+                  <td className="p-2.5">¿Puedes hablar más despacio por favor?</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 className="font-bold text-base text-gray-900 pt-3">4. Accuracy, Nuance, and Cultural Context in AI Translation</h3>
+          <p>
+            Achieving true fluency requires more than swapping vocabulary. Cultural context, honorifics, regional dialects (such as Levantine vs. Gulf Arabic, or formal Urdu vs. conversational Punjabi-infused expressions), and idiomatic expressions often trip up conventional translators. Google Gemini AI excels by interpreting the underlying intent behind statements. Nova Translator combines this powerful AI engine with specialized audio text-to-speech pronunciation and visual OCR camera capture, ensuring you receive complete, reliable, and professional translation results instantly.
+          </p>
+        </div>
       </div>
 
 
