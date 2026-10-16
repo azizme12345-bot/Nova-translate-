@@ -454,13 +454,23 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           >
             ≡
           </button>
-          <div className="flex items-center gap-2">
-            <span className="font-bold tracking-wider text-base sm:text-lg">
-              {fromLang.toUpperCase().split(' ')[0]} ↔ {toLang.toUpperCase().split(' ')[0]}
-            </span>
-            <span className="text-[11px] bg-emerald-900/60 text-emerald-100 px-2 py-0.5 rounded-full font-medium hidden xs:inline-block">
-              {isTargetUrdu ? 'انگریزی ↔ اردو' : 'URDU ↔ ENGLISH'}
-            </span>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/app-logo.jpg"
+              alt="Nova Translator Logo"
+              width={34}
+              height={34}
+              className="w-8 h-8 rounded-lg shadow-xs object-cover border border-white/30 shrink-0"
+              loading="eager"
+            />
+            <div className="flex flex-col">
+              <span className="font-bold tracking-wider text-sm sm:text-base leading-tight">
+                {fromLang.toUpperCase().split(' ')[0]} ↔ {toLang.toUpperCase().split(' ')[0]}
+              </span>
+              <span className="text-[10px] text-emerald-100 font-medium">
+                {isTargetUrdu ? 'انگریزی ↔ اردو' : 'URDU ↔ ENGLISH'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -793,8 +803,21 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       </form>
 
       {/* SEO Description */}
-      <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-700">
-        <h2 className="font-bold text-lg mb-2">Nova AI Translation</h2>
+      <div className="px-4 py-5 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-700">
+        <div className="flex items-center gap-3 mb-2">
+          <img
+            src="/app-logo.jpg"
+            alt="Nova Translator Logo"
+            width={36}
+            height={36}
+            className="w-9 h-9 rounded-xl shadow-xs object-cover border border-emerald-600/20 shrink-0"
+            loading="lazy"
+          />
+          <div>
+            <h2 className="font-bold text-base sm:text-lg text-gray-900 leading-tight">Nova AI Translation</h2>
+            <span className="text-xs text-gray-500 font-medium">Fast, Accurate & Multilingual</span>
+          </div>
+        </div>
         <p className="text-sm leading-relaxed">
           Nova Translate provides fast, natural, and accurate AI-powered translations.
           Easily translate text, voice, and images in over 100+ languages, including English, Urdu, Arabic, Japanese, Punjabi, Spanish, French, German, and Hindi.
@@ -815,7 +838,16 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           {/* Drawer Content */}
           <div className="relative bg-white w-72 max-w-[85vw] h-full shadow-2xl flex flex-col p-5 z-10 animate-in slide-in-from-left duration-200">
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-              <span className="font-bold text-[#2e7d32] text-lg">Nova Options</span>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/app-logo.jpg"
+                  alt="Nova Translator Logo"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-lg shadow-xs object-cover border border-emerald-600/20 shrink-0"
+                />
+                <span className="font-bold text-[#2e7d32] text-lg">Nova Options</span>
+              </div>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}

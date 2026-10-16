@@ -9,7 +9,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="bg-white border-t border-gray-200 py-6 px-4 mt-auto text-xs text-gray-600">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 font-bold text-gray-800">
-          <span className="w-6 h-6 rounded-lg bg-[#2e7d32] text-white flex items-center justify-center text-xs">N</span>
+          <img
+            src="/app-logo.jpg"
+            alt="Nova Translator Logo"
+            width={24}
+            height={24}
+            className="w-6 h-6 rounded-md object-cover border border-emerald-600/20 shrink-0"
+          />
           <span>Nova Translator</span>
         </div>
         

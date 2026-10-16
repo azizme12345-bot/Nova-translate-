@@ -33,11 +33,21 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
       </div>
 
       <div className="p-4 sm:p-6 flex-1 flex flex-col gap-6 bg-white overflow-y-auto">
-        <header>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">About Nova Translator</h1>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Nova Translator is a next-generation multilingual communication suite designed to connect people across the globe. Powered by state-of-the-art Google Gemini AI models, we deliver fast, contextual, and natural translations for text, voice, and camera text recognition.
-          </p>
+        <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
+          <img
+            src="/app-logo.jpg"
+            alt="Nova Translator Official Logo"
+            width={64}
+            height={64}
+            className="w-16 h-16 rounded-2xl shadow-sm object-cover border border-emerald-600/20 shrink-0"
+            loading="eager"
+          />
+          <div>
+            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">About Nova Translator</h1>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Nova Translator is a next-generation multilingual communication suite designed to connect people across the globe. Powered by state-of-the-art Google Gemini AI models, we deliver fast, contextual, and natural translations for text, voice, and camera text recognition.
+            </p>
+          </div>
         </header>
 
         <section className="space-y-4">

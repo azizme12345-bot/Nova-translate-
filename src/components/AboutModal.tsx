@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrandLogo } from './BrandLogo.tsx';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-          <div className="logo">A</div>
+          <BrandLogo size={46} />
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
               Nova Translator

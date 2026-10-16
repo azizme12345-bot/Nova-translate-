@@ -1,7 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+import { ApiClient } from './apiClient.ts';
 
 export const translateText = async (
   text: string,
@@ -10,13 +7,9 @@ export const translateText = async (
 ): Promise<string> => {
   try {
     if (!text.trim()) return '';
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `You are a professional translator. Translate the following text from ${sourceLang} to ${targetLang}. Return ONLY the translated text with no preamble or explanations.\n\nText:\n${text}`;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    const result = await ApiClient.translateText(text, sourceLang, targetLang, 'natural');
+    return result.translatedText || '';
   } catch (error: any) {
-    console.error('Translation Error:', error);
     throw new Error(error?.message || 'ترجمہ کرنے میں ناکامی ہوئی۔');
   }
 };
@@ -26,20 +19,12 @@ export const translateImageText = async (
   targetLang: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
-    const imagePart = {
-      inlineData: {
-        data: base64Data,
-        mimeType: 'image/jpeg',
-      },
-    };
-    const prompt = `Extract all visible text from this image and translate it to ${targetLang}. Return ONLY the translated text.`;
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    return response.text().trim();
+    const result = await ApiClient.ocrAndTranslate({
+      imageBase64: base64Image,
+      targetLanguage: targetLang,
+    });
+    return result.translatedText || '';
   } catch (error: any) {
-    console.error('OCR Error:', error);
     throw new Error('تصویر پڑھنے اور ترجمہ کرنے میں ناکامی ہوئی۔');
   }
 };
