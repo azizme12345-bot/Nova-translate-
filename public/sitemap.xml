@@ -1,46 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://nova-translate-orpin.vercel.app/"/>
-    <xhtml:link rel="alternate" hreflang="ur" href="https://nova-translate-orpin.vercel.app/?lang=ur"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://nova-translate-orpin.vercel.app/?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://nova-translate-orpin.vercel.app/?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="hi" href="https://nova-translate-orpin.vercel.app/?lang=hi"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://nova-translate-orpin.vercel.app/"/>
-  </url>
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/text-translation</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/voice-translation</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/camera-translation</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/languages</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://nova-translate-orpin.vercel.app/about</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://nova-translate-orpin.vercel.app/</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/camera</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/history</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/voice</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/text-translation</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/voice-translation</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/camera-translation</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/languages</loc></url>
+  <url><loc>https://nova-translate-orpin.vercel.app/about</loc></url>
 </urlset>

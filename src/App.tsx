@@ -26,16 +26,84 @@ const DEFAULT_LANGUAGES: LanguageOption[] = [
   { code: 'hi', name: 'Hindi', label: 'Hindi 🇮🇳', nativeName: 'हिन्दी', direction: 'ltr' },
 ];
 
+const setMeta = (title: string, description: string, path: string) => {
+  document.title = title;
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) {
+    metaDesc.setAttribute('content', description);
+  }
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', `https://nova-translate-orpin.vercel.app${path}`);
+};
+
+const getPageFromPath = (path: string): { view: ActivePage; title: string; desc: string; canonical: string } => {
+  if (path === '/camera' || path === '/camera-translation') {
+    return {
+      view: 'image',
+      title: 'Camera Translate – Nova Translate',
+      desc: 'Use your camera to translate text in real time.',
+      canonical: '/camera'
+    };
+  }
+  if (path === '/history') {
+    return {
+      view: 'history',
+      title: 'Translation History – Nova Translate',
+      desc: 'View and manage your past translations.',
+      canonical: '/history'
+    };
+  }
+  if (path === '/voice' || path === '/voice-translation') {
+    return {
+      view: 'voice-translation',
+      title: 'Voice Translate – Nova Translate',
+      desc: 'Translate spoken language on the fly.',
+      canonical: '/voice'
+    };
+  }
+  if (path === '/text-translation') {
+    return {
+      view: 'text-translation',
+      title: 'Text Translation – Nova Translate',
+      desc: 'Translate text instantly across multiple languages.',
+      canonical: '/text-translation'
+    };
+  }
+  if (path === '/languages') {
+    return {
+      view: 'languages',
+      title: 'Supported Languages – Nova Translate',
+      desc: 'Explore 100+ supported languages for translation.',
+      canonical: '/languages'
+    };
+  }
+  if (path === '/about') {
+    return {
+      view: 'about',
+      title: 'About Us – Nova Translate',
+      desc: 'Learn about Nova Translator and our AI engine.',
+      canonical: '/about'
+    };
+  }
+  return {
+    view: 'translate',
+    title: 'Nova Translate – Home',
+    desc: 'Translate text instantly with Nova Translate.',
+    canonical: '/'
+  };
+};
+
 export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActivePage>(() => {
-    const path = window.location.pathname;
-    if (path === '/text-translation') return 'text-translation';
-    if (path === '/voice-translation') return 'voice-translation';
-    if (path === '/camera-translation') return 'image';
-    if (path === '/languages') return 'languages';
-    if (path === '/about') return 'about';
-    return 'translate';
+    const route = getPageFromPath(window.location.pathname);
+    setMeta(route.title, route.desc, route.canonical);
+    return route.view;
   });
   const [loadedItem, setLoadedItem] = useState<HistoryItem | null>(null);
 
@@ -60,18 +128,53 @@ export default function App() {
     return [];
   });
 
+  const changeView = useCallback((page: ActivePage, pushHistory = true) => {
+    setActiveView(page);
+    let path = '/';
+    if (page === 'image' || page === 'camera') path = '/camera';
+    else if (page === 'history') path = '/history';
+    else if (page === 'voice-translation') path = '/voice';
+    else if (page === 'text-translation') path = '/text-translation';
+    else if (page === 'languages') path = '/languages';
+    else if (page === 'about') path = '/about';
+    else if (page === 'translate' || page === 'home') path = '/';
+
+    const routeInfo = getPageFromPath(path);
+    setMeta(routeInfo.title, routeInfo.desc, routeInfo.canonical);
+
+    if (pushHistory && window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+  }, []);
+
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/text-translation') setActiveView('text-translation');
-      else if (path === '/voice-translation') setActiveView('voice-translation');
-      else if (path === '/camera-translation') setActiveView('image');
-      else if (path === '/languages') setActiveView('languages');
-      else if (path === '/about') setActiveView('about');
-      else setActiveView('translate');
+      const route = getPageFromPath(window.location.pathname);
+      setMeta(route.title, route.desc, route.canonical);
+      setActiveView(route.view);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Intercept internal link clicks
+  useEffect(() => {
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('a');
+      if (target && target.href && target.href.startsWith(window.location.origin)) {
+        const url = new URL(target.href);
+        const path = url.pathname;
+        if (path && path !== '#') {
+          e.preventDefault();
+          window.history.pushState({}, '', path);
+          const route = getPageFromPath(path);
+          setMeta(route.title, route.desc, route.canonical);
+          setActiveView(route.view);
+        }
+      }
+    };
+    document.addEventListener('click', handleAnchorClick);
+    return () => document.removeEventListener('click', handleAnchorClick);
   }, []);
 
   const showToast = useCallback((msg: string) => {
@@ -139,8 +242,7 @@ export default function App() {
       output: translatedText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
-    setActiveView('translate');
-    window.history.pushState({}, '', '/');
+    changeView('translate', true);
   };
 
   return (
@@ -155,13 +257,13 @@ export default function App() {
             onClearHistory={handleClearHistory}
             onAddSaved={handleAddSaved}
             onNavigate={(page) => {
-              if (page === 'image') window.history.pushState({}, '', '/camera-translation');
-              else if (page === 'languages') window.history.pushState({}, '', '/languages');
-              else if (page === 'about') window.history.pushState({}, '', '/about');
-              else if (page === 'text-translation') window.history.pushState({}, '', '/text-translation');
-              else if (page === 'voice-translation') window.history.pushState({}, '', '/voice-translation');
-              else window.history.pushState({}, '', '/');
-              setActiveView(page);
+              if (page === 'image' || page === 'camera') changeView('image', true);
+              else if (page === 'languages') changeView('languages', true);
+              else if (page === 'about') changeView('about', true);
+              else if (page === 'text-translation') changeView('text-translation', true);
+              else if (page === 'voice-translation' || page === 'voice') changeView('voice-translation', true);
+              else if (page === 'history') changeView('history', true);
+              else changeView('translate', true);
             }}
             onToast={showToast}
             loadedItem={loadedItem}
@@ -174,7 +276,7 @@ export default function App() {
         {activeView === 'image' && (
           <CameraSection
             languages={DEFAULT_LANGUAGES}
-            onBack={() => { window.history.pushState({}, '', '/'); setActiveView('translate'); }}
+            onBack={() => changeView('translate', true)}
             onToast={showToast}
             onAddHistory={handleAddHistory}
           />
@@ -182,31 +284,31 @@ export default function App() {
 
         {activeView === 'text-translation' && (
           <TextTranslationSection
-            onBack={() => setActiveView('translate')}
-            onNavigate={setActiveView}
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
           />
         )}
 
         {activeView === 'voice-translation' && (
           <VoiceTranslationSection
-            onBack={() => setActiveView('translate')}
-            onNavigate={setActiveView}
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
           />
         )}
 
         {activeView === 'languages' && (
           <LanguagesSection
             languages={DEFAULT_LANGUAGES}
-            onBack={() => setActiveView('translate')}
-            onNavigate={setActiveView}
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
             onToast={showToast}
           />
         )}
 
         {activeView === 'about' && (
           <AboutSection
-            onBack={() => setActiveView('translate')}
-            onNavigate={setActiveView}
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
           />
         )}
 
@@ -240,7 +342,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={setActiveView} />
+      <Footer onNavigate={(p) => changeView(p, true)} />
 
       {/* Modals */}
       {showApiKeyModal && (
