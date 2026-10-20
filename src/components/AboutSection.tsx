@@ -35,7 +35,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
       <div className="p-4 sm:p-6 flex-1 flex flex-col gap-6 bg-white overflow-y-auto">
         <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
           <img
-            src="/app-logo.jpg"
+            src="/app-logo.png"
             alt="Nova Translator Official Logo"
             width={64}
             height={64}

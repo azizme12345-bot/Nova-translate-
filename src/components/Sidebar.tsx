@@ -2,18 +2,20 @@ import React from 'react';
 import { ActivePage } from '../types.ts';
 import { BrandLogo } from './BrandLogo.tsx';
 import { Bookmark, Home, Camera, History, Settings } from 'lucide-react';
+import { AppLanguage, t } from '../services/i18n.ts';
 
 interface SidebarProps {
   activePage: ActivePage;
   onSelectPage: (page: ActivePage) => void;
+  lang: AppLanguage;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage, lang }) => {
   return (
     <aside className="sidebar">
       <div className="brand cursor-pointer" onClick={() => onSelectPage('home')}>
         <BrandLogo size={42} />
-        <span className="font-extrabold text-lg text-white tracking-tight">Nova Translator</span>
+        <span className="font-extrabold text-lg text-white tracking-tight">{t('novaTranslator', lang)}</span>
       </div>
       <nav className="nav">
         <button
@@ -22,7 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           type="button"
         >
           <Home className="w-4 h-4 icon" />
-          <span>Home</span>
+          <span>{t('home', lang)}</span>
         </button>
         <button
           className={activePage === 'camera' ? 'active' : ''}
@@ -30,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           type="button"
         >
           <Camera className="w-4 h-4 icon" />
-          <span>Camera</span>
+          <span>{t('camera', lang)}</span>
         </button>
         <button
           className={activePage === 'saved' ? 'active' : ''}
@@ -38,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           type="button"
         >
           <Bookmark className="w-4 h-4 icon" />
-          <span>Saved</span>
+          <span>{t('saved', lang)}</span>
         </button>
         <button
           className={activePage === 'history' ? 'active' : ''}
@@ -46,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           type="button"
         >
           <History className="w-4 h-4 icon" />
-          <span>History</span>
+          <span>{t('history', lang)}</span>
         </button>
         <button
           className={activePage === 'settings' ? 'active' : ''}
@@ -54,10 +56,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onSelectPage }) =>
           type="button"
         >
           <Settings className="w-4 h-4 icon" />
-          <span>Settings</span>
+          <span>{t('settings', lang)}</span>
         </button>
       </nav>
-      <div className="sidebottom">Nova Translator · Pro</div>
+      <div className="sidebottom">{t('novaTranslator', lang)} · Pro</div>
     </aside>
   );
 };

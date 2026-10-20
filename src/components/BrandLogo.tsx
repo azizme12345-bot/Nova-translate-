@@ -14,7 +14,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 42, className = '',
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
       <img
-        src="/app-logo.jpg"
+        src="/app-logo.png"
         alt="Nova Translator Logo"
         width={size}
         height={size}

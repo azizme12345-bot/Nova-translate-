@@ -220,7 +220,7 @@ ${rawText}
             contents: prompt,
             config: {
               systemInstruction,
-              temperature: 0.1,
+              temperature: 0,
               responseMimeType: 'application/json',
               responseSchema: {
                 type: Type.OBJECT,

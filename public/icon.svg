@@ -4,5 +4,5 @@
       <rect width="512" height="512" rx="112" ry="112" />
     </clipPath>
   </defs>
-  <image href="/app-logo.jpg" width="512" height="512" clip-path="url(#logoRoundClip)" preserveAspectRatio="xMidYMid slice" />
+  <image href="/app-logo.png" width="512" height="512" clip-path="url(#logoRoundClip)" preserveAspectRatio="xMidYMid slice" />
 </svg>

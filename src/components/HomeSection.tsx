@@ -3,6 +3,7 @@ import { ApiClient, LanguageOption } from '../services/apiClient.ts';
 import { GlobalAudioPlayer, getSavedVoiceGender, setSavedVoiceGender, VoiceGender } from '../services/audioPlayer.ts';
 import { AudioCompressor } from '../services/audioCompressor.ts';
 import { HistoryItem, SavedItem, ActivePage } from '../types.ts';
+import { AppLanguage, t } from '../services/i18n.ts';
 
 interface HomeSectionProps {
   activeScreen?: 'home' | 'translate';
@@ -20,6 +21,8 @@ interface HomeSectionProps {
   onClearLoadedItem: () => void;
   onOpenCallModal?: () => void;
   onOpenApiKeyModal?: () => void;
+  lang?: AppLanguage;
+  onToggleLang?: () => void;
 }
 
 export const HomeSection: React.FC<HomeSectionProps> = ({
@@ -36,6 +39,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   onClearLoadedItem,
   onOpenCallModal,
   onOpenApiKeyModal,
+  lang = 'en',
+  onToggleLang,
 }) => {
   const [fromLang, setFromLang] = useState('English 🇬🇧');
   const [toLang, setToLang] = useState('Urdu 🇵🇰');
@@ -314,7 +319,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = window.setTimeout(() => {
               executeTranslation(clean, fromLang, toLang, false);
-            }, 500);
+            }, 150);
           }
         };
 
@@ -412,7 +417,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         }
       };
 
-      recorder.start();
+      recorder.start(400);
       isListeningRef.current = true;
       setIsListening(true);
       onToast('🎙️ بولنا شروع کریں... بند کرنے کے لیے دوبارہ مائیک دبائیں');
@@ -456,7 +461,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           </button>
           <div className="flex items-center gap-2.5">
             <img
-              src="/app-logo.jpg"
+              src="/app-logo.png"
               alt="Nova Translator Logo"
               width={34}
               height={34}
@@ -475,6 +480,18 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Quick Language Toggle Button */}
+          {onToggleLang && (
+            <button
+              type="button"
+              onClick={onToggleLang}
+              className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+              title="Switch Language (English / اردو)"
+            >
+              {lang === 'ur' ? 'English' : 'اردو'}
+            </button>
+          )}
+
           {/* Quick Language Swap in Header */}
           <button
             type="button"
@@ -828,7 +845,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <img
-                  src="/app-logo.jpg"
+                  src="/app-logo.png"
                   alt="Nova Translator Logo"
                   width={32}
                   height={32}

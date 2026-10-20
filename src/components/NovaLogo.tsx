@@ -12,7 +12,7 @@ interface NovaLogoProps {
 export const NovaLogo: React.FC<NovaLogoProps> = ({ size = 52, className = '' }) => {
   return (
     <img
-      src="/app-logo.jpg"
+      src="/app-logo.png"
       alt="Nova Translate Official Logo"
       width={size}
       height={size}

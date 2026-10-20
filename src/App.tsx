@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HistoryItem, SavedItem, ActivePage } from './types.ts';
 import { ApiClient, LanguageOption } from './services/apiClient.ts';
+import { AppLanguage, getSavedLanguage, setSavedLanguage } from './services/i18n.ts';
 import { HomeSection } from './components/HomeSection.tsx';
 import { CameraSection } from './components/CameraSection.tsx';
 import { HistorySection } from './components/HistorySection.tsx';
@@ -100,6 +101,7 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
 
 export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [lang, setLang] = useState<AppLanguage>(() => getSavedLanguage());
   const [activeView, setActiveView] = useState<ActivePage>(() => {
     const route = getPageFromPath(window.location.pathname);
     setMeta(route.title, route.desc, route.canonical);
@@ -127,6 +129,12 @@ export default function App() {
     } catch {}
     return [];
   });
+
+  const toggleLang = useCallback(() => {
+    const next = lang === 'en' ? 'ur' : 'en';
+    setLang(next);
+    setSavedLanguage(next);
+  }, [lang]);
 
   const changeView = useCallback((page: ActivePage, pushHistory = true) => {
     setActiveView(page);
@@ -270,6 +278,8 @@ export default function App() {
             onClearLoadedItem={() => setLoadedItem(null)}
             onOpenCallModal={() => setShowCallModal(true)}
             onOpenApiKeyModal={() => setShowApiKeyModal(true)}
+            lang={lang}
+            onToggleLang={toggleLang}
           />
         )}
 
@@ -342,7 +352,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={(p) => changeView(p, true)} />
+      <Footer onNavigate={(p) => changeView(p, true)} lang={lang} onToggleLang={toggleLang} />
 
       {/* Modals */}
       {showApiKeyModal && (
