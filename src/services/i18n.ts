@@ -53,6 +53,7 @@ const translations = {
     textCleared: 'Text cleared',
     languagesSwapped: 'Languages swapped',
     novaTranslator: 'Nova Translator',
+    sitemap: 'Sitemap',
   },
   ur: {
     home: 'ہوم',
@@ -65,6 +66,7 @@ const translations = {
     cameraOcr: 'کیمرہ اسکینر',
     languages: 'زبانیں',
     aboutUs: 'ہمارے بارے میں',
+    sitemap: 'سائٹ میپ',
     installApp: '📥 ایپ انسٹال کریں',
     scanCamera: '📸 کیمرہ اسکین',
     clearText: 'متن صاف کریں',

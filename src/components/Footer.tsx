@@ -65,6 +65,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, lang, onToggleLang }
           >
             {t('aboutUs', lang)}
           </button>
+          <button 
+            type="button" 
+            onClick={() => { window.history.pushState({}, '', '/sitemap'); onNavigate('sitemap'); }}
+            className="hover:text-[#2e7d32] transition cursor-pointer"
+          >
+            {t('sitemap', lang)}
+          </button>
           <button
             type="button"
             onClick={onToggleLang}

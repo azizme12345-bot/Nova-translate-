@@ -10,6 +10,7 @@ import { LanguagesSection } from './components/LanguagesSection.tsx';
 import { TextTranslationSection } from './components/TextTranslationSection.tsx';
 import { VoiceTranslationSection } from './components/VoiceTranslationSection.tsx';
 import { AboutSection } from './components/AboutSection.tsx';
+import { SitemapSection } from './components/SitemapSection.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Toast } from './components/Toast.tsx';
 import { ApiKeyModal } from './components/ApiKeyModal.tsx';
@@ -91,6 +92,14 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
       canonical: '/about'
     };
   }
+  if (path === '/sitemap') {
+    return {
+      view: 'sitemap',
+      title: 'Sitemap & Tools Directory – Nova Translate',
+      desc: 'Explore all tools, features, and web pages available on Nova Translator.',
+      canonical: '/sitemap'
+    };
+  }
   return {
     view: 'translate',
     title: 'Nova Translate – Home',
@@ -145,6 +154,7 @@ export default function App() {
     else if (page === 'text-translation') path = '/text-translation';
     else if (page === 'languages') path = '/languages';
     else if (page === 'about') path = '/about';
+    else if (page === 'sitemap') path = '/sitemap';
     else if (page === 'translate' || page === 'home') path = '/';
 
     const routeInfo = getPageFromPath(path);
@@ -268,6 +278,7 @@ export default function App() {
               if (page === 'image' || page === 'camera') changeView('image', true);
               else if (page === 'languages') changeView('languages', true);
               else if (page === 'about') changeView('about', true);
+              else if (page === 'sitemap') changeView('sitemap', true);
               else if (page === 'text-translation') changeView('text-translation', true);
               else if (page === 'voice-translation' || page === 'voice') changeView('voice-translation', true);
               else if (page === 'history') changeView('history', true);
@@ -319,6 +330,14 @@ export default function App() {
           <AboutSection
             onBack={() => changeView('translate', true)}
             onNavigate={(p) => changeView(p, true)}
+          />
+        )}
+
+        {activeView === 'sitemap' && (
+          <SitemapSection
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
+            lang={lang}
           />
         )}
 
