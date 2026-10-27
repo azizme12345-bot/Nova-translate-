@@ -1,3 +1,22 @@
 User-agent: *
 Allow: /
+Allow: /sitemap
+Allow: /text-translation
+Allow: /voice
+Allow: /camera
+Allow: /languages
+Allow: /about
+Disallow: /saved
+Disallow: /api/
+
+User-agent: Googlebot
+Allow: /
+Allow: /sitemap
+Allow: /text-translation
+Allow: /voice
+Allow: /camera
+Allow: /languages
+Allow: /about
+Disallow: /saved
+
 Sitemap: https://nova-translate-orpin.vercel.app/sitemap.xml
