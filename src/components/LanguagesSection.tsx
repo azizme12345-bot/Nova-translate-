@@ -28,10 +28,13 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
       </div>
 
       <div className="p-4 sm:p-6 flex-1 flex flex-col gap-6 bg-white overflow-y-auto">
-        <header>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Supported Languages & Dialects</h1>
+        <header className="space-y-3">
+          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Supported Languages &amp; Dialects</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
             Nova Translator supports over 100+ global languages with high-fidelity AI translation models. Below are our core supported languages with native scripts, RTL/LTR layout support, and voice synthesis.
+          </p>
+          <p className="text-sm text-gray-600 leading-relaxed bg-emerald-50/60 p-4 rounded-xl border border-emerald-100">
+            <strong>How to pick and use languages:</strong> On the translator home page, you can easily select your source language and target language using the interactive dropdown selectors or the quick language swap button. Whether you need English, Urdu, Arabic, Spanish, French, or any other supported tongue, the application instantly adapts its keyboard input, translation context, and right-to-left (RTL) text formatting to ensure a seamless translation experience.
           </p>
         </header>
 
@@ -48,7 +51,7 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
                 Native Name: <span className="font-medium text-gray-900">{lang.nativeName}</span>
               </div>
               <div className="text-xs text-gray-500">
-                Text & Voice Translation: <span className="text-emerald-700 font-semibold">Fully Supported</span>
+                Text &amp; Voice Translation: <span className="text-emerald-700 font-semibold">Fully Supported</span>
               </div>
             </div>
           ))}

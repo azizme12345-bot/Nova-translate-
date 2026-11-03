@@ -51,20 +51,44 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-800">Our Mission</h2>
+          <h2 className="text-lg font-bold text-gray-800">What Nova Translator Does &amp; Who It Is For</h2>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Our mission is to eliminate language barriers in education, travel, business, and daily conversation by providing a lightning-fast, highly accurate, and privacy-focused translation experience accessible on any device.
+            Nova Translator is built specifically for anyone who needs fast, accurate, and reliable translation between English and Urdu, as well as over 100 other international languages. Whether you are a student learning a new language, a traveler navigating foreign streets, a business professional handling international documents, or someone communicating daily with friends and family across language barriers, Nova Translator provides the tools you need right in your browser or mobile device.
+          </p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Our application is designed to be lightweight, responsive, and completely user-friendly. Because it is a Progressive Web App (PWA), you can easily install Nova Translator directly onto your phone or computer home screen like a native mobile app without visiting an app store. It runs smoothly offline and online, keeping your data secure with client-side local storage.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-800">Core Technologies</h2>
-          <ul className="list-disc list-inside text-sm text-gray-600 space-y-1.5">
-            <li>Google Gemini Flash & Pro AI Models for intelligent context understanding.</li>
-            <li>Web Speech API for continuous real-time voice recognition.</li>
-            <li>Client-side caching for instant 0ms responses on frequent translations.</li>
-            <li>Progressive Web App (PWA) compliance for offline readiness and fast mobile install.</li>
-          </ul>
+          <h2 className="text-lg font-bold text-gray-800">How Our Translation Features Work</h2>
+          <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-1">✍️ Text Translation</h3>
+              <p>
+                Type or paste sentences and paragraphs into the translator input box. Powered by advanced Google Gemini AI, the system instantly processes context, grammar, and natural phrasing to deliver clear bidirectional translation between English and Urdu with correct right-to-left (RTL) script alignment.
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-1">🎙️ Voice &amp; Speech Translation</h3>
+              <p>
+                Tap the microphone icon to speak naturally into your device. Our continuous speech recognition captures your voice in real time, converts it into text, translates it instantly, and reads the translation aloud using natural male or female audio synthesis.
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-1">📷 Camera &amp; Photo Scanner</h3>
+              <p>
+                Use your camera or upload photo files of restaurant menus, road signs, book pages, or official documents. Optical Character Recognition (OCR) extracts the printed text from the image and translates it immediately into your target language.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-gray-800">Our Mission</h2>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Our mission is to eliminate language barriers in education, travel, business, and daily conversation by providing a lightning-fast, highly accurate, and privacy-focused translation experience accessible on any device.
+          </p>
         </section>
 
         <div className="mt-auto pt-6 flex justify-center">
