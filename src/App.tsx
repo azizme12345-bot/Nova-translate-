@@ -30,80 +30,99 @@ const DEFAULT_LANGUAGES: LanguageOption[] = [
 
 const setMeta = (title: string, description: string, path: string) => {
   document.title = title;
-  const metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) {
-    metaDesc.setAttribute('content', description);
-  }
-  let canonical = document.querySelector('link[rel="canonical"]');
-  if (!canonical) {
-    canonical = document.createElement('link');
-    canonical.setAttribute('rel', 'canonical');
-    document.head.appendChild(canonical);
-  }
-  canonical.setAttribute('href', `https://nova-translate-orpin.vercel.app${path}`);
+
+  const setTag = (selector: string, attr: string, value: string) => {
+    let el = document.querySelector(selector);
+    if (!el) {
+      el = document.createElement(selector.startsWith('meta') ? 'meta' : 'link');
+      if (selector.includes('name="')) {
+        const name = selector.match(/name="([^"]+)"/)?.[1];
+        if (name) el.setAttribute('name', name);
+      } else if (selector.includes('property="')) {
+        const prop = selector.match(/property="([^"]+)"/)?.[1];
+        if (prop) el.setAttribute('property', prop);
+      } else if (selector.includes('rel="')) {
+        const rel = selector.match(/rel="([^"]+)"/)?.[1];
+        if (rel) el.setAttribute('rel', rel);
+      }
+      document.head.appendChild(el);
+    }
+    el.setAttribute(attr, value);
+  };
+
+  const fullUrl = `https://nova-translate-orpin.vercel.app${path}`;
+
+  setTag('meta[name="description"]', 'content', description);
+  setTag('link[rel="canonical"]', 'href', fullUrl);
+  setTag('meta[property="og:title"]', 'content', title);
+  setTag('meta[property="og:description"]', 'content', description);
+  setTag('meta[property="og:url"]', 'content', fullUrl);
+  setTag('meta[name="twitter:title"]', 'content', title);
+  setTag('meta[name="twitter:description"]', 'content', description);
+  setTag('meta[name="twitter:url"]', 'content', fullUrl);
 };
 
 const getPageFromPath = (path: string): { view: ActivePage; title: string; desc: string; canonical: string } => {
   if (path === '/camera' || path === '/camera-translation') {
     return {
       view: 'image',
-      title: 'Camera Translate – Nova Translate',
-      desc: 'Use your camera to translate text in real time.',
+      title: 'Camera OCR & Photo Translator – Nova Translator',
+      desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents directly using your mobile camera or uploaded image.',
       canonical: '/camera'
     };
   }
   if (path === '/history') {
     return {
       view: 'history',
-      title: 'Translation History – Nova Translate',
-      desc: 'View and manage your past translations.',
+      title: 'Translation History & Activity Log – Nova Translator',
+      desc: 'View, search, replay, and manage your recent translations with private device storage and one-click clipboard copying.',
       canonical: '/history'
     };
   }
   if (path === '/voice' || path === '/voice-translation') {
     return {
       view: 'voice-translation',
-      title: 'Voice Translate – Nova Translate',
-      desc: 'Translate spoken language on the fly.',
+      title: 'Voice Translator & Speech-to-Text – Nova Translator',
+      desc: 'Speak naturally and translate your voice in real-time between English and Urdu with continuous microphone input and natural audio playback.',
       canonical: '/voice'
     };
   }
   if (path === '/text-translation') {
     return {
       view: 'text-translation',
-      title: 'Text Translation – Nova Translate',
-      desc: 'Translate text instantly across multiple languages.',
+      title: 'Text Translation – Nova Translator',
+      desc: 'Instant bidirectional AI text translation supporting English, Urdu, and 100+ languages. Fast sentence, paragraph, and document translator.',
       canonical: '/text-translation'
     };
   }
   if (path === '/languages') {
     return {
       view: 'languages',
-      title: 'Supported Languages – Nova Translate',
-      desc: 'Explore 100+ supported languages for translation.',
+      title: 'Supported Languages Directory – Nova Translator',
+      desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in Nova Translator.',
       canonical: '/languages'
     };
   }
   if (path === '/about') {
     return {
       view: 'about',
-      title: 'About Us – Nova Translate',
-      desc: 'Learn about Nova Translator and our AI engine.',
+      title: 'About Nova Translator – Mission & Multilingual AI',
+      desc: 'Discover the technology, mission, and accessibility features behind Nova Translator, bridging global communication gaps.',
       canonical: '/about'
     };
   }
   if (path === '/sitemap') {
     return {
       view: 'sitemap',
-      title: 'Sitemap & Tools Directory – Nova Translate',
-      desc: 'Explore all tools, features, and web pages available on Nova Translator.',
+      title: 'Sitemap & Tools Directory – Nova Translator',
+      desc: 'Explore all translation tools, features, and indexable pages on Nova Translator. Complete navigation directory for users and search engines.',
       canonical: '/sitemap'
     };
   }
   return {
     view: 'translate',
-    title: 'Nova Translate – Home',
-    desc: 'Translate text instantly with Nova Translate.',
+    title: 'Nova Translator – Free English to Urdu AI Translation',
+    desc: 'Translate text, speech, and photos instantly between English and Urdu with Nova Translator. Fast bidirectional translation powered by AI.',
     canonical: '/'
   };
 };

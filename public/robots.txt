@@ -5,8 +5,9 @@ Allow: /text-translation
 Allow: /voice
 Allow: /camera
 Allow: /languages
+Allow: /history
 Allow: /about
-Disallow: /saved
+Disallow: /saved/
 Disallow: /api/
 
 User-agent: Googlebot
@@ -16,7 +17,9 @@ Allow: /text-translation
 Allow: /voice
 Allow: /camera
 Allow: /languages
+Allow: /history
 Allow: /about
-Disallow: /saved
+Disallow: /saved/
+Disallow: /api/
 
 Sitemap: https://nova-translate-orpin.vercel.app/sitemap.xml

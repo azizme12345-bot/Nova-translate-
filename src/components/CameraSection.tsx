@@ -340,6 +340,31 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             </div>
           </div>
         )}
+
+        {/* Camera OCR Guide Section for SEO & Crawlers */}
+        <article className="bg-white rounded-xl p-5 border border-gray-200 shadow-xs flex flex-col gap-4 w-full max-w-xl text-left mt-2">
+          <header className="border-b border-gray-100 pb-3">
+            <h2 className="text-lg font-bold text-gray-900">How Camera OCR Translation Works</h2>
+            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+              Scan printed text, book pages, street boards, and restaurant menus with your phone camera for instant Urdu and English translation.
+            </p>
+          </header>
+
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <h3 className="font-bold text-[#2e7d32] mb-1">📸 Real-Time Visual Scanner</h3>
+              <p className="text-gray-600">Snap a quick photo with your phone or webcam to detect and transcribe text automatically.</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <h3 className="font-bold text-[#2e7d32] mb-1">🖼️ Gallery &amp; Document Upload</h3>
+              <p className="text-gray-600">Select screenshots, photos, or image files (JPEG, PNG, WebP) directly from your device.</p>
+            </div>
+          </section>
+
+          <footer className="text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+            Tip: Ensure good lighting and keep the camera steady for the highest recognition accuracy.
+          </footer>
+        </article>
       </div>
     </div>
   );
