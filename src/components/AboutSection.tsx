@@ -56,7 +56,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
             Nova Translator is built specifically for anyone who needs fast, accurate, and reliable translation between English and Urdu, as well as over 100 other international languages. Whether you are a student learning a new language, a traveler navigating foreign streets, a business professional handling international documents, or someone communicating daily with friends and family across language barriers, Nova Translator provides the tools you need right in your browser or mobile device.
           </p>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Our application is designed to be lightweight, responsive, and completely user-friendly. Because it is a Progressive Web App (PWA), you can easily install Nova Translator directly onto your phone or computer home screen like a native mobile app without visiting an app store. It runs smoothly offline and online, keeping your data secure with client-side local storage.
+            Our application is designed to be lightweight, responsive, and completely user-friendly. Because it is a Progressive Web App (PWA), you can easily install Nova Translator directly onto your phone or computer home screen like a native mobile app without visiting an app store. It also translates a small set of common everyday phrases even when you are offline, and it keeps your translation history private in your browser.
           </p>
         </section>
 

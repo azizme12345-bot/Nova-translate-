@@ -34,7 +34,7 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
             Nova Translator supports over 100+ global languages with high-fidelity AI translation models. Below are our core supported languages with native scripts, RTL/LTR layout support, and voice synthesis.
           </p>
           <p className="text-sm text-gray-600 leading-relaxed bg-emerald-50/60 p-4 rounded-xl border border-emerald-100">
-            <strong>How to pick and use languages:</strong> On the translator home page, you can easily select your source language and target language using the interactive dropdown selectors or the quick language swap button. Whether you need English, Urdu, Arabic, Spanish, French, or any other supported tongue, the application instantly adapts its keyboard input, translation context, and right-to-left (RTL) text formatting to ensure a seamless translation experience.
+            <strong>How to pick and use languages:</strong> On the translator home page, you can easily select your source language and target language using the interactive dropdown selectors or the quick language swap button. Whether you need English, Urdu, Arabic, Spanish, French, or any other supported language, the application shows text in the correct direction, including right-to-left (RTL) languages such as Urdu and Arabic, for a smooth translation experience.
           </p>
         </header>
 
