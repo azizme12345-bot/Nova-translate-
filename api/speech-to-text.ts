@@ -1,4 +1,4 @@
-import { TranslationService } from '../server/translationService.ts';
+import { TranslationService } from '../server/translationService';
 
 export default async function handler(req: any, res: any) {
   // Enable CORS

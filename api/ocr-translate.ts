@@ -1,4 +1,4 @@
-import { TranslationService } from '../server/translationService.ts';
+import { TranslationService } from '../server/translationService';
 
 export const config = {
   api: {

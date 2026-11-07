@@ -121,8 +121,8 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   }
   return {
     view: 'translate',
-    title: 'Nova Translator – Free English to Urdu AI Translation',
-    desc: 'Translate text, speech, and photos instantly between English and Urdu with Nova Translator. Fast bidirectional translation powered by AI.',
+    title: 'Nova Translator – AI Translation Workspace',
+    desc: 'Nova Translator is an advanced AI translation workspace for English, Urdu, and 100+ languages. Translate text, real-time voice, and documents with high accuracy.',
     canonical: '/'
   };
 };
