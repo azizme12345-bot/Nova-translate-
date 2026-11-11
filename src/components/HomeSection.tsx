@@ -126,7 +126,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Nova Translator',
+          title: 'Lafz Translator',
           text: `${inputText}\n\n${outputText}`,
         });
         return;
@@ -462,7 +462,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           <div className="flex items-center gap-2.5">
             <img
               src="/app-logo.png"
-              alt="Nova Translator Logo"
+              alt="Lafz Translator Logo"
               width={34}
               height={34}
               className="w-8 h-8 rounded-lg shadow-xs object-cover border border-white/30 shrink-0"
@@ -821,9 +821,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       {/* Short Clean SEO Section */}
       <div className="px-4 py-4 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-800 space-y-2">
-        <h2 className="font-extrabold text-base sm:text-lg text-[#2e7d32]">Nova Translator</h2>
+        <h2 className="font-extrabold text-base sm:text-lg text-[#2e7d32]">Lafz Translator</h2>
         <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-          Nova Translator is a simple, fast English and Urdu translator. Type, speak, or scan with your camera.
+          Lafz Translator is a simple, fast English and Urdu translator. Type, speak, or scan with your camera.
         </p>
         <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-urdu text-right" dir="rtl">
           نوا ٹرانسلیٹر سے انگریزی اور اردو کا آسان اور تیز ترجمہ کریں۔ لکھیں، بولیں، یا کیمرے سے اسکین کریں۔
@@ -846,7 +846,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               <div className="flex items-center gap-2.5">
                 <img
                   src="/app-logo.png"
-                  alt="Nova Translator Logo"
+                  alt="Lafz Translator Logo"
                   width={32}
                   height={32}
                   className="w-8 h-8 rounded-lg shadow-xs object-cover border border-emerald-600/20 shrink-0"
@@ -1029,7 +1029,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
             </div>
 
             <div className="text-[11px] text-gray-400 text-center border-t border-gray-100 pt-3">
-              NOVA AI TRANSLATOR • FAST & INTEL
+              LAFZ AI TRANSLATOR • FAST & INTEL
             </div>
           </div>
         </div>

@@ -12,7 +12,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="bg-white border-t border-gray-200 py-4 px-4 mt-auto text-xs text-gray-600">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="font-semibold text-gray-700">
-          &copy; 2026 Nova Translator
+          &copy; 2026 Lafz Translator
         </div>
         <nav aria-label="Footer Navigation" className="flex items-center gap-5 font-semibold text-[#2e7d32]">
           <a

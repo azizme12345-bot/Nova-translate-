@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Nova Translate",
-  "short_name": "Nova Translate",
+  "name": "Lafz Translator",
+  "short_name": "Lafz Translator",
   "description": "Fast, simple and natural AI translation for text, voice and images across 100+ languages.",
   "start_url": "/",
   "scope": "/",

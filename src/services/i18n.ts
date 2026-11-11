@@ -37,7 +37,7 @@ export const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     favoritesCleared: 'Favorites cleared',
     textCleared: 'Text cleared',
     languagesSwapped: 'Languages swapped',
-    novaTranslator: 'Nova Translator',
+    novaTranslator: 'Lafz Translator',
   },
 };
 

@@ -17,7 +17,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
   onUseItem,
 }) => {
   useEffect(() => {
-    document.title = 'Translation History & Activity Log — Nova Translator';
+    document.title = 'Translation History & Activity Log — Lafz Translator';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
@@ -87,7 +87,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             Your Translation History &amp; Phrase Log
           </h1>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Nova Translator automatically keeps a local, private record of your recent translations for quick reference, instant repetition, and offline access. All records remain exclusively on your device.
+            Lafz Translator automatically keeps a local, private record of your recent translations for quick reference, instant repetition, and offline access. All records remain exclusively on your device.
           </p>
         </header>
 

@@ -7,7 +7,7 @@ interface TextTranslationSectionProps {
 
 export const TextTranslationSection: React.FC<TextTranslationSectionProps> = ({ onBack, onNavigate }) => {
   useEffect(() => {
-    document.title = 'AI Text Translation — Nova Translator';
+    document.title = 'AI Text Translation — Lafz Translator';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', 'Translate sentences, paragraphs, and documents instantly with AI-powered natural text translation across 100+ languages.');
@@ -36,7 +36,7 @@ export const TextTranslationSection: React.FC<TextTranslationSectionProps> = ({ 
         <header>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Instant AI Text Translation</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Experience lightning-fast, highly accurate text translation powered by advanced Google Gemini AI models. Whether you need formal business translation or casual conversational phrasing, Nova Translator adapts instantly.
+            Experience lightning-fast, highly accurate text translation powered by advanced Google Gemini AI models. Whether you need formal business translation or casual conversational phrasing, Lafz Translator adapts instantly.
           </p>
         </header>
 

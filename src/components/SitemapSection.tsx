@@ -10,12 +10,12 @@ interface SitemapSectionProps {
 
 export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNavigate, lang = 'en' }) => {
   useEffect(() => {
-    document.title = 'Sitemap & Tools Directory — Nova Translator';
+    document.title = 'Sitemap & Tools Directory — Lafz Translator';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         'content',
-        'Explore all tools, features, and web pages available on Nova Translator. Complete sitemap and directory for users and search engine indexing.'
+        'Explore all tools, features, and web pages available on Lafz Translator. Complete sitemap and directory for users and search engine indexing.'
       );
     }
   }, []);
@@ -67,7 +67,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
       tag: 'History',
     },
     {
-      titleEn: 'About Nova Translator & AI Architecture',
+      titleEn: 'About Lafz Translator & AI Architecture',
       icon: 'ℹ️',
       path: '/about',
       pageKey: 'about' as ActivePage,
@@ -108,7 +108,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
         <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
           <img
             src="/app-logo.png"
-            alt="Nova Translator Official Logo"
+            alt="Lafz Translator Official Logo"
             width={64}
             height={64}
             className="w-16 h-16 rounded-2xl shadow-sm object-cover border border-emerald-600/20 shrink-0"
@@ -116,10 +116,10 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
           />
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
-              {'Nova Translator: Sitemap & Complete Tools Index'}
+              {'Lafz Translator: Sitemap & Complete Tools Index'}
             </h1>
             <p className="text-sm text-gray-600 leading-relaxed">
-              {'This comprehensive sitemap and directory outlines every tool, page, and feature available in Nova Translator for users and Google Search Engine indexing.'}
+              {'This comprehensive sitemap and directory outlines every tool, page, and feature available in Lafz Translator for users and Google Search Engine indexing.'}
             </p>
           </div>
         </header>
@@ -265,7 +265,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
                   <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
                 </tr>
                 <tr className="bg-gray-50/50">
-                  <td className="p-3 font-semibold text-gray-900">About Nova Translator</td>
+                  <td className="p-3 font-semibold text-gray-900">About Lafz Translator</td>
                   <td className="p-3 font-mono text-emerald-700">/about</td>
                   <td className="p-3">Product details, AI engine specs, and privacy policy</td>
                   <td className="p-3 font-bold text-emerald-600">Index, Follow</td>

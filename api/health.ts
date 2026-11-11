@@ -4,7 +4,7 @@ export default function handler(req: any, res: any) {
   res.end(
     JSON.stringify({
       status: 'ok',
-      service: 'Nova Translate Vercel Serverless API',
+      service: 'Lafz Translator Vercel Serverless API',
       geminiConfigured: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY',
       timestamp: new Date().toISOString(),
     })

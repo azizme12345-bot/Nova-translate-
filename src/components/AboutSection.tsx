@@ -7,10 +7,10 @@ interface AboutSectionProps {
 
 export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }) => {
   useEffect(() => {
-    document.title = 'About Us — Nova Translator';
+    document.title = 'About Us — Lafz Translator';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute('content', 'Learn about Nova Translator, our mission to bridge global communication gaps with Google Gemini AI translation technology.');
+      metaDesc.setAttribute('content', 'Learn about Lafz Translator, our mission to bridge global communication gaps with Google Gemini AI translation technology.');
     }
   }, []);
 
@@ -27,7 +27,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
             ← Home
           </button>
           <span className="font-bold tracking-wide text-sm sm:text-base">
-            About Nova Translator
+            About Lafz Translator
           </span>
         </div>
       </div>
@@ -36,27 +36,27 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack, onNavigate }
         <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
           <img
             src="/app-logo.png"
-            alt="Nova Translator Official Logo"
+            alt="Lafz Translator Official Logo"
             width={64}
             height={64}
             className="w-16 h-16 rounded-2xl shadow-sm object-cover border border-emerald-600/20 shrink-0"
             loading="eager"
           />
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">About Nova Translator</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">About Lafz Translator</h1>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Nova Translator is a next-generation multilingual communication suite designed to connect people across the globe. Powered by state-of-the-art Google Gemini AI models, we deliver fast, contextual, and natural translations for text, voice, and camera text recognition.
+              Lafz Translator is a next-generation multilingual communication suite designed to connect people across the globe. Powered by state-of-the-art Google Gemini AI models, we deliver fast, contextual, and natural translations for text, voice, and camera text recognition.
             </p>
           </div>
         </header>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-800">What Nova Translator Does &amp; Who It Is For</h2>
+          <h2 className="text-lg font-bold text-gray-800">What Lafz Translator Does &amp; Who It Is For</h2>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Nova Translator is built specifically for anyone who needs fast, accurate, and reliable translation between English and Urdu, as well as over 100 other international languages. Whether you are a student learning a new language, a traveler navigating foreign streets, a business professional handling international documents, or someone communicating daily with friends and family across language barriers, Nova Translator provides the tools you need right in your browser or mobile device.
+            Lafz Translator is built specifically for anyone who needs fast, accurate, and reliable translation between English and Urdu, as well as over 100 other international languages. Whether you are a student learning a new language, a traveler navigating foreign streets, a business professional handling international documents, or someone communicating daily with friends and family across language barriers, Lafz Translator provides the tools you need right in your browser or mobile device.
           </p>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Our application is designed to be lightweight, responsive, and completely user-friendly. Because it is a Progressive Web App (PWA), you can easily install Nova Translator directly onto your phone or computer home screen like a native mobile app without visiting an app store. It also translates a small set of common everyday phrases even when you are offline, and it keeps your translation history private in your browser.
+            Our application is designed to be lightweight, responsive, and completely user-friendly. Because it is a Progressive Web App (PWA), you can easily install Lafz Translator directly onto your phone or computer home screen like a native mobile app without visiting an app store. It also translates a small set of common everyday phrases even when you are offline, and it keeps your translation history private in your browser.
           </p>
         </section>
 

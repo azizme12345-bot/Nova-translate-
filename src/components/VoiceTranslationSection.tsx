@@ -7,7 +7,7 @@ interface VoiceTranslationSectionProps {
 
 export const VoiceTranslationSection: React.FC<VoiceTranslationSectionProps> = ({ onBack, onNavigate }) => {
   useEffect(() => {
-    document.title = 'Voice Speech Translation & Live Call — Nova Translator';
+    document.title = 'Voice Speech Translation & Live Call — Lafz Translator';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', 'Speak naturally and translate your voice in real-time across 100+ languages with continuous voice recognition and AI speech synthesis.');
@@ -36,7 +36,7 @@ export const VoiceTranslationSection: React.FC<VoiceTranslationSectionProps> = (
         <header>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Real-Time Voice Speech Translation</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Communicate effortlessly across language barriers using your voice. Nova Translator features advanced speech recognition and continuous voice translation, allowing you to speak freely and hear instant audio translations.
+            Communicate effortlessly across language barriers using your voice. Lafz Translator features advanced speech recognition and continuous voice translation, allowing you to speak freely and hear instant audio translations.
           </p>
         </header>
 

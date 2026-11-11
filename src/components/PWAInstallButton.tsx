@@ -17,7 +17,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onToast }) =
     if (isInstallable) {
       const outcome = await install();
       if (outcome) {
-        onToast('Nova Translate installed successfully!');
+        onToast('Lafz Translator installed successfully!');
       }
     } else if (isIOS) {
       setShowIOSModal(true);
@@ -31,7 +31,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onToast }) =
       <button
         className="mini"
         onClick={handleInstallClick}
-        title="Install Nova Translate App"
+        title="Install Lafz Translator App"
         style={{ color: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'rgba(2, 132, 199, 0.08)' }}
         type="button"
       >

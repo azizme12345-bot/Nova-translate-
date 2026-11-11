@@ -1,5 +1,5 @@
 /**
- * Offline Translation Engine & Language Pack Manager for Nova Translator
+ * Offline Translation Engine & Language Pack Manager for Lafz Translator
  * Provides instant local translations when offline or disconnected.
  */
 

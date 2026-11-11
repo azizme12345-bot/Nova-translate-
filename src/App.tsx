@@ -66,7 +66,7 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   if (path === '/camera' || path === '/camera-translation') {
     return {
       view: 'image',
-      title: 'Camera OCR & Photo Translator – Nova Translator',
+      title: 'Camera OCR & Photo Translator – Lafz Translator',
       desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents directly using your mobile camera or uploaded image.',
       canonical: '/camera'
     };
@@ -74,7 +74,7 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   if (path === '/history') {
     return {
       view: 'history',
-      title: 'Translation History & Activity Log – Nova Translator',
+      title: 'Translation History & Activity Log – Lafz Translator',
       desc: 'View, search, replay, and manage your recent translations with private device storage and one-click clipboard copying.',
       canonical: '/history'
     };
@@ -82,7 +82,7 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   if (path === '/voice' || path === '/voice-translation') {
     return {
       view: 'voice-translation',
-      title: 'Voice Translator & Speech-to-Text – Nova Translator',
+      title: 'Voice Translator & Speech-to-Text – Lafz Translator',
       desc: 'Speak naturally and translate your voice in real-time between English and Urdu with continuous microphone input and natural audio playback.',
       canonical: '/voice'
     };
@@ -90,7 +90,7 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   if (path === '/text-translation') {
     return {
       view: 'text-translation',
-      title: 'Text Translation – Nova Translator',
+      title: 'Text Translation – Lafz Translator',
       desc: 'Instant bidirectional AI text translation supporting English, Urdu, and 100+ languages. Fast sentence, paragraph, and document translator.',
       canonical: '/text-translation'
     };
@@ -98,31 +98,31 @@ const getPageFromPath = (path: string): { view: ActivePage; title: string; desc:
   if (path === '/languages') {
     return {
       view: 'languages',
-      title: 'Supported Languages Directory – Nova Translator',
-      desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in Nova Translator.',
+      title: 'Supported Languages Directory – Lafz Translator',
+      desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in Lafz Translator.',
       canonical: '/languages'
     };
   }
   if (path === '/about') {
     return {
       view: 'about',
-      title: 'About Nova Translator – Mission & Multilingual AI',
-      desc: 'Discover the technology, mission, and accessibility features behind Nova Translator, bridging global communication gaps.',
+      title: 'About Lafz Translator – Mission & Multilingual AI',
+      desc: 'Discover the technology, mission, and accessibility features behind Lafz Translator, bridging global communication gaps.',
       canonical: '/about'
     };
   }
   if (path === '/sitemap') {
     return {
       view: 'sitemap',
-      title: 'Sitemap & Tools Directory – Nova Translator',
-      desc: 'Explore all translation tools, features, and indexable pages on Nova Translator. Complete navigation directory for users and search engines.',
+      title: 'Sitemap & Tools Directory – Lafz Translator',
+      desc: 'Explore all translation tools, features, and indexable pages on Lafz Translator. Complete navigation directory for users and search engines.',
       canonical: '/sitemap'
     };
   }
   return {
     view: 'translate',
-    title: 'Nova Translator – AI Translation Workspace',
-    desc: 'Nova Translator is an advanced AI translation workspace for English, Urdu, and 100+ languages. Translate text, real-time voice, and documents with high accuracy.',
+    title: 'Lafz Translator – AI Translation Workspace',
+    desc: 'Lafz Translator is an advanced AI translation workspace for English, Urdu, and 100+ languages. Translate text, real-time voice, and documents with high accuracy.',
     canonical: '/'
   };
 };
