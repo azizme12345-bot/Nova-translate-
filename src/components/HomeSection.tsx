@@ -1035,67 +1035,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         </div>
       )}
 
-      {/* Helpful App Guide & FAQ Section */}
-      <section className="bg-white border-t border-gray-200 px-4 sm:px-6 py-6 space-y-6 text-gray-800">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* How to use Nova Translator */}
-          <div className="space-y-3">
-            <h2 className="text-base font-bold text-gray-900">How to use Nova Translator</h2>
-            <ol className="list-decimal list-inside space-y-2 text-xs sm:text-sm text-gray-600">
-              <li>
-                <span className="font-semibold text-gray-800">Type or speak:</span> Enter text in the box, tap the microphone to speak, or scan printed text with your camera.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-800">Choose the language:</span> Pick your source and target languages, such as English and Urdu or 100+ other languages.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-800">Read or listen to the translation:</span> View the translated text right away, copy it, or tap the speaker icon to hear it aloud.
-              </li>
-            </ol>
-          </div>
-
-          {/* Why Nova Translator */}
-          <div className="space-y-3">
-            <h2 className="text-base font-bold text-gray-900">Why Nova Translator</h2>
-            <ul className="list-disc list-inside space-y-2 text-xs sm:text-sm text-gray-600">
-              <li>
-                <span className="font-semibold text-gray-800">Fast results:</span> Translations appear in moments so you can keep conversations moving without waiting.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-800">Simple layout:</span> Clean controls for text, voice, and camera make it easy for anyone to use on any screen.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-800">Privacy in the browser:</span> Your translation history stays in your own browser storage, and you can clear it whenever you want.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Frequently asked questions */}
-        <div className="max-w-4xl mx-auto pt-4 border-t border-gray-100 space-y-3">
-          <h2 className="text-base font-bold text-gray-900">Frequently asked questions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
-            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-              <h3 className="font-bold text-[#2e7d32] mb-1">Is it free?</h3>
-              <p className="text-gray-600">
-                Yes, Nova Translator is free to use for text, voice, and camera translation in your browser.
-              </p>
-            </div>
-            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-              <h3 className="font-bold text-[#2e7d32] mb-1">Does it work on phones?</h3>
-              <p className="text-gray-600">
-                Yes, it works on Android and iPhone browsers and can be added to your home screen like an app.
-              </p>
-            </div>
-            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-              <h3 className="font-bold text-[#2e7d32] mb-1">Does it need an account?</h3>
-              <p className="text-gray-600">
-                No account or sign-in is needed. Open the page and start translating right away.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <p className="text-center text-xs text-gray-500 py-3 px-4 bg-white border-t border-gray-200">
+        Type, speak, or scan to translate between English and Urdu.
+      </p>
     </div>
   );
 };
