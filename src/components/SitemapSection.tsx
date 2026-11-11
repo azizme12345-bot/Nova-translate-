@@ -23,74 +23,56 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
   const tools = [
     {
       titleEn: 'Text Translation Tool',
-      titleUr: 'ٹیکسٹ ٹرانسلیشن ٹول',
       icon: '✍️',
       path: '/text-translation',
       pageKey: 'text-translation' as ActivePage,
       descEn:
         'Fast and accurate bidirectional text translator supporting English, Urdu, Arabic, Spanish, French, German, and 100+ languages. Includes instant language swap, character count, and 1-click clipboard copy.',
-      descUr:
-        'انگریزی، اردو، عربی، ہسپانوی اور 100 سے زائد زبانوں میں تیز رفتار اور درست متنی ترجمہ۔ زبانوں کے تبادلے (Swap) اور کلپ بورڈ کاپی کی سہولت کے ساتھ۔',
       tag: 'Core Tool',
     },
     {
       titleEn: 'Voice Translator & Speech-to-Text',
-      titleUr: 'صوتی ترجمہ اور اسپیچ ٹو ٹیکسٹ',
       icon: '🎙️',
       path: '/voice',
       pageKey: 'voice-translation' as ActivePage,
       descEn:
         'Instant real-time speech recognition. Speak through your microphone in English or Urdu and get immediate spoken translation with natural male and female voice playback.',
-      descUr:
-        'مائیکروفون کے ذریعے بول کر فوری صوتی ترجمہ حاصل کریں۔ آواز سن کر ٹیکسٹ میں تبدیل کرنے اور مردانہ و زنانہ آواز میں سننے کی سہولت۔',
       tag: 'Voice AI',
     },
     {
       titleEn: 'Camera OCR & Photo Scanner',
-      titleUr: 'کیمرہ اسکینر اور تصویری ترجمہ',
       icon: '📷',
       path: '/camera',
       pageKey: 'camera' as ActivePage,
       descEn:
         'Visual optical character recognition (OCR) translator. Scan restaurant menus, street signboards, packaging, and documents using your device camera or uploaded photos.',
-      descUr:
-        'کیمرے یا تصویر کے ذریعے کسی بھی بورڈ، مینو یا دستاویز کا فوری ترجمہ۔ موبائل کیمرے سے تصویر کھینچیں اور متن کا ترجمہ دیکھیں۔',
       tag: 'Vision OCR',
     },
     {
       titleEn: 'Supported Languages Directory',
-      titleUr: 'معاونت شدہ زبانوں کی ڈائریکٹری',
       icon: '🌐',
       path: '/languages',
       pageKey: 'languages' as ActivePage,
       descEn:
         'Browse our extensive catalog of 100+ supported international languages, including native scripts, language codes, and right-to-left (RTL) writing directions.',
-      descUr:
-        'دنیا بھر کی 100 سے زائد بین الاقوامی زبانوں کی مکمل فہرست بشمول رسم الخط اور زبان کے کوڈز۔',
       tag: 'Dictionary',
     },
     {
       titleEn: 'Translation History & Favorites',
-      titleUr: 'ہسٹری اور محفوظ شدہ ترجمے',
       icon: '📜',
       path: '/history',
       pageKey: 'history' as ActivePage,
       descEn:
         'Easily review your past translations, save frequent phrases to favorites for instant access, and reuse them without typing again.',
-      descUr:
-        'اپنے سابقہ ترجموں کو ہسٹری میں دیکھیں، اہم جملوں کو فیورٹ میں محفوظ کریں اور بغیر دوبارہ ٹائپ کیے استعمال کریں۔',
       tag: 'History',
     },
     {
       titleEn: 'About Nova Translator & AI Architecture',
-      titleUr: 'نوا ٹرانسلیٹر کے بارے میں تفصیلات',
       icon: 'ℹ️',
       path: '/about',
       pageKey: 'about' as ActivePage,
       descEn:
         'Learn about our high-speed translation platform, Google Gemini multimodal technology, zero-lag client-side cache, and privacy architecture.',
-      descUr:
-        'ہمارے تیز رفتار پلیٹ فارم، جدید ٹیکنالوجی، اور پرائیویسی پر مبنی آرکیٹیکچر کے بارے میں تفصیلی معلومات۔',
       tag: 'About',
     },
   ];
@@ -112,7 +94,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
           </button>
           <div className="flex items-center gap-2">
             <span className="font-bold tracking-wide text-sm sm:text-base">
-              {lang === 'ur' ? 'سائٹ میپ اور ٹولز ڈائریکٹری' : 'Sitemap & Tools Directory'}
+              'Sitemap & Tools Directory'
             </span>
           </div>
         </div>
@@ -134,12 +116,10 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
           />
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
-              {lang === 'ur' ? 'نوا ٹرانسلیٹر: مکمل سائٹ میپ اور ٹولز' : 'Nova Translator: Sitemap & Complete Tools Index'}
+              {'Nova Translator: Sitemap & Complete Tools Index'}
             </h1>
             <p className="text-sm text-gray-600 leading-relaxed">
-              {lang === 'ur'
-                ? 'یہ ویب پیج گوگل سرچ انجن اور صارفین کے لیے تیار کیا گیا ہے تاکہ معلوم ہو سکے کہ اس ویب سائٹ میں کون سے ٹولز ہیں اور وہ کس طرح کام کرتے ہیں۔'
-                : 'This comprehensive sitemap and directory outlines every tool, page, and feature available in Nova Translator for users and Google Search Engine indexing.'}
+              {'This comprehensive sitemap and directory outlines every tool, page, and feature available in Nova Translator for users and Google Search Engine indexing.'}
             </p>
           </div>
         </header>
@@ -174,12 +154,10 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
         <section className="space-y-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {lang === 'ur' ? 'دستیاب ٹولز اور ان کے افعال' : 'Available Tools & What You Can Do'}
+              'Available Tools & What You Can Do'
             </h2>
             <p className="text-xs text-gray-500">
-              {lang === 'ur'
-                ? 'ہر ٹول کو براہ راست کھولنے کے لیے لنک پر کلک کریں:'
-                : 'Click any tool below to launch and start translating immediately:'}
+              {'Click any tool below to launch and start translating immediately:'}
             </p>
           </div>
 
@@ -196,7 +174,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
                         {tool.icon}
                       </span>
                       <h3 className="font-bold text-sm text-gray-900 group-hover:text-emerald-800 transition">
-                        {lang === 'ur' ? tool.titleUr : tool.titleEn}
+                        tool.titleEn
                       </h3>
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
@@ -206,12 +184,6 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
 
                   <p className="text-xs text-gray-600 leading-relaxed mb-1.5">
                     {tool.descEn}
-                  </p>
-                  <p
-                    className="text-xs text-emerald-900/90 leading-relaxed font-urdu text-right border-t border-gray-200/60 pt-1.5"
-                    dir="rtl"
-                  >
-                    {tool.descUr}
                   </p>
                 </div>
 
@@ -225,7 +197,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
                     }}
                     className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800 transition cursor-pointer group-hover:translate-x-0.5 duration-150"
                   >
-                    <span>{lang === 'ur' ? 'ٹول کھولیں' : 'Open Tool'}</span>
+                    <span>'Open Tool'</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -237,7 +209,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
         {/* Structured Web Page Index Table for Googlebot */}
         <section className="space-y-3 pt-2">
           <h2 className="text-base font-bold text-gray-900">
-            {lang === 'ur' ? 'گوگل انڈیکسنگ پیجز کی فہرست' : 'Complete Page Index & Crawl Architecture'}
+            'Complete Page Index & Crawl Architecture'
           </h2>
           <div className="overflow-x-auto border border-gray-200 rounded-xl">
             <table className="w-full text-left text-xs border-collapse">
@@ -313,7 +285,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
             }}
             className="bg-[#2e7d32] hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer shadow-xs"
           >
-            ← {lang === 'ur' ? 'ہوم پیج پر واپس جائیں' : 'Back to Home'}
+            ← 'Back to Home'
           </button>
 
           <a
@@ -322,7 +294,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
             rel="noopener noreferrer"
             className="text-xs text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
           >
-            {lang === 'ur' ? 'ایکس ایم ایل سائٹ میپ دیکھیں (sitemap.xml)' : 'View XML Sitemap (sitemap.xml)'}
+            'View XML Sitemap (sitemap.xml)'
           </a>
         </div>
       </div>

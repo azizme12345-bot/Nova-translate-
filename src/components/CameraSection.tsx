@@ -38,7 +38,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
       setExtractedText(translatedText);
       setTranslatedText(prevExt);
     }
-    onToast('زبانیں تبدیل کر دی گئیں');
+    onToast('Languages swapped');
   };
 
   const processImageBase64 = async (base64Url: string, mimeType = 'image/jpeg') => {
@@ -46,7 +46,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     const base64Data = base64Url.includes(',') ? base64Url.split(',')[1] : base64Url;
 
     setIsLoading(true);
-    onToast('تصویر سکین اور ترجمہ کی جا رہی ہے...');
+    onToast('Scanning and translating image...');
 
     try {
       const cleanMime = (mimeType && mimeType.startsWith('image/')) ? mimeType : 'image/jpeg';
@@ -57,8 +57,8 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         targetLanguage: targetLang,
       });
 
-      const ext = res.extractedText || 'کوئی متن نہیں ملا';
-      const trn = res.translatedText || 'کوئی ترجمہ دستیاب نہیں';
+      const ext = res.extractedText || 'No text found';
+      const trn = res.translatedText || 'No translation available';
 
       setExtractedText(ext);
       setTranslatedText(trn);
@@ -72,9 +72,9 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
 
-      onToast('کیمرہ سکین مکمل ہو گیا!');
+      onToast('Camera scan complete!');
     } catch (err: any) {
-      onToast(err.message || 'تصویر کا ترجمہ کرنے میں خرابی');
+      onToast(err.message || 'Error translating image');
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +138,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     }
 
     setIsSpeaking(true);
-    onToast('آواز چل رہی ہے...');
+    onToast('Playing audio...');
     GlobalAudioPlayer.play(text, lang, {
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
@@ -173,10 +173,10 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             onClick={onBack}
             className="text-white hover:bg-white/10 px-2 py-1 rounded-md text-sm font-semibold flex items-center gap-1 transition"
           >
-            ← واپس
+            ← Back
           </button>
           <span className="font-bold tracking-wide text-sm sm:text-base">
-            کیمرہ سکینر • {sourceLang.split(' ')[0]} ↔ {targetLang.split(' ')[0]}
+            Camera Scanner • {sourceLang.split(' ')[0]} ↔ {targetLang.split(' ')[0]}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -184,9 +184,9 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             type="button"
             onClick={handleSwap}
             className="bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-md text-xs font-bold transition"
-            title="زبانیں تبدیل کریں"
+            title="Swap languages"
           >
-            ⇄ تبدیل کریں
+            ⇄ Swap
           </button>
         </div>
       </div>
@@ -194,7 +194,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
       {/* Language Selector Bar */}
       <div className="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-gray-600">ذریعہ:</span>
+          <span className="font-semibold text-gray-600">From:</span>
           <select
             value={sourceLang}
             onChange={(e) => setSourceLang(e.target.value)}
@@ -207,7 +207,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
             ))}
           </select>
 
-          <span className="font-semibold text-gray-600 ml-2">مقصد:</span>
+          <span className="font-semibold text-gray-600 ml-2">To:</span>
           <select
             value={targetLang}
             onChange={(e) => setTargetLang(e.target.value)}
@@ -238,9 +238,9 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
               📸
             </div>
             <div>
-              <h2 className="font-bold text-lg text-gray-800">کیمرہ سکینر اور فوٹو ترجمہ</h2>
+              <h2 className="font-bold text-lg text-gray-800">Camera Scanner &amp; Photo Translation</h2>
               <p className="text-xs text-gray-500 mt-1">
-                کوئی بھی تحریر، سائن بورڈ یا دستاویز کی تصویر لیں اور اس کا فوری ترجمہ حاصل کریں۔
+                Take a photo of any text, signboard, or printed page to get an instant translation.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 w-full">
@@ -277,8 +277,8 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         {isLoading && (
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center gap-3 max-w-md w-full">
             <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="font-bold text-sm tracking-wide text-gray-800">تصویر کا تجزیہ ہو رہا ہے...</span>
-            <span className="text-xs text-gray-500">جیمینی اے آئی کے ذریعے متن پڑھا اور ترجمہ کیا جا رہا ہے</span>
+            <span className="font-bold text-sm tracking-wide text-gray-800">Analyzing image...</span>
+            <span className="text-xs text-gray-500">Reading and translating text</span>
           </div>
         )}
 
@@ -307,7 +307,7 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
           <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex flex-col gap-3 w-full max-w-md">
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <span className="text-xs font-bold text-[#2e7d32] uppercase tracking-wide">
-                ترجمہ کا نتیجہ
+                Translation Result
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -317,18 +317,18 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
                     isSpeaking ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                   }`}
                 >
-                  🔊 {isSpeaking ? 'رکیں' : 'سنیں'}
+                  🔊 {isSpeaking ? 'Stop' : 'Listen'}
                 </button>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="text-xs text-gray-500 font-medium">اصل تحریر:</div>
+              <div className="text-xs text-gray-500 font-medium">Original Text:</div>
               <div className="text-sm bg-gray-50 p-2.5 rounded-lg text-gray-800">{extractedText}</div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="text-xs text-gray-500 font-medium">ترجمہ ({targetLang}):</div>
+              <div className="text-xs text-gray-500 font-medium">Translation ({targetLang}):</div>
               <div
                 className={`text-base font-bold text-gray-900 bg-emerald-50/50 p-3 rounded-lg ${
                   isTargetUrdu ? 'font-urdu text-right text-lg' : 'text-left'

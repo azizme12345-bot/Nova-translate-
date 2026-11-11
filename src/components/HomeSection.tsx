@@ -212,7 +212,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
           handleSpeak(finalOut, tgtLang, 'target');
         }
       } catch (err: any) {
-        const fallbackMsg = err.message || 'ترجمہ کرنے میں خرابی پیش آئی۔ براہ کرم دوبارہ کوشش کریں۔';
+        const fallbackMsg = err.message || 'Translation failed. Please try again.';
         setOutputText(fallbackMsg);
         onToast(fallbackMsg);
       } finally {
@@ -343,10 +343,10 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       if (recognitionRef.current) {
         isListeningRef.current = true;
         setIsListening(true);
-        onToast('🎙️ سن رہے ہیں... بولنا شروع کریں');
+        onToast('🎙️ Listening... Start speaking');
         return;
       }
-      onToast('مائیکروفون اس ڈیوائس پر سپورٹ نہیں کرتا');
+      onToast('Microphone is not supported on this device');
       return;
     }
 
@@ -377,7 +377,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         }
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size > 0 && !liveRecognized) {
-          onToast('🎙️ آواز کو ٹیکسٹ میں بدلا جا رہا ہے...');
+          onToast('🎙️ Converting speech to text...');
           try {
             const compressed = await AudioCompressor.compressAudioBlob(blob);
             const stt = await ApiClient.speechToText({
@@ -403,12 +403,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               } else {
                 await executeTranslation(transcribed, fromLang, toLang, false);
               }
-              onToast('ترجمہ مکمل ہو گیا!');
+              onToast('Translation complete!');
             } else {
-              onToast('کوئی آواز نہیں سنی گئی۔ دوبارہ کوشش کریں۔');
+              onToast('No speech detected. Please try again.');
             }
           } catch (err: any) {
-            onToast(err.message || 'صوتی ترجمہ میں خرابی');
+            onToast(err.message || 'Error in voice translation');
           }
         }
         if (mediaStreamRef.current) {
@@ -420,17 +420,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       recorder.start(400);
       isListeningRef.current = true;
       setIsListening(true);
-      onToast('🎙️ بولنا شروع کریں... بند کرنے کے لیے دوبارہ مائیک دبائیں');
+      onToast('🎙️ Start speaking... Tap mic again to stop');
 
       // Continuous listening without auto-stop
 
 
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
-        onToast('مائیکروفون کی اجازت درکار ہے۔ براہ کرم براؤزر سیٹنگز میں اسے آن کریں۔');
+        onToast('Microphone permission is required. Please enable it in browser settings.');
       } else {
         console.warn('Microphone error:', err);
-        onToast('مائیکروفون استعمال کرنے میں خرابی۔');
+        onToast('Error accessing microphone.');
       }
       setIsListening(false);
       isListeningRef.current = false;
@@ -473,7 +473,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                 {fromLang.toUpperCase().split(' ')[0]} ↔ {toLang.toUpperCase().split(' ')[0]}
               </span>
               <span className="text-[10px] text-emerald-100 font-medium">
-                {isTargetUrdu ? 'انگریزی ↔ اردو' : 'URDU ↔ ENGLISH'}
+                {isTargetUrdu ? 'ENGLISH ↔ URDU' : 'URDU ↔ ENGLISH'}
               </span>
             </div>
           </div>
@@ -486,9 +486,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               type="button"
               onClick={onToggleLang}
               className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition cursor-pointer"
-              title="Switch Language (English / اردو)"
+              title="Switch Language"
             >
-              {lang === 'ur' ? 'English' : 'اردو'}
+              {"English"}
             </button>
           )}
 
@@ -534,7 +534,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   }
                 });
               } else {
-                onToast('براہ کرم براؤزر مینو سے "Add to Home Screen" منتخب کریں۔');
+                onToast('Please select "Add to Home Screen" from your browser menu.');
               }
             }}
             className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer transition"
@@ -872,7 +872,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                     className="flex items-center gap-2 text-emerald-900 font-bold text-sm flex-1 text-left cursor-pointer"
                   >
                     <span>📜</span>
-                    <span>History (ہسٹری) ({history.length})</span>
+                    <span>History ({history.length})</span>
                     <span className="text-xs ml-auto">{showDrawerHistory ? '▲' : '▼'}</span>
                   </button>
                   {history.length > 0 && onClearHistory && (
@@ -880,7 +880,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                       type="button"
                       onClick={onClearHistory}
                       className="text-[11px] text-red-600 hover:underline font-semibold ml-2 cursor-pointer"
-                      title="پوری ہسٹری ڈیلیٹ کریں"
+                      title="Clear all history"
                     >
                       Clear All
                     </button>
@@ -891,7 +891,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                   <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-2 border-t border-gray-200 bg-white">
                     {history.length === 0 ? (
                       <div className="text-xs text-gray-400 text-center py-3">
-                        ابھی کوئی ہسٹری موجود نہیں ہے
+                        No history items yet
                       </div>
                     ) : (
                       history.map((item) => (
@@ -910,7 +910,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                 setInputText(item.input);
                                 setOutputText(item.output);
                                 setDrawerOpen(false);
-                                onToast('ہسٹری سے چیٹ دوبارہ لوڈ ہو گئی');
+                                onToast('Loaded from history');
                               }}
                               className="bg-[#2e7d32] text-white px-2 py-0.5 rounded text-[11px] font-bold hover:bg-emerald-700 transition cursor-pointer"
                             >
@@ -920,7 +920,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                               type="button"
                               onClick={() => {
                                 navigator.clipboard.writeText(`${item.input}\n${item.output}`);
-                                onToast('کاپی ہو گیا!');
+                                onToast('Copied!');
                               }}
                               className="bg-white border border-gray-300 text-gray-700 px-2 py-0.5 rounded text-[11px] font-semibold hover:bg-gray-100 transition cursor-pointer"
                             >
@@ -939,7 +939,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                 });
                               }}
                               className="bg-white border border-gray-300 text-emerald-700 px-1.5 py-0.5 rounded text-[11px] font-semibold hover:bg-emerald-50 transition cursor-pointer"
-                              title="سیو کریں"
+                              title="Save"
                             >
                               ♡ Save
                             </button>
@@ -948,7 +948,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                 type="button"
                                 onClick={() => onDeleteHistoryItem(item.id)}
                                 className="text-red-500 hover:text-red-700 px-1 py-0.5 rounded text-[11px] font-bold cursor-pointer"
-                                title="ڈیلیٹ کریں"
+                                title="Delete"
                               >
                                 🗑️
                               </button>

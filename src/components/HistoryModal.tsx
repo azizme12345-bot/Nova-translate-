@@ -64,7 +64,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             <span className="text-xl">📜</span>
             <div>
               <h3 className="font-bold text-base leading-tight">Translation History</h3>
-              <p className="text-xs text-emerald-100">ترجمہ کی محفوظ شدہ ہسٹری ({history.length})</p>
+              <p className="text-xs text-emerald-100">Saved translation history ({history.length})</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         <div className="p-3 bg-gray-50 border-b border-gray-200">
           <input
             type="text"
-            placeholder="Search history (تلاش کریں)..."
+            placeholder="Search history..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#2e7d32]"
@@ -108,7 +108,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             <div className="text-center py-12 text-gray-400">
               <span className="text-3xl block mb-2">📖</span>
               <p className="text-sm font-medium">No history items found.</p>
-              <p className="text-xs mt-1 text-gray-400">نئے ترجمے خود بخود یہاں محفوظ ہوں گے۔</p>
+              <p className="text-xs mt-1 text-gray-400">New translations will be saved here automatically.</p>
             </div>
           ) : (
             filteredHistory.map((item) => {
@@ -179,7 +179,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
 
         {/* Footer */}
         <div className="p-3 bg-gray-50 border-t border-gray-200 text-center text-xs text-gray-500">
-          تمام پرانے اور نئے ترجمے خود بخود آپ کی ہسٹری میں محفوظ ہوتے ہیں۔
+          All past and recent translations are automatically saved in your history.
         </div>
       </div>
     </div>

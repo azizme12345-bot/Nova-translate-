@@ -20,14 +20,6 @@ export const Topbar: React.FC<TopbarProps> = ({ lang, onToggleLang, onToggleThem
       </div>
       <div></div>
       <div className="top-actions flex items-center gap-2">
-        <button
-          className="smallbtn font-bold px-2.5 py-1 text-xs cursor-pointer bg-emerald-700 text-white border-emerald-600 rounded-lg hover:bg-emerald-800 transition"
-          onClick={onToggleLang}
-          title="Switch Language (English / اردو)"
-          type="button"
-        >
-          {lang === 'en' ? 'اردو' : 'English'}
-        </button>
         <PWAInstallButton onToast={onToast} />
         {onOpenSettings && (
           <button

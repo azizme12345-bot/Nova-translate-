@@ -49,13 +49,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://nova-translate-orpin.vercel.app/privacy.html</loc>
+    <loc>https://nova-translate-orpin.vercel.app/privacy</loc>
     <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://nova-translate-orpin.vercel.app/contact.html</loc>
+    <loc>https://nova-translate-orpin.vercel.app/contact</loc>
     <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

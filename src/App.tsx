@@ -159,10 +159,9 @@ export default function App() {
   });
 
   const toggleLang = useCallback(() => {
-    const next = lang === 'en' ? 'ur' : 'en';
-    setLang(next);
-    setSavedLanguage(next);
-  }, [lang]);
+    setLang('en');
+    setSavedLanguage('en');
+  }, []);
 
   const changeView = useCallback((page: ActivePage, pushHistory = true) => {
     setActiveView(page);
@@ -259,7 +258,7 @@ export default function App() {
       } catch {}
       return updated;
     });
-    showToast('ہسٹری آئٹم ڈیلیٹ ہو گیا');
+    showToast('History item deleted');
   }, [showToast]);
 
   const handleClearHistory = useCallback(() => {
@@ -267,7 +266,7 @@ export default function App() {
     try {
       localStorage.removeItem('nova_translation_history');
     } catch {}
-    showToast('ہسٹری صاف کر دی گئی');
+    showToast('History cleared');
   }, [showToast]);
 
   const handleUseInTranslator = (sourceText: string, translatedText: string, from: string, to: string) => {
