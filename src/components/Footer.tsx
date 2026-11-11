@@ -161,9 +161,59 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, lang, onToggleLang }
 
         <div className="flex flex-col sm:flex-row items-center justify-between text-gray-400 text-xs gap-2 pt-2 border-t border-gray-100">
           <div>
-            &copy; 2026 {t('novaTranslator', lang)}. Verified for Google Search Console indexing.
+            &copy; 2026 Nova Translator. All rights reserved.
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[11px]">
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/');
+                onNavigate('translate');
+              }}
+              className="text-[#2e7d32] hover:underline font-semibold"
+            >
+              Home
+            </a>
+            <span>•</span>
+            <a
+              href="/about"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/about');
+                onNavigate('about');
+              }}
+              className="text-[#2e7d32] hover:underline font-semibold"
+            >
+              About
+            </a>
+            <span>•</span>
+            <a
+              href="/sitemap"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/sitemap');
+                onNavigate('sitemap');
+              }}
+              className="text-[#2e7d32] hover:underline font-semibold"
+            >
+              Sitemap
+            </a>
+            <span>•</span>
+            <a
+              href="/privacy.html"
+              className="text-[#2e7d32] hover:underline font-semibold"
+            >
+              Privacy
+            </a>
+            <span>•</span>
+            <a
+              href="/contact.html"
+              className="text-[#2e7d32] hover:underline font-semibold"
+            >
+              Contact
+            </a>
+            <span>•</span>
             <a
               href="/sitemap.xml"
               target="_blank"
