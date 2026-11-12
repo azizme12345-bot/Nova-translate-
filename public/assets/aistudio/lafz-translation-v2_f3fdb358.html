@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#123b70">
+<meta name="description" content="LAFZ Translation helps you translate text and images with a simple, clear and easy-to-use experience.">
+<meta property="og:title" content="LAFZ Translation">
+<meta property="og:description" content="A simple and beautiful language translation experience.">
+<meta property="og:type" content="website">
+<title>LAFZ Translation — Simple Language Translation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#1d5fb8;--blue2:#2f7de0;--navy:#0f2a4a;--teal:#14a085;--ink:#16263b;--muted:#6b7a8f;--line:#e3eaf3;--bg:#f4f7fb;--white:#ffffff;--soft:#eaf2fc;--shadow:0 18px 45px rgba(15,42,74,.10);--shadow-sm:0 4px 14px rgba(15,42,74,.06);--radius:22px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(1100px 500px at 92% -10%,#dcebff 0%,transparent 60%),radial-gradient(900px 480px at -10% 8%,#d9f5ee 0%,transparent 55%),var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:15px;line-height:1.6}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;transition:background .18s,color .18s,transform .18s,box-shadow .18s,border-color .18s}
+.wrap{width:min(1120px,calc(100% - 40px));margin:auto}
+
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);border-bottom:1px solid rgba(227,234,243,.9)}
+.nav{height:72px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--navy);font:800 20px Manrope,sans-serif;letter-spacing:-.5px}
+.brand-mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,var(--blue2) 0%,var(--navy) 100%);display:grid;place-items:center;color:#fff;font-size:19px;box-shadow:0 8px 18px rgba(29,95,184,.28)}
+.navlinks{display:flex;align-items:center;gap:4px;background:#f1f5fa;padding:4px;border-radius:14px}
+.navlinks button,.mobile-menu button{border:0;background:transparent;color:#55657b;padding:9px 14px;border-radius:10px;font-weight:600;font-size:13px}
+.navlinks button:hover{color:var(--blue)}
+.navlinks button.active{background:#fff;color:var(--blue);box-shadow:var(--shadow-sm)}
+.menu-toggle{display:none;border:1px solid var(--line);background:#fff;border-radius:12px;width:42px;height:42px;color:var(--navy);font-size:20px}
+.mobile-menu{display:none;padding:0 0 14px;gap:6px}
+.mobile-menu.open{display:grid}
+.mobile-menu button{text-align:left;padding:12px 14px;background:#fff;border:1px solid var(--line)}
+.mobile-menu button.active{background:var(--soft);color:var(--blue);border-color:#cfe1f7}
+
+main{min-height:70vh}
+.page{display:none;padding:44px 0 72px;animation:fade .3s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.hero{text-align:center;padding:24px 0 34px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid #d5e6f7;background:rgba(255,255,255,.85);border-radius:999px;color:var(--blue);font-size:12px;font-weight:600;box-shadow:var(--shadow-sm)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(20,160,133,.15)}
+h1,h2,h3{font-family:Manrope,Inter,sans-serif;line-height:1.15;letter-spacing:-.8px}
+h1{font-size:clamp(32px,5.2vw,52px);color:var(--navy);margin:20px 0 12px;font-weight:800}
+h1 span{background:linear-gradient(90deg,var(--blue2),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:560px;margin:0 auto;color:var(--muted);font-size:16px}
+
+.translator{max-width:940px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:24px}
+.language-row{display:grid;grid-template-columns:1fr 52px 1fr;align-items:center;gap:12px;margin-bottom:18px}
+.language-select{width:100%;border:1px solid var(--line);background:#fafcfe;border-radius:14px;padding:14px 16px;color:var(--ink);font-weight:600;outline:none;transition:border-color .2s,box-shadow .2s}
+.language-select:focus,textarea:focus,input:focus{border-color:#7fb0e6;box-shadow:0 0 0 4px rgba(47,125,224,.14)}
+.swap{height:44px;width:44px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--blue);font-size:18px;justify-self:center;box-shadow:var(--shadow-sm)}
+.swap:hover{transform:rotate(180deg);background:var(--soft)}
+
+.text-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.text-panel{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;min-width:0;display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s}
+.text-panel:focus-within{border-color:#9cc3ec;box-shadow:0 0 0 4px rgba(47,125,224,.10)}
+.panel-head{padding:12px 16px;background:#f8fbfe;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;color:#4d6078;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.panel-head span:last-child{font-weight:500;color:#94a3b5;letter-spacing:0;text-transform:none;font-size:12px}
+.text-panel textarea{display:block;width:100%;flex:1;height:190px;min-height:190px;resize:vertical;border:0;outline:0;box-shadow:none!important;padding:16px;color:var(--ink);line-height:1.75;font-size:16px;background:#fff}
+.text-panel textarea:focus{border:0}
+.text-panel textarea::placeholder{color:#a3afbf}
+.output{flex:1;min-height:190px;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;color:#243c57;font-size:16px;line-height:1.75}
+.output:not(.placeholder){background:linear-gradient(180deg,#f7fbff,#fff)}
+.output.placeholder{color:#a3afbf}
+.panel-actions{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line);gap:8px;background:#fff}
+.small-actions{display:flex;gap:4px;flex-wrap:wrap}
+.icon-btn{border:1px solid transparent;background:transparent;color:#5f7089;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:600}
+.icon-btn:hover{background:var(--soft);color:var(--blue)}
+.primary{border:0;background:linear-gradient(135deg,var(--blue2),var(--blue));color:#fff;padding:13px 28px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 10px 22px rgba(29,95,184,.25)}
+.primary:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(29,95,184,.30)}
+.primary:active{transform:translateY(0)}
+.primary:disabled{opacity:.6;cursor:wait;transform:none}
+.translate-row{display:flex;justify-content:center;margin-top:20px}
+.hint{text-align:center;color:#8a97a8;font-size:12px;margin:14px 0 0}
+
+.section{margin:52px auto 0;max-width:940px}
+.section-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.section h2{font-size:22px;color:var(--navy);margin:0}
+.section-sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+.history-tools{display:flex;gap:8px;align-items:center}
+.search{width:220px;border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:#fff;outline:none;font-size:13px;transition:border-color .2s,box-shadow .2s}
+.text-btn{border:0;background:transparent;color:#b4443a;font-size:12px;font-weight:700;padding:8px}
+.text-btn:hover{text-decoration:underline}
+.history-list{display:grid;gap:10px}
+.history-item{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;transition:box-shadow .2s,transform .2s}
+.history-item:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.history-icon{width:38px;height:38px;flex:none;border-radius:12px;background:linear-gradient(140deg,var(--soft),#d9f5ee);display:grid;place-items:center;color:var(--blue);font-size:16px;font-weight:700}
+.history-content{min-width:0;flex:1}
+.history-langs{font-size:11px;color:var(--blue);font-weight:700;letter-spacing:.3px}
+.history-preview{font-size:13px;color:#42556d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.history-date{font-size:11px;color:#98a4b2;margin-top:3px}
+.history-actions{display:flex;gap:2px}
+.empty{border:1px dashed #cfdbe8;border-radius:16px;text-align:center;padding:30px;color:#8a97a8;background:#fbfdff;font-size:13px}
+
+.content-card{max-width:860px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,44px);box-shadow:var(--shadow)}
+.content-card h1{font-size:34px;margin-top:0}
+.content-card h2{font-size:20px;color:var(--navy);margin:28px 0 8px}
+.content-card p,.content-card li{color:#55657b;font-size:15px}
+.content-card ul{padding-left:20px}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+.feature{background:linear-gradient(180deg,#f8fbfe,#f3f8fd);border:1px solid var(--line);border-radius:16px;padding:18px}
+.feature b{display:block;color:var(--navy);font:700 15px Manrope,sans-serif;margin:8px 0 4px}
+.feature p{font-size:13px;margin:0}
+.feature .ico{font-size:22px}
+
+.upload-box{border:1.5px dashed #b5cbe3;border-radius:20px;background:#f9fbfe;text-align:center;padding:38px 18px;cursor:pointer;transition:.2s}
+.upload-box:hover{border-color:var(--blue2);background:#f1f7fd}
+.upload-box .upload-ico{font-size:32px;color:var(--blue2)}
+.upload-box h3{margin:8px 0 4px;color:var(--navy)}
+.upload-box p{margin:0;color:var(--muted);font-size:13px}
+.preview{max-width:100%;max-height:300px;display:block;margin:16px auto;border-radius:14px;box-shadow:var(--shadow-sm)}
+.hidden{display:none!important}
+.image-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+.notice{font-size:12px;color:#7a899b;background:#f6f9fc;border-radius:12px;padding:12px 14px;margin-top:16px}
+
+footer{border-top:1px solid var(--line);background:rgba(255,255,255,.7);padding:26px 0;color:#8996a5;font-size:12px;margin-top:20px}
+.footer-inner{display:flex;justify-content:space-between;gap:15px;align-items:center}
+.footer-brand{color:var(--navy);font:800 14px Manrope,sans-serif}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--navy);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:50;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:720px){
+.wrap{width:min(100% - 28px,600px)}
+.nav{height:64px}
+.navlinks{display:none}
+.menu-toggle{display:block}
+.page{padding:26px 0 52px}
+.hero{padding:12px 0 22px}
+h1{font-size:32px}
+.translator{padding:14px;border-radius:20px}
+.language-row{grid-template-columns:1fr 40px 1fr;gap:8px;margin-bottom:12px}
+.language-select{padding:12px 10px;font-size:13px}
+.swap{width:38px;height:38px}
+.text-grid{grid-template-columns:1fr;gap:12px}
+.text-panel textarea{height:140px;min-height:140px}
+.output{min-height:140px}
+.primary{width:100%}
+.translate-row{margin-top:16px}
+.section{margin-top:38px}
+.section-top{align-items:flex-start;flex-direction:column}
+.history-tools{width:100%}
+.search{flex:1;width:100%}
+.history-item{padding:12px;gap:10px}
+.history-actions{flex-direction:column}
+.feature-grid{grid-template-columns:1fr}
+.image-controls{grid-template-columns:1fr}
+.content-card h1{font-size:28px}
+.footer-inner{flex-direction:column;text-align:center}
+.panel-actions{padding:8px}
+.icon-btn{padding:7px 8px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header>
+ <div class="wrap nav">
+  <a class="brand" href="#home" aria-label="LAFZ Translation Home"><span class="brand-mark">文</span><span>LAFZ<span style="color:var(--blue2)">.</span></span></a>
+  <nav class="navlinks" aria-label="Main navigation">
+   <button class="active" data-page="home">Home</button><button data-page="content">Content</button><button data-page="about">About</button><button data-page="privacy">Privacy</button><button data-page="image">Image Translator</button>
+  </nav>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false">☰</button>
+ </div>
+ <nav class="wrap mobile-menu" id="mobileMenu" aria-label="Mobile navigation">
+  <button data-page="home">Home</button><button data-page="content">Content</button><button data-page="about">About</button><button data-page="privacy">Privacy</button><button data-page="image">Image Translator</button><button id="historyJump">↳ Translation History</button>
+ </nav>
+</header>
+<main>
+<section class="page active" id="home">
+ <div class="wrap">
+  <div class="hero">
+   <span class="eyebrow"><i class="dot"></i> Clear words. Better understanding.</span>
+   <h1>Every language, <span>closer.</span></h1>
+   <p>Translate words and sentences with a clean, simple experience. Choose your languages and let your words travel.</p>
+  </div>
+  <div class="translator">
+   <div class="language-row">
+    <select class="language-select" id="sourceLang" aria-label="Translate from"><option value="auto">Detect language</option></select>
+    <button class="swap" id="swapLang" title="Swap languages" aria-label="Swap languages">⇄</button>
+    <select class="language-select" id="targetLang" aria-label="Translate to"></select>
+   </div>
+   <div class="text-grid">
+    <div class="text-panel">
+     <div class="panel-head"><span>YOUR TEXT</span><span id="charCount">0 / 5000</span></div>
+     <textarea id="sourceText" maxlength="5000" placeholder="Type or paste your text here..." aria-label="Text to translate"></textarea>
+     <div class="panel-actions">
+      <div class="small-actions"><button class="icon-btn" id="pasteBtn">Paste</button><button class="icon-btn" id="micBtn">🎙 Speak</button><button class="icon-btn" id="clearBtn">Clear</button></div>
+      <span style="font-size:11px;color:#9aa6b4">Input</span>
+     </div>
+    </div>
+    <div class="text-panel">
+     <div class="panel-head"><span>TRANSLATION</span><span id="resultStatus">Ready</span></div>
+     <div class="output placeholder" id="output" aria-live="polite">Your translation will appear here...</div>
+     <div class="panel-actions">
+      <div class="small-actions"><button class="icon-btn" id="copyBtn">Copy</button><button class="icon-btn" id="listenBtn">🔊 Listen</button><button class="icon-btn" id="saveBtn">Save</button></div>
+      <span style="font-size:11px;color:#9aa6b4">Result</span>
+     </div>
+    </div>
+   </div>
+   <div class="translate-row"><button class="primary" id="translateBtn">Translate text&nbsp; →</button></div>
+   <p class="hint">Your saved translations stay in this browser on this device.</p>
+  </div>
+  <section class="section" id="historySection">
+   <div class="section-top">
+    <div><h2>Translation History</h2><p class="section-sub">Your saved translations, all in one place.</p></div>
+    <div class="history-tools"><input class="search" id="historySearch" placeholder="Search saved translations..." aria-label="Search history"><button class="text-btn" id="clearHistory">Clear all</button></div>
+   </div>
+   <div class="history-list" id="historyList"></div>
+  </section>
+ </div>
+</section>
+<section class="page" id="content"><div class="wrap"><article class="content-card">
+ <h1>Words connect us.</h1><p>Language should make communication easier, not more complicated. LAFZ Translation is designed to help you understand messages, explore new languages and express your thoughts with greater confidence.</p>
+ <h2>Translate with clarity</h2><p>Choose the language you are writing in, select the language you want, and enter your text. The translation area keeps the result separate from your original words, making it easy to compare, copy or listen. You can save useful translations and return to them later from the History section on the Home page.</p>
+ <h2>Made for everyday use</h2><p>Whether you are learning, travelling, studying or communicating with someone who speaks another language, a simple interface can make the process feel more natural. LAFZ keeps its main tools easy to find and works to provide a comfortable experience on both phones and larger screens.</p>
+ <div class="feature-grid"><div class="feature"><span class="ico">🌐</span><b>Many languages</b><p>Choose from a wide range of language options.</p></div><div class="feature"><span class="ico">✍️</span><b>Simple workflow</b><p>Enter, translate, copy or save in a few steps.</p></div><div class="feature"><span class="ico">🖼️</span><b>Image translation</b><p>Upload an image to extract and translate its text.</p></div></div>
+ </article></div></section>
+<section class="page" id="about"><div class="wrap"><article class="content-card">
+ <h1>About LAFZ</h1><p>LAFZ Translation is built around one simple idea: understanding should feel easy. The name “LAFZ” means “word”, and every word can help people share ideas, learn something new and connect across language differences.</p>
+ <h2>Our approach</h2><p>We focus on a clear layout, readable text and practical tools. The translator keeps the original text and translated result side by side on larger screens, while adapting into a comfortable stacked layout on mobile devices. Helpful actions such as copy, listen and saved history are kept close to the text they belong to.</p>
+ <h2>Keep improving</h2><p>Translation quality depends on the translation service connected to this website. We aim to make that process straightforward and to show clear messages when a service is unavailable, rather than displaying made-up results. LAFZ is an independent translation interface and is not affiliated with Google, Microsoft or any other translation provider.</p>
+ </article></div></section>
+<section class="page" id="privacy"><div class="wrap"><article class="content-card">
+ <h1>Privacy</h1><p>Your privacy matters. This website stores saved translation history in your browser's local storage so you can reopen it on the same device and browser. This history is not automatically synced between devices.</p>
+ <h2>Text you submit</h2><p>When a translation service is connected, the text you submit may be sent to that service's server to produce a translation. The handling of submitted text depends on the provider and the website's server configuration. Do not submit passwords, financial details or other sensitive personal information.</p>
+ <h2>Browser features</h2><p>Voice input and spoken output, when available, use browser or device speech features. Their availability and data handling may vary by browser and operating system.</p>
+ <h2>Your choices</h2><p>You can delete individual saved translations or clear your entire local history from the Home page. Clearing browser site data may also remove saved history. This page should be updated with the exact service provider, retention policy and contact details before the website is publicly launched.</p>
+ </article></div></section>
+<section class="page" id="image"><div class="wrap"><article class="content-card">
+ <h1>Image Translator</h1><p>Upload an image containing text. Extract the text first, then translate it into your chosen language.</p>
+ <label class="upload-box" for="imageInput" id="uploadBox"><div class="upload-ico">▧</div><h3>Choose an image</h3><p>Tap to browse, or use your camera. JPG, PNG and WEBP.</p></label>
+ <input type="file" id="imageInput" accept="image/*" capture="environment" class="hidden">
+ <img id="imagePreview" class="preview hidden" alt="Selected image preview">
+ <div class="small-actions" style="justify-content:center"><button class="icon-btn hidden" id="removeImage">Remove image</button><button class="icon-btn hidden" id="replaceImage">Choose another</button></div>
+ <div class="image-controls"><select class="language-select" id="ocrSource"><option value="auto">Detect image language</option></select><select class="language-select" id="ocrTarget"></select></div>
+ <div class="translate-row" style="gap:9px;flex-wrap:wrap"><button class="primary" id="extractBtn">Extract text</button><button class="primary" id="imageTranslateBtn" style="background:var(--navy)">Extract & translate</button></div>
+ <h2 style="font-size:17px;margin-top:28px">Extracted text</h2><textarea id="extractedText" class="language-select" style="height:130px;resize:vertical;width:100%;font-weight:400" placeholder="Text from your image will appear here..."></textarea>
+ <h2 style="font-size:17px;margin-top:20px">Translated text</h2><div class="output" id="imageOutput" style="border:1px solid var(--line);border-radius:12px;min-height:90px">Your image translation will appear here...</div>
+ <div class="small-actions" style="margin-top:10px"><button class="icon-btn" id="copyExtracted">Copy extracted text</button><button class="icon-btn" id="copyImageResult">Copy translation</button><button class="icon-btn" id="clearImage">Clear</button></div>
+ <div class="notice">Image text extraction and translation require OCR and translation services to be connected on the server. This design does not pretend to process images when those services are not configured.</div>
+ </article></div></section>
+</main>
+<footer><div class="wrap footer-inner"><span class="footer-brand">LAFZ Translation</span><span>Clear words. Better understanding.</span><span>© <span id="year"></span> LAFZ. All rights reserved.</span></div></footer>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const LANGUAGES=[["Arabic","ar"],["Bengali","bn"],["Chinese (Simplified)","zh"],["Dutch","nl"],["English","en"],["French","fr"],["German","de"],["Hindi","hi"],["Indonesian","id"],["Italian","it"],["Japanese","ja"],["Korean","ko"],["Persian","fa"],["Polish","pl"],["Portuguese","pt"],["Punjabi","pa"],["Russian","ru"],["Spanish","es"],["Swahili","sw"],["Tamil","ta"],["Thai","th"],["Turkish","tr"],["Ukrainian","uk"],["Urdu","ur"],["Vietnamese","vi"]];
+const $=id=>document.getElementById(id);let lastTranslation="",selectedImage=null;
+function fillLanguages(select,includeAuto=false){select.innerHTML="";if(includeAuto){let o=document.createElement("option");o.value="auto";o.textContent="Detect language";select.append(o)}LANGUAGES.forEach(([name,code])=>{let o=document.createElement("option");o.value=code;o.textContent=name;select.append(o)})}
+fillLanguages($("sourceLang"),true);fillLanguages($("targetLang"));fillLanguages($("ocrSource"),true);fillLanguages($("ocrTarget"));
+$("sourceLang").value="auto";$("targetLang").value="ur";$("ocrSource").value="auto";$("ocrTarget").value="ur";$("year").textContent=new Date().getFullYear();
+function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),2300)}
+function showPage(name){document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===name));document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===name));$("mobileMenu").classList.remove("open");$("menuToggle").setAttribute("aria-expanded","false");window.scrollTo({top:0,behavior:"smooth"});location.hash=name}
+document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+$("menuToggle").addEventListener("click",()=>{let open=$("mobileMenu").classList.toggle("open");$("menuToggle").setAttribute("aria-expanded",String(open));$("menuToggle").textContent=open?"×":"☰"});
+$("historyJump").addEventListener("click",()=>{showPage("home");setTimeout(()=>$("historySection").scrollIntoView({behavior:"smooth"}),100)});
+window.addEventListener("hashchange",()=>{let p=location.hash.slice(1);if(["home","content","about","privacy","image"].includes(p))showPage(p)});
+$("sourceText").addEventListener("input",()=>$("charCount").textContent=$("sourceText").value.length+" / 5000");
+$("swapLang").addEventListener("click",()=>{if($("sourceLang").value==="auto"){toast("Choose a source language first.");return}let a=$("sourceLang").value;$("sourceLang").value=$("targetLang").value;$("targetLang").value=a;let old=$("sourceText").value;$("sourceText").value=lastTranslation||"";$("output").textContent=old||"Your translation will appear here...";$("output").classList.toggle("placeholder",!old);$("charCount").textContent=$("sourceText").value.length+" / 5000";lastTranslation=old});
+$("clearBtn").addEventListener("click",()=>{$("sourceText").value="";$("charCount").textContent="0 / 5000";$("output").textContent="Your translation will appear here...";$("output").classList.add("placeholder");$("resultStatus").textContent="Ready";lastTranslation=""});
+async function copyText(text){if(!text){toast("Nothing to copy.");return}try{await navigator.clipboard.writeText(text);toast("Copied to clipboard.")}catch(e){toast("Clipboard is not available in this browser.")}}
+$("copyBtn").addEventListener("click",()=>copyText(lastTranslation));$("pasteBtn").addEventListener("click",async()=>{try{$("sourceText").value=await navigator.clipboard.readText();$("sourceText").dispatchEvent(new Event("input"));}catch(e){toast("Please paste using your device keyboard.")}});
+$("listenBtn").addEventListener("click",()=>{if(!lastTranslation)return toast("Translate some text first.");if(!("speechSynthesis"in window))return toast("Speech is not supported in this browser.");speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(lastTranslation);u.lang=$("targetLang").value;speechSynthesis.speak(u)});
+$("micBtn").addEventListener("click",()=>{let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return toast("Voice input is not supported in this browser.");let rec=new SR();rec.lang=$("sourceLang").value==="auto"?"en-US":$("sourceLang").value;rec.onresult=e=>{$("sourceText").value=e.results[0][0].transcript;$("sourceText").dispatchEvent(new Event("input"))};rec.onerror=()=>toast("Could not capture speech. Try again.");rec.start();toast("Listening…")});
+async function translateText(text,from,to){const res=await fetch("/api/translate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,source:from,target:to})});if(!res.ok)throw new Error("Translation service returned an error ("+res.status+").");const data=await res.json();const result=data.translation||data.translatedText||data.text;if(typeof result!=="string"||!result.trim())throw new Error("The translation service returned an empty result.");return result}
+$("translateBtn").addEventListener("click",async()=>{let text=$("sourceText").value.trim();if(!text)return toast("Enter some text to translate.");$("translateBtn").disabled=true;$("translateBtn").textContent="Translating…";$("resultStatus").textContent="Working";try{lastTranslation=await translateText(text,$("sourceLang").value,$("targetLang").value);$("output").textContent=lastTranslation;$("output").classList.remove("placeholder");$("resultStatus").textContent="Complete";toast("Translation complete.")}catch(e){$("resultStatus").textContent="Unavailable";toast(e.message.includes("Failed to fetch")?"Translation service is not connected yet.":e.message)}finally{$("translateBtn").disabled=false;$("translateBtn").textContent="Translate text  →"}});
+function getHistory(){try{return JSON.parse(localStorage.getItem("lafzHistory")||"[]")}catch(e){return[]}}
+function setHistory(items){localStorage.setItem("lafzHistory",JSON.stringify(items))}
+$("saveBtn").addEventListener("click",()=>{let original=$("sourceText").value.trim();if(!original||!lastTranslation)return toast("Translate text before saving.");let items=getHistory();items.unshift({id:Date.now().toString(),original,translation:lastTranslation,from:$("sourceLang").value,to:$("targetLang").value,date:new Date().toISOString()});setHistory(items.slice(0,100));renderHistory();toast("Translation saved.")});
+function renderHistory(){let items=getHistory(),q=$("historySearch").value.toLowerCase(),list=$("historyList");list.innerHTML="";items=items.filter(x=>(x.original+" "+x.translation+" "+x.from+" "+x.to).toLowerCase().includes(q));if(!items.length){list.innerHTML='<div class="empty">'+(getHistory().length?"No matching saved translations.":"No saved translations yet. Your saved items will appear here.")+'</div>';return}items.forEach(item=>{let row=document.createElement("div");row.className="history-item";let icon=document.createElement("div");icon.className="history-icon";icon.textContent="文";let body=document.createElement("div");body.className="history-content";let langs=document.createElement("div");langs.className="history-langs";langs.textContent=(LANGUAGES.find(x=>x[1]===item.from)?.[0]||"Auto")+" → "+(LANGUAGES.find(x=>x[1]===item.to)?.[0]||item.to);let preview=document.createElement("div");preview.className="history-preview";preview.textContent=item.original+"  →  "+item.translation;let date=document.createElement("div");date.className="history-date";date.textContent=new Date(item.date).toLocaleString();body.append(langs,preview,date);let actions=document.createElement("div");actions.className="history-actions";let open=document.createElement("button");open.className="icon-btn";open.textContent="Open";open.onclick=()=>{showPage("home");$("sourceText").value=item.original;$("sourceText").dispatchEvent(new Event("input"));$("sourceLang").value=item.from;$("targetLang").value=item.to;lastTranslation=item.translation;$("output").textContent=item.translation;$("output").classList.remove("placeholder");window.scrollTo({top:0,behavior:"smooth"})};let cp=document.createElement("button");cp.className="icon-btn";cp.textContent="Copy";cp.onclick=()=>copyText(item.translation);let del=document.createElement("button");del.className="icon-btn";del.textContent="Delete";del.onclick=()=>{setHistory(getHistory().filter(x=>x.id!==item.id));renderHistory();toast("Item deleted.")};actions.append(open,cp,del);row.append(icon,body,actions);list.append(row)})}
+$("historySearch").addEventListener("input",renderHistory);$("clearHistory").addEventListener("click",()=>{if(!getHistory().length)return toast("History is already empty.");if(confirm("Clear all saved translations?")){setHistory([]);renderHistory();toast("History cleared.")}});renderHistory();
+$("imageInput").addEventListener("change",e=>{let f=e.target.files[0];if(!f)return;if(!f.type.startsWith("image/"))return toast("Please choose an image file.");selectedImage=f;$("imagePreview").src=URL.createObjectURL(f);$("imagePreview").classList.remove("hidden");$("removeImage").classList.remove("hidden");$("replaceImage").classList.remove("hidden");$("uploadBox").classList.add("hidden")});
+$("replaceImage").addEventListener("click",()=>$("imageInput").click());$("removeImage").addEventListener("click",clearSelectedImage);
+function clearSelectedImage(){selectedImage=null;$("imageInput").value="";$("imagePreview").removeAttribute("src");$("imagePreview").classList.add("hidden");$("removeImage").classList.add("hidden");$("replaceImage").classList.add("hidden");$("uploadBox").classList.remove("hidden")}
+async function runOcr(alsoTranslate){if(!selectedImage)return toast("Choose an image first.");let fd=new FormData();fd.append("image",selectedImage);fd.append("language",$("ocrSource").value);$("extractBtn").disabled=$("imageTranslateBtn").disabled=true;try{let r=await fetch("/api/ocr",{method:"POST",body:fd});if(!r.ok)throw Error("OCR service returned an error ("+r.status+").");let d=await r.json();let extracted=d.text||d.extractedText;if(!extracted)throw Error("No text was detected in this image.");$("extractedText").value=extracted;if(alsoTranslate){let translated=await translateText(extracted,$("ocrSource").value,$("ocrTarget").value);$("imageOutput").textContent=translated}else toast("Text extracted.")}catch(e){toast(e.message.includes("Failed to fetch")?"Image OCR service is not connected yet.":e.message)}finally{$("extractBtn").disabled=$("imageTranslateBtn").disabled=false}}
+$("extractBtn").addEventListener("click",()=>runOcr(false));$("imageTranslateBtn").addEventListener("click",()=>runOcr(true));$("copyExtracted").addEventListener("click",()=>copyText($("extractedText").value));$("copyImageResult").addEventListener("click",()=>copyText($("imageOutput").textContent));$("clearImage").addEventListener("click",()=>{clearSelectedImage();$("extractedText").value="";$("imageOutput").textContent="Your image translation will appear here..."});
+</script>
+</body>
+</html>
