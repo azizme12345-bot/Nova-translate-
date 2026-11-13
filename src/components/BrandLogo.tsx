@@ -2,33 +2,24 @@ import React from 'react';
 
 interface BrandLogoProps {
   size?: number;
-  className?: string;
   showText?: boolean;
+  className?: string;
 }
 
-/**
- * Official BrandLogo component using the exact app logo:
- * Green 3D icon with 'A' and '文' rounded tiles & curved arrows.
- */
-export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 42, className = '', showText = false }) => {
+export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 40, showText = false, className = '' }) => {
   return (
-    <div className={`inline-flex items-center gap-2.5 ${className}`}>
+    <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
       <img
-        src="/app-logo.png"
-        alt="Lafz Translator Logo"
-        width={size}
-        height={size}
-        className="rounded-xl shadow-sm object-cover shrink-0 select-none transition-transform duration-200 hover:scale-105"
-        style={{ width: `${size}px`, height: `${size}px` }}
-        loading="eager"
+        src="/lafz-logo-icon.png"
+        alt="LAFZ Translation Logo"
+        style={{ height: `${size}px`, width: 'auto' }}
+        className="rounded-xl object-contain block"
       />
-
       {showText && (
-        <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 flex items-center gap-1">
-          NOVA <span className="text-[#2e7d32]">Translator</span>
+        <span className="font-extrabold text-[20px] tracking-tight text-[#0f2a4a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          LAFZ<span className="text-[#2f7de0]">.</span>
         </span>
       )}
     </div>
   );
 };
-

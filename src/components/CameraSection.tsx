@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { ApiClient, LanguageOption } from '../services/apiClient.ts';
 import { GlobalAudioPlayer } from '../services/audioPlayer.ts';
 import { HistoryItem } from '../types.ts';
@@ -21,22 +21,22 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
   const [sourceLang, setSourceLang] = useState('English 🇬🇧');
   const [targetLang, setTargetLang] = useState('Urdu 🇵🇰');
   const [scannedImage, setScannedImage] = useState<string | null>(null);
-  const [extractedText, setExtractedText] = useState('');
-  const [translatedText, setTranslatedText] = useState('');
+  const [extracted, setExtracted] = useState('');
+  const [translated, setTranslated] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleSwap = () => {
     const temp = sourceLang;
     setSourceLang(targetLang);
     setTargetLang(temp);
-    if (translatedText && extractedText) {
-      const prevExt = extractedText;
-      setExtractedText(translatedText);
-      setTranslatedText(prevExt);
+    if (translated && extracted) {
+      const prevExt = extracted;
+      setExtracted(translated);
+      setTranslated(prevExt);
     }
     onToast('Languages swapped');
   };
@@ -46,10 +46,10 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     const base64Data = base64Url.includes(',') ? base64Url.split(',')[1] : base64Url;
 
     setIsLoading(true);
-    onToast('Scanning and translating image...');
+    onToast('Scanning and extracting text...');
 
     try {
-      const cleanMime = (mimeType && mimeType.startsWith('image/')) ? mimeType : 'image/jpeg';
+      const cleanMime = mimeType && mimeType.startsWith('image/') ? mimeType : 'image/jpeg';
       const res = await ApiClient.ocrAndTranslate({
         imageBase64: base64Data,
         mimeType: cleanMime,
@@ -60,8 +60,8 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
       const ext = res.extractedText || 'No text found';
       const trn = res.translatedText || 'No translation available';
 
-      setExtractedText(ext);
-      setTranslatedText(trn);
+      setExtracted(ext);
+      setTranslated(trn);
 
       onAddHistory({
         id: Date.now().toString(),
@@ -72,9 +72,9 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
 
-      onToast('Camera scan complete!');
+      onToast('Image processed successfully!');
     } catch (err: any) {
-      onToast(err.message || 'Error translating image');
+      onToast(err.message || 'Error processing image');
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +107,11 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          processImageBase64(dataUrl, 'image/jpeg');
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          processImageBase64(compressed, 'image/jpeg');
         } else {
           processImageBase64(rawUrl, file.type || 'image/jpeg');
         }
-      };
-      img.onerror = () => {
-        processImageBase64(rawUrl, file.type || 'image/jpeg');
       };
       img.src = rawUrl;
     };
@@ -122,11 +119,11 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     e.target.value = '';
   };
 
-  const handleRetake = () => {
+  const handleClearImage = () => {
     setScannedImage(null);
-    setExtractedText('');
-    setTranslatedText('');
-    fileInputRef.current?.click();
+    setExtracted('');
+    setTranslated('');
+    onToast('Image and results cleared');
   };
 
   const handleSpeak = (text: string, lang: string) => {
@@ -138,233 +135,292 @@ export const CameraSection: React.FC<CameraSectionProps> = ({
     }
 
     setIsSpeaking(true);
-    onToast('Playing audio...');
+    onToast('Playing pronunciation...');
     GlobalAudioPlayer.play(text, lang, {
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
     });
   };
 
-  const isTargetUrdu = targetLang.includes('Urdu') || targetLang.includes('Arabic') || targetLang.includes('Punjabi');
+  const isTargetUrdu =
+    targetLang.includes('Urdu') || targetLang.includes('Arabic') || targetLang.includes('Punjabi');
 
   return (
-    <div className="flex flex-col flex-1 bg-[#f0f0f0] rounded-xl overflow-hidden shadow-sm border border-gray-200">
+    <div className="lafz-wrap py-6 sm:py-8 flex flex-col gap-6">
+      {/* Hidden File Inputs */}
+      <input
+        id="imageInput"
+        type="file"
+        ref={imageInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
       <input
         type="file"
-        ref={fileInputRef}
+        ref={cameraInputRef}
         onChange={handleFileChange}
         accept="image/*"
         capture="environment"
         className="hidden"
       />
-      <input
-        type="file"
-        ref={galleryInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        className="hidden"
-      />
 
-      {/* Header matching green bar */}
-      <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-white hover:bg-white/10 px-2 py-1 rounded-md text-sm font-semibold flex items-center gap-1 transition"
-          >
-            ← Back
-          </button>
-          <span className="font-bold tracking-wide text-sm sm:text-base">
-            Camera Scanner • {sourceLang.split(' ')[0]} ↔ {targetLang.split(' ')[0]}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSwap}
-            className="bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-md text-xs font-bold transition"
-            title="Swap languages"
-          >
-            ⇄ Swap
-          </button>
-        </div>
-      </div>
-
-      {/* Language Selector Bar */}
-      <div className="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-gray-600">From:</span>
-          <select
-            value={sourceLang}
-            onChange={(e) => setSourceLang(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1 bg-white text-gray-800 focus:outline-none focus:border-emerald-600"
-          >
-            {(languages || [{ code: 'en', label: 'English 🇬🇧' }, { code: 'ur', label: 'Urdu 🇵🇰' }]).map((l) => (
-              <option key={l.code} value={l.label}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-
-          <span className="font-semibold text-gray-600 ml-2">To:</span>
-          <select
-            value={targetLang}
-            onChange={(e) => setTargetLang(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1 bg-white text-gray-800 focus:outline-none focus:border-emerald-600"
-          >
-            {(languages || [{ code: 'en', label: 'English 🇬🇧' }, { code: 'ur', label: 'Urdu 🇵🇰' }]).map((l) => (
-              <option key={l.code} value={l.label}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
+      {/* Top Header Row */}
+      <div className="flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => galleryInputRef.current?.click()}
-          className="text-[#2e7d32] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+          onClick={onBack}
+          className="text-xs sm:text-sm font-bold text-[#1d5fb8] hover:underline flex items-center gap-1.5 cursor-pointer"
         >
-          📁 Import File
+          ← Back to Translator
         </button>
+
+        <span className="text-xs font-bold text-[#6b7a8f] uppercase tracking-wider">
+          Camera &amp; Photo OCR
+        </span>
       </div>
 
-      {/* Main Viewfinder / Scanner Area */}
-      <div className="p-3 sm:p-4 flex-1 flex flex-col gap-4 items-center justify-center">
-        {!scannedImage && !isLoading && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center gap-4 max-w-md w-full">
-            <div className="w-16 h-16 bg-emerald-50 text-[#2e7d32] rounded-full flex items-center justify-center text-3xl">
+      {/* Main OCR Card */}
+      <div className="lafz-card p-4 sm:p-7 flex flex-col gap-6">
+        {/* Languages Selection Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#e3eaf3] min-w-0 w-full">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto min-w-0">
+            <select
+              id="ocrSource"
+              value={sourceLang}
+              onChange={(e) => setSourceLang(e.target.value)}
+              className="lafz-select flex-1 sm:flex-initial min-w-0 max-w-full text-xs sm:text-sm font-semibold cursor-pointer"
+              aria-label="OCR Source Language"
+            >
+              {(languages || [
+                { code: 'en', label: 'English 🇬🇧' },
+                { code: 'ur', label: 'Urdu 🇵🇰' },
+              ]).map((l) => (
+                <option key={l.code} value={l.label}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleSwap}
+              className="shrink-0 border border-[#e3eaf3] bg-[#fafcfe] hover:bg-[#eaf2fc] text-[#1d5fb8] rounded-xl p-2.5 sm:px-3 sm:py-2 text-sm font-bold transition transform active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs"
+              title="Swap Languages"
+            >
+              ⇄
+            </button>
+
+            <select
+              id="ocrTarget"
+              value={targetLang}
+              onChange={(e) => setTargetLang(e.target.value)}
+              className="lafz-select flex-1 sm:flex-initial min-w-0 max-w-full text-xs sm:text-sm font-semibold cursor-pointer"
+              aria-label="OCR Target Language"
+            >
+              {(languages || [
+                { code: 'en', label: 'English 🇬🇧' },
+                { code: 'ur', label: 'Urdu 🇵🇰' },
+              ]).map((l) => (
+                <option key={l.code} value={l.label}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              id="extractBtn"
+              type="button"
+              disabled={isLoading || !scannedImage}
+              onClick={() => scannedImage && processImageBase64(scannedImage)}
+              className="lafz-primary-btn text-xs sm:text-sm px-4 py-2 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+            >
+              {isLoading ? 'Processing...' : 'Translate Image'}
+            </button>
+            {scannedImage && (
+              <button
+                id="clearImage"
+                type="button"
+                onClick={handleClearImage}
+                className="text-xs font-semibold text-gray-500 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-3 py-2 rounded-xl transition cursor-pointer shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Upload & Scanner Box */}
+        {!scannedImage ? (
+          <div
+            id="uploadBox"
+            onClick={() => imageInputRef.current?.click()}
+            className="border-2 border-dashed border-[#e3eaf3] hover:border-[#2f7de0] bg-[#fafcfe] hover:bg-[#f1f7ff] rounded-3xl p-6 sm:p-12 flex flex-col items-center justify-center text-center gap-4 cursor-pointer transition group min-w-0 w-full"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-[#eaf2fc] text-[#1d5fb8] flex items-center justify-center text-3xl group-hover:scale-110 transition shadow-xs">
               📸
             </div>
-            <div>
-              <h2 className="font-bold text-lg text-gray-800">Camera Scanner &amp; Photo Translation</h2>
-              <p className="text-xs text-gray-500 mt-1">
-                Take a photo of any text, signboard, or printed page to get an instant translation.
+            <div className="min-w-0 w-full">
+              <h2
+                className="text-lg sm:text-xl font-bold text-[#0f2a4a]"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
+              >
+                Upload an Image or Take a Photo
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6b7a8f] mt-1 max-w-md mx-auto">
+                Supports JPG, PNG, and WebP documents, signs, menus, and receipts.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2 w-full">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-[#2e7d32] hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold shadow-md transition flex items-center gap-2 text-sm flex-1 justify-center cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
+                className="lafz-primary-btn text-xs sm:text-sm px-5 py-2.5 flex items-center gap-2 cursor-pointer shadow-md"
               >
-                📸 Take Another Photo
+                <span>📷</span> Take Photo
               </button>
               <button
                 type="button"
-                onClick={() => galleryInputRef.current?.click()}
-                className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 px-5 py-3 rounded-xl font-bold shadow-sm transition flex items-center gap-2 text-sm flex-1 justify-center cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  imageInputRef.current?.click();
+                }}
+                className="bg-white border border-[#e3eaf3] hover:bg-[#eaf2fc] text-[#1d5fb8] font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition cursor-pointer shadow-xs"
               >
-                📁 Import File
+                📁 Choose File
               </button>
             </div>
           </div>
-        )}
-
-        {/* Scanned Image Preview */}
-        {scannedImage && (
-          <div className="relative bg-black rounded-2xl overflow-hidden aspect-4/3 max-h-[300px] w-full max-w-md mx-auto flex items-center justify-center shadow-inner border border-gray-700">
-            <img
-              src={scannedImage}
-              alt="Scanned frame"
-              className="w-full h-full object-contain bg-black"
-            />
-          </div>
-        )}
-
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center gap-3 max-w-md w-full">
-            <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="font-bold text-sm tracking-wide text-gray-800">Analyzing image...</span>
-            <span className="text-xs text-gray-500">Reading and translating text</span>
-          </div>
-        )}
-
-        {/* Retake & Import File Buttons when image scanned */}
-        {scannedImage && !isLoading && (
-          <div className="flex items-center justify-center gap-3 py-1 flex-wrap">
-            <button
-              type="button"
-              onClick={handleRetake}
-              className="bg-[#2e7d32] hover:bg-emerald-700 text-white text-xs sm:text-sm px-5 py-2.5 rounded-full font-bold shadow transition flex items-center gap-2 cursor-pointer"
+        ) : (
+          <div className="flex flex-col gap-6 min-w-0 w-full">
+            {/* Scanned Image Preview Container */}
+            <div
+              id="imagePreview"
+              className="relative rounded-2xl overflow-hidden bg-slate-900 border border-[#e3eaf3] max-h-72 flex items-center justify-center w-full"
             >
-              📸 Take Another Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => galleryInputRef.current?.click()}
-              className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs sm:text-sm px-5 py-2.5 rounded-full font-bold shadow-sm transition flex items-center gap-2 cursor-pointer"
-            >
-              📁 Import File
-            </button>
-          </div>
-        )}
-
-        {/* Translation Results Card */}
-        {(extractedText || translatedText) && !isLoading && (
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex flex-col gap-3 w-full max-w-md">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-              <span className="text-xs font-bold text-[#2e7d32] uppercase tracking-wide">
-                Translation Result
-              </span>
-              <div className="flex items-center gap-2">
+              <img
+                src={scannedImage}
+                alt="Uploaded scan preview"
+                className="max-h-72 max-w-full w-auto object-contain mx-auto"
+              />
+              <div className="absolute top-3 right-3 flex items-center gap-2">
                 <button
+                  id="replaceImage"
                   type="button"
-                  onClick={() => handleSpeak(translatedText, targetLang)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1 ${
-                    isSpeaking ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                  }`}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-1.5 rounded-lg backdrop-blur-md transition cursor-pointer"
                 >
-                  🔊 {isSpeaking ? 'Stop' : 'Listen'}
+                  Replace
+                </button>
+                <button
+                  id="removeImage"
+                  type="button"
+                  onClick={handleClearImage}
+                  className="bg-red-600/80 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg backdrop-blur-md transition cursor-pointer"
+                >
+                  Remove
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="text-xs text-gray-500 font-medium">Original Text:</div>
-              <div className="text-sm bg-gray-50 p-2.5 rounded-lg text-gray-800">{extractedText}</div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="text-xs text-gray-500 font-medium">Translation ({targetLang}):</div>
-              <div
-                className={`text-base font-bold text-gray-900 bg-emerald-50/50 p-3 rounded-lg ${
-                  isTargetUrdu ? 'font-urdu text-right text-lg' : 'text-left'
-                }`}
-                dir={isTargetUrdu ? 'rtl' : 'ltr'}
-              >
-                {translatedText}
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="p-8 bg-[#fafcfe] rounded-2xl border border-[#e3eaf3] text-center flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-3 border-[#1d5fb8] border-t-transparent rounded-full animate-spin"></div>
+                <span className="font-bold text-sm text-[#0f2a4a]">
+                  Detecting and translating text...
+                </span>
               </div>
-            </div>
+            )}
+
+            {/* Results Grid */}
+            {!isLoading && (extracted || translated) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 w-full">
+                {/* Extracted Text Box */}
+                <div className="min-w-0 w-full border border-[#e3eaf3] bg-[#fafcfe] rounded-2xl p-4 flex flex-col justify-between min-h-[200px]">
+                  <div className="min-w-0 w-full">
+                    <div className="flex items-center justify-between gap-2 text-xs font-bold text-[#6b7a8f] mb-2">
+                      <span className="truncate">Detected Text ({sourceLang.split(' ')[0]})</span>
+                      <button
+                        id="copyExtracted"
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(extracted);
+                          onToast('Copied original text');
+                        }}
+                        className="text-[#1d5fb8] hover:underline cursor-pointer shrink-0"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <div
+                      id="extractedText"
+                      className="text-sm text-[#16263b] whitespace-pre-wrap break-words leading-relaxed select-text"
+                    >
+                      {extracted}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Translated Result Box */}
+                <div className="min-w-0 w-full border border-[#e3eaf3] bg-white rounded-2xl p-4 flex flex-col justify-between min-h-[200px] shadow-xs">
+                  <div className="min-w-0 w-full">
+                    <div className="flex items-center justify-between gap-2 text-xs font-bold text-[#6b7a8f] mb-2">
+                      <span className="text-[#1d5fb8] truncate">Translation ({targetLang.split(' ')[0]})</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSpeak(translated, targetLang)}
+                          className="text-[#1d5fb8] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          🔊 {isSpeaking ? 'Stop' : 'Listen'}
+                        </button>
+                        <button
+                          id="copyImageResult"
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(translated);
+                            onToast('Copied translation!');
+                          }}
+                          className="text-[#1d5fb8] hover:underline cursor-pointer"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      id="imageOutput"
+                      dir={isTargetUrdu ? 'rtl' : 'ltr'}
+                      className={`text-base font-semibold text-[#0f2a4a] whitespace-pre-wrap break-words leading-relaxed select-text ${
+                        isTargetUrdu ? 'font-urdu text-lg' : ''
+                      }`}
+                    >
+                      {translated}
+                    </div>
+                  </div>
+
+                  {onUseInTranslator && (
+                    <div className="pt-3 border-t border-[#e3eaf3] mt-3 flex justify-end">
+                      <button
+                        id="imageTranslateBtn"
+                        type="button"
+                        onClick={() => onUseInTranslator(extracted, translated, sourceLang, targetLang)}
+                        className="text-xs font-bold text-[#1d5fb8] hover:underline cursor-pointer"
+                      >
+                        Open in Text Translator →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
-
-        {/* Camera OCR Guide Section for SEO & Crawlers */}
-        <article className="bg-white rounded-xl p-5 border border-gray-200 shadow-xs flex flex-col gap-4 w-full max-w-xl text-left mt-2">
-          <header className="border-b border-gray-100 pb-3">
-            <h2 className="text-lg font-bold text-gray-900">How Camera OCR Translation Works</h2>
-            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-              Scan printed text, book pages, street boards, and restaurant menus with your phone camera for instant Urdu and English translation.
-            </p>
-          </header>
-
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-bold text-[#2e7d32] mb-1">📸 Real-Time Visual Scanner</h3>
-              <p className="text-gray-600">Snap a quick photo with your phone or webcam to detect and transcribe text automatically.</p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-bold text-[#2e7d32] mb-1">🖼️ Gallery &amp; Document Upload</h3>
-              <p className="text-gray-600">Select screenshots, photos, or image files (JPEG, PNG, WebP) directly from your device.</p>
-            </div>
-          </section>
-
-          <footer className="text-[11px] text-gray-500 pt-2 border-t border-gray-100">
-            Tip: Ensure good lighting and keep the camera steady for the highest recognition accuracy.
-          </footer>
-        </article>
       </div>
     </div>
   );

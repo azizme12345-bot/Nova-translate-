@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Lafz Translator - AI Translation Workspace</title>
-    <meta name="description" content="Text, voice, and camera translation between English and Urdu, and 100+ languages." />
-    <meta name="keywords" content="Lafz Translator, AI translation workspace, English to Urdu translator, voice translator, camera OCR translator, multilingual AI translation" />
-    <meta name="theme-color" content="#2e7d32" />
+    <title>LAFZ Translation — Simple Language Translation</title>
+    <meta name="description" content="LAFZ Translation helps you translate text and images with a simple, clear and easy-to-use experience." />
+    <meta name="keywords" content="LAFZ Translation, English to Urdu translator, voice translator, camera OCR translator, multilingual translation" />
+    <meta name="theme-color" content="#123b70" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Search Engine Crawler Directives -->
     <meta name="robots" content="index, follow" />
@@ -18,39 +18,40 @@
 
     <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Lafz Translator" />
-    <meta property="og:title" content="Lafz Translator - AI Translation Workspace" />
-    <meta property="og:description" content="Text, voice, and camera translation between English and Urdu, and 100+ languages." />
+    <meta property="og:site_name" content="LAFZ Translation" />
+    <meta property="og:title" content="LAFZ Translation — Simple Language Translation" />
+    <meta property="og:description" content="Text, voice, and camera translation between English, Urdu, and 100+ languages." />
     <meta property="og:url" content="https://nova-translate-orpin.vercel.app/" />
-    <meta property="og:image" content="/app-logo.jpg" />
-    
+    <meta property="og:image" content="/lafz-logo-icon.png" />
+
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Lafz Translator - AI Translation Workspace" />
-    <meta name="twitter:description" content="Text, voice, and camera translation between English and Urdu, and 100+ languages." />
-    <meta name="twitter:image" content="/app-logo.jpg" />
+    <meta name="twitter:title" content="LAFZ Translation — Simple Language Translation" />
+    <meta name="twitter:description" content="Text, voice, and camera translation between English, Urdu, and 100+ languages." />
+    <meta name="twitter:url" content="https://nova-translate-orpin.vercel.app/" />
+    <meta name="twitter:image" content="/lafz-logo-icon.png" />
 
     <!-- PWA & Mobile Web App Meta -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Lafz Translator" />
+    <meta name="apple-mobile-web-app-title" content="LAFZ Translation" />
     <link rel="icon" type="image/png" href="/favicon.png?v=2" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png?v=2" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=2" />
     <link rel="manifest" href="/manifest.webmanifest?v=2" />
 
-    <!-- Schema.org Structured Data (JSON-LD) for Google Search Console -->
+    <!-- Schema.org Structured Data (JSON-LD) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "Lafz Translator",
+      "name": "LAFZ Translation",
       "url": "https://nova-translate-orpin.vercel.app/",
       "applicationCategory": "ProductivityApplication",
       "operatingSystem": "All",
-      "description": "Text, voice, and camera translation between English and Urdu, and 100+ languages.",
+      "description": "Text, voice, and camera translation between English, Urdu, and 100+ languages.",
       "browserRequirements": "Requires JavaScript. Requires HTML5.",
       "inLanguage": ["en", "ur"],
       "offers": {
@@ -60,28 +61,3586 @@
       }
     }
     </script>
+
+    <style>
+      :root {
+        --blue: #1d5fb8;
+        --blue2: #2f7de0;
+        --navy: #0f2a4a;
+        --teal: #14a085;
+        --ink: #16263b;
+        --slate: #55657b;
+        --muted: #6b7a8f;
+        --muted-light: #8996a5;
+        --line: #e3eaf3;
+        --bg: #f4f7fb;
+        --white: #ffffff;
+        --soft: #eaf2fc;
+        --surface: #fafcfe;
+        --shadow: 0 18px 45px rgba(15, 42, 74, 0.10);
+        --shadow-sm: 0 4px 14px rgba(15, 42, 74, 0.06);
+        --radius: 22px;
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+        display: flex;
+        flex-direction: column;
+        background:
+          radial-gradient(1100px 500px at 92% -10%, #dcebff 0%, transparent 60%),
+          radial-gradient(900px 480px at -10% 8%, #d9f5ee 0%, transparent 55%),
+          var(--bg);
+        color: var(--ink);
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      h1, h2, h3 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        margin: 0;
+      }
+
+      button, input, select, textarea {
+        font-family: inherit;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .lafz-wrap {
+        width: min(1120px, calc(100% - 40px));
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Header & Navigation */
+      .lafz-header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        width: 100%;
+        max-width: 100%;
+        background: rgba(255, 255, 255, 0.84);
+        backdrop-filter: saturate(180%) blur(16px);
+        -webkit-backdrop-filter: saturate(180%) blur(16px);
+        border-bottom: 1px solid rgba(227, 234, 243, 0.9);
+      }
+
+      .lafz-nav {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .lafz-nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .brand-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        user-select: none;
+        flex-shrink: 0;
+        min-width: 0;
+      }
+
+      .brand-logo {
+        height: 40px;
+        width: auto;
+        border-radius: 10px;
+        object-fit: contain;
+        display: block;
+        box-shadow: var(--shadow-sm);
+        flex-shrink: 0;
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .brand-title {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-weight: 800;
+        font-size: 20px;
+        line-height: 1.15;
+        letter-spacing: -0.5px;
+        color: var(--navy);
+      }
+
+      .brand-title span {
+        color: var(--blue2);
+      }
+
+      .brand-sub {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        line-height: 1;
+        display: none;
+      }
+
+      .lafz-navlinks {
+        display: none;
+        align-items: center;
+        gap: 3px;
+        background: #f1f5fa;
+        padding: 4px;
+        border-radius: 14px;
+      }
+
+      .lafz-navlinks button {
+        border: 0;
+        background: transparent;
+        color: var(--slate);
+        padding: 8px 11px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      }
+
+      .lafz-navlinks button:hover {
+        color: var(--blue);
+      }
+
+      .lafz-navlinks button.active {
+        background: var(--white);
+        color: var(--blue);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .pwa-btn {
+        color: #0284c7;
+        border: 1px solid #0284c7;
+        background: rgba(2, 132, 199, 0.08);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 11px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .pwa-btn-mark {
+        font-size: 14px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #1e3a8a, #06b6d4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .menu-toggle {
+        border: 1px solid var(--line);
+        background: var(--white);
+        color: var(--navy);
+        border-radius: 12px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .menu-toggle:hover {
+        background: var(--soft);
+      }
+
+      .mobile-menu {
+        width: 100%;
+        max-width: 100%;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(12px);
+        padding: 12px 16px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .mobile-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mobile-menu-btn {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        background: var(--surface);
+        color: var(--slate);
+        cursor: pointer;
+      }
+
+      .mobile-menu-btn.active {
+        background: var(--soft);
+        color: var(--blue);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .mobile-menu-btn span.label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @media (min-width: 1024px) {
+        .lafz-navlinks {
+          display: flex;
+        }
+        .menu-toggle,
+        .mobile-menu {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1280px) {
+        .brand-sub {
+          display: block;
+        }
+      }
+
+      /* Main Layout */
+      main {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding-bottom: 40px;
+      }
+
+      .page-view {
+        display: none;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .page-view.active {
+        display: block;
+      }
+
+      .tool-stack {
+        padding-top: 24px;
+        padding-bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        min-width: 0;
+      }
+
+      /* Hero Intro (Tool Page) */
+      .hero-intro {
+        text-align: center;
+        width: 100%;
+        max-width: 672px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--soft);
+        color: var(--blue);
+        max-width: 100%;
+      }
+
+      .hero-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--teal);
+        flex-shrink: 0;
+      }
+
+      .hero-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--navy);
+        letter-spacing: -0.6px;
+        line-height: 1.15;
+        width: 100%;
+        max-width: 100%;
+        overflow-wrap: break-word;
+      }
+
+      .hero-sub {
+        font-size: 14px;
+        color: var(--muted);
+        font-weight: 500;
+        margin: 0;
+        width: 100%;
+        max-width: 520px;
+        overflow-wrap: break-word;
+      }
+
+      @media (min-width: 640px) {
+        .hero-title {
+          font-size: 38px;
+        }
+        .hero-sub {
+          font-size: 16px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .hero-title {
+          font-size: 46px;
+        }
+      }
+
+      /* Cards & Controls (Tool Screens ONLY) */
+      .lafz-card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        box-shadow: var(--shadow);
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 16px;
+      }
+
+      @media (min-width: 640px) {
+        .lafz-card {
+          padding: 28px;
+        }
+      }
+
+      .lang-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+        min-width: 0;
+        width: 100%;
+      }
+
+      .lang-selectors {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        width: 100%;
+        min-width: 0;
+      }
+
+      @media (min-width: 640px) {
+        .lang-selectors {
+          width: auto;
+          gap: 12px;
+        }
+      }
+
+      .lafz-select {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 11px 12px;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 13px;
+        outline: none;
+        flex: 1 1 0%;
+        min-width: 0;
+        max-width: 100%;
+        cursor: pointer;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      @media (min-width: 640px) {
+        .lafz-select {
+          flex: initial;
+          font-size: 14px;
+          padding: 12px 14px;
+        }
+      }
+
+      .lafz-select:focus {
+        border-color: #7fb0e6;
+        box-shadow: 0 0 0 4px rgba(47, 125, 224, 0.14);
+      }
+
+      .swap-btn {
+        flex-shrink: 0;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--blue);
+        border-radius: 12px;
+        padding: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .swap-btn:hover {
+        background: var(--soft);
+      }
+
+      .swap-btn-text {
+        display: none;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media (min-width: 640px) {
+        .swap-btn {
+          padding: 9px 12px;
+        }
+        .swap-btn-text {
+          display: inline;
+        }
+      }
+
+      .lafz-primary-btn {
+        border: 0;
+        background: linear-gradient(135deg, var(--blue2), var(--blue));
+        color: var(--white);
+        padding: 13px 26px;
+        border-radius: 14px;
+        font-weight: 700;
+        font-size: 15px;
+        box-shadow: 0 10px 22px rgba(29, 95, 184, 0.25);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+      }
+
+      .lafz-primary-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 26px rgba(29, 95, 184, 0.30);
+      }
+
+      .lafz-primary-btn:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+
+      .translate-submit {
+        width: 100%;
+      }
+
+      @media (min-width: 640px) {
+        .translate-submit {
+          width: auto;
+          margin-left: auto;
+        }
+      }
+
+      /* Dual Workspace Grid */
+      .dual-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+        min-width: 0;
+        width: 100%;
+        margin-top: 18px;
+      }
+
+      @media (min-width: 768px) {
+        .dual-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      .panel-box {
+        min-width: 0;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .panel-source {
+        background: var(--surface);
+      }
+
+      .panel-source:focus-within {
+        border-color: var(--blue2);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .panel-target {
+        background: var(--white);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        margin-bottom: 6px;
+        min-width: 0;
+      }
+
+      .panel-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .source-textarea {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        background: transparent;
+        resize: none;
+        border: 0;
+        outline: none;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--ink);
+        min-height: 110px;
+        height: 110px;
+      }
+
+      @media (min-width: 640px) {
+        .source-textarea {
+          min-height: 150px;
+          height: 150px;
+        }
+      }
+
+      .source-textarea::placeholder {
+        color: var(--muted-light);
+      }
+
+      .output-area {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--ink);
+        min-height: 110px;
+        height: 110px;
+        white-space: pre-wrap;
+      }
+
+      @media (min-width: 640px) {
+        .output-area {
+          min-height: 150px;
+          height: 150px;
+        }
+      }
+
+      .output-placeholder {
+        color: var(--muted-light);
+        font-style: italic;
+        user-select: none;
+      }
+
+      .rtl-text {
+        font-size: 18px;
+        line-height: 1.75;
+      }
+
+      .panel-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-top: 12px;
+        margin-top: 12px;
+        border-top: 1px solid rgba(227, 234, 243, 0.75);
+        font-size: 12px;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .tool-chip {
+        padding: 6px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--white);
+        border: 1px solid var(--line);
+        color: var(--slate);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: background 0.15s, color 0.15s;
+      }
+
+      .tool-chip.primary {
+        color: var(--blue);
+      }
+
+      .tool-chip:hover {
+        background: var(--soft);
+        color: var(--blue);
+      }
+
+      .tool-chip.recording {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: var(--white);
+      }
+
+      .tool-chip.speaking {
+        background: #fffbeb;
+        border-color: #fcd34d;
+        color: #d97706;
+      }
+
+      .tool-chip-label {
+        display: none;
+      }
+
+      @media (min-width: 640px) {
+        .tool-chip-label {
+          display: inline;
+        }
+      }
+
+      .status-pill {
+        font-weight: 600;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+      }
+
+      .status-pill.ready {
+        background: #dbeafe;
+        color: var(--blue);
+      }
+
+      .status-pill.busy {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .confidence-pill {
+        font-weight: 700;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+      }
+
+      /* History Section Card */
+      .history-head {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 16px;
+      }
+
+      @media (min-width: 640px) {
+        .history-head {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      .history-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+      }
+
+      @media (min-width: 640px) {
+        .history-controls {
+          width: auto;
+        }
+      }
+
+      .search-input {
+        font-size: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 7px 12px;
+        background: var(--surface);
+        color: var(--ink);
+        outline: none;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .search-input:focus {
+        border-color: var(--blue2);
+      }
+
+      .danger-btn {
+        font-size: 12px;
+        font-weight: 600;
+        color: #dc2626;
+        background: #fef2f2;
+        border: 0;
+        padding: 7px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .danger-btn:hover {
+        background: #fee2e2;
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 380px;
+        overflow-y: auto;
+      }
+
+      .history-item {
+        width: 100%;
+        min-width: 0;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      @media (min-width: 640px) {
+        .history-item {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      .history-meta {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .history-meta .to-lang {
+        color: var(--blue);
+      }
+
+      .history-src {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink);
+        overflow-wrap: break-word;
+      }
+
+      .history-out {
+        font-size: 13px;
+        color: var(--slate);
+        overflow-wrap: break-word;
+      }
+
+      .history-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        align-self: flex-end;
+      }
+
+      @media (min-width: 640px) {
+        .history-actions {
+          align-self: center;
+        }
+      }
+
+      .mini-btn {
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--white);
+        border: 1px solid var(--line);
+        color: var(--slate);
+        padding: 5px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .mini-btn.blue {
+        color: var(--blue);
+        font-weight: 700;
+      }
+
+      .mini-btn:hover {
+        background: var(--soft);
+      }
+
+      /* ===========================================================
+         TEXT PAGES READING COLUMN (UNBOXED — NO CARDS / NO BORDERS)
+         Pages: Home guide (#homeGuide), About, Privacy, Contact, Terms
+         =========================================================== */
+      .lafz-prose-page {
+        width: 100%;
+        max-width: 720px; /* 680px text width + 20px left & right padding */
+        margin: 0 auto;
+        padding: 24px 20px 32px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        text-align: left;
+      }
+
+      .lafz-home-guide {
+        width: 100%;
+        max-width: 720px; /* 680px text width + 20px left & right padding */
+        margin: 24px auto 0;
+        padding: 8px 20px 16px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        text-align: left;
+      }
+
+      .prose-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0 0 20px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--blue);
+        cursor: pointer;
+      }
+
+      .prose-back:hover {
+        text-decoration: underline;
+      }
+
+      .prose-h1 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.4px;
+        color: var(--navy);
+        margin: 0 0 14px;
+      }
+
+      .prose-h2 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.3px;
+        color: var(--navy);
+        margin: 36px 0 12px;
+      }
+
+      .lafz-home-guide .prose-h2:first-child {
+        margin-top: 12px;
+      }
+
+      .prose-p {
+        font-size: 17px;
+        line-height: 1.7;
+        color: var(--slate);
+        margin: 0 0 16px;
+        overflow-wrap: break-word;
+      }
+
+      .prose-link {
+        color: var(--blue);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        word-break: break-word;
+      }
+
+      .prose-link-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+      }
+
+      @media (min-width: 768px) {
+        .prose-h1 {
+          font-size: 30px;
+        }
+        .prose-p {
+          font-size: 18px;
+        }
+      }
+
+      /* Tool subpages styling (Camera, Voice, Languages, History, Saved, Sitemap) */
+      .sub-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .back-link {
+        background: none;
+        border: 0;
+        padding: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--blue);
+        cursor: pointer;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      .upload-zone {
+        border: 2px dashed var(--line);
+        background: var(--surface);
+        border-radius: 22px;
+        padding: 28px 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 14px;
+        cursor: pointer;
+      }
+
+      .upload-zone:hover {
+        border-color: var(--blue2);
+        background: #f1f7ff;
+      }
+
+      .preview-box {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #0f172a;
+        border: 1px solid var(--line);
+        max-height: 290px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .preview-box img {
+        max-height: 290px;
+        max-width: 100%;
+        width: auto;
+        object-fit: contain;
+      }
+
+      .preview-actions {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .lang-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      @media (min-width: 640px) {
+        .lang-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 900px) {
+        .lang-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      .lang-card {
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .tool-grid-2 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      @media (min-width: 640px) {
+        .tool-grid-2 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      .tool-grid-3 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      @media (min-width: 640px) {
+        .tool-grid-3 {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      .sub-card {
+        padding: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        min-width: 0;
+      }
+
+      .sitemap-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+
+      .sitemap-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 12px;
+      }
+
+      .sitemap-table th,
+      .sitemap-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .sitemap-table th {
+        background: #f1f5fa;
+        color: var(--navy);
+        font-weight: 700;
+      }
+
+      .ocr-actions-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      @media (min-width: 640px) {
+        .ocr-actions-bar {
+          width: auto;
+          margin-left: auto;
+        }
+      }
+
+      /* Footer */
+      .lafz-footer {
+        width: 100%;
+        max-width: 100%;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 24px 0;
+        font-size: 12px;
+        color: var(--muted-light);
+        margin-top: auto;
+      }
+
+      .footer-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        text-align: center;
+      }
+
+      @media (min-width: 640px) {
+        .footer-inner {
+          flex-direction: row;
+          text-align: left;
+        }
+      }
+
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .footer-logo {
+        height: 28px;
+        width: auto;
+        border-radius: 6px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .footer-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        font-weight: 600;
+        color: var(--blue);
+      }
+
+      .footer-nav a {
+        text-decoration: none;
+      }
+
+      .footer-nav a:hover,
+      .footer-nav a.active {
+        text-decoration: underline;
+      }
+
+      .footer-nav a.active {
+        color: var(--navy);
+      }
+
+      /* Toast & Modal */
+      .lafz-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--navy);
+        color: var(--white);
+        padding: 11px 18px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 60;
+        max-width: calc(100vw - 32px);
+        text-align: center;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .lafz-toast.show {
+        opacity: 1;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 42, 74, 0.45);
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .modal-content {
+        width: 100%;
+        max-width: 420px;
+        background: var(--white);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      @media (max-width: 720px) {
+        .lafz-wrap {
+          width: min(calc(100% - 24px), 600px);
+        }
+        .lafz-nav {
+          height: 64px;
+          gap: 10px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root">
-      <!-- Crawler Fallback & SSR-style Initial HTML -->
-      <header>
-        <h1>Lafz Translator</h1>
-        <p>Lafz Translator is a simple, fast English and Urdu translator. Type, speak, or scan with your camera.</p>
-        <nav aria-label="Sitemap and Tools Navigation">
-          <h2>Tools &amp; Pages Directory</h2>
-          <ul>
-            <li><a href="/">Home</a> - Instant English and Urdu AI translation tool</li>
-            <li><a href="/sitemap">Sitemap &amp; Tools Directory</a> - Explore all translation features and page index</li>
-            <li><a href="/text-translation">Text Translation</a> - Instant English &amp; Urdu text translator</li>
-            <li><a href="/voice">Voice Translator</a> - Real-time speech-to-text and spoken translation</li>
-            <li><a href="/camera">Camera Scanner</a> - OCR photo and document image translation</li>
-            <li><a href="/languages">Languages</a> - Catalog of 100+ supported international languages</li>
-            <li><a href="/history">History &amp; Activity Log</a> - Manage previous translations and phrasebook</li>
-            <li><a href="/about">About Lafz Translator</a> - Overview of technology and translation tools</li>
-          </ul>
+    <!-- Top Header -->
+    <header class="lafz-header">
+      <div class="lafz-wrap lafz-nav">
+        <a href="/" class="brand-link" data-route="translate" title="LAFZ Translation Home">
+          <img src="/lafz-logo-icon.png" alt="LAFZ Translation Logo" class="brand-logo" />
+          <div class="brand-text">
+            <span class="brand-title">LAFZ<span>.</span></span>
+            <span class="brand-sub">Simple Language Translation</span>
+          </div>
+        </a>
+
+        <nav aria-label="Main Navigation" class="lafz-navlinks" id="desktopNav">
+          <button type="button" data-nav="translate" class="active">文A Translate</button>
+          <button type="button" data-nav="voice-translation">🎙️ Voice</button>
+          <button type="button" data-nav="image">📸 Camera OCR</button>
+          <button type="button" data-nav="history">🕒 History</button>
+          <button type="button" data-nav="languages">🌐 Languages</button>
+          <button type="button" data-nav="about">ℹ️ About</button>
+          <button type="button" data-nav="terms">📄 Terms</button>
         </nav>
-      </header>
+
+        <div class="header-actions">
+          <button type="button" id="pwaInstallBtn" class="pwa-btn" title="Install LAFZ Translation App">
+            <span class="pwa-btn-mark">L</span>
+            <span>Install App</span>
+          </button>
+          <button
+            type="button"
+            id="menuToggle"
+            class="menu-toggle"
+            aria-label="Toggle Navigation Menu"
+            aria-expanded="false"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+
+      <div id="mobileMenu" class="mobile-menu hidden">
+        <div class="mobile-menu-grid">
+          <button type="button" class="mobile-menu-btn active" data-nav="translate">
+            <span>文A</span><span class="label">Translate</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="voice-translation">
+            <span>🎙️</span><span class="label">Voice</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="image">
+            <span>📸</span><span class="label">Camera OCR</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="history">
+            <span>🕒</span><span class="label">History</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="languages">
+            <span>🌐</span><span class="label">Languages</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="about">
+            <span>ℹ️</span><span class="label">About</span>
+          </button>
+          <button type="button" class="mobile-menu-btn" data-nav="terms">
+            <span>📄</span><span class="label">Terms</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- ===========================================================
+           HOME / TRANSLATOR WORKSPACE + UNBOXED GUIDE
+           =========================================================== -->
+      <section id="page-translate" class="page-view active">
+        <div class="lafz-wrap tool-stack">
+          <div class="hero-intro">
+            <span class="hero-badge">
+              <span class="hero-dot"></span>
+              <span>English • Urdu • 100+ Languages</span>
+            </span>
+            <h1 class="hero-title">Simple Language Translation</h1>
+            <p class="hero-sub">Type, speak, or scan to translate between English, Urdu, and 100+ languages.</p>
+          </div>
+
+          <div class="lafz-card">
+            <form id="translateForm" style="display:flex;flex-direction:column;gap:0;min-width:0;width:100%;">
+              <div class="lang-bar">
+                <div class="lang-selectors">
+                  <select id="sourceLang" class="lafz-select" aria-label="Source Language"></select>
+                  <button type="button" id="swapLang" class="swap-btn" title="Swap Languages" aria-label="Swap Languages">
+                    ⇄ <span class="swap-btn-text">Swap</span>
+                  </button>
+                  <select id="targetLang" class="lafz-select" aria-label="Target Language"></select>
+                </div>
+                <button type="submit" id="translateBtn" class="lafz-primary-btn translate-submit">
+                  <span>Translate</span>
+                  <span style="font-size:12px;opacity:0.85;">↵</span>
+                </button>
+              </div>
+
+              <div class="dual-grid">
+                <!-- Source Panel -->
+                <div class="panel-box panel-source">
+                  <div style="display:flex;flex-direction:column;flex:1 1 auto;min-width:0;width:100%;">
+                    <div class="panel-head">
+                      <span class="panel-label" id="sourceLabelHead">Source (English)</span>
+                      <span id="listeningIndicator" class="hidden" style="color:#dc2626;font-weight:700;">● Listening...</span>
+                    </div>
+                    <textarea
+                      id="sourceText"
+                      maxlength="5000"
+                      class="source-textarea"
+                      placeholder="Enter text to translate or tap microphone to speak..."
+                      aria-label="Source Text Input"
+                    ></textarea>
+                  </div>
+                  <div class="panel-foot">
+                    <span id="charCount" style="color:var(--muted-light);font-weight:500;">0 / 5,000</span>
+                    <div class="toolbar-group">
+                      <button type="button" id="micBtn" class="tool-chip primary" title="Speak into microphone">
+                        <span>🎙️</span><span class="tool-chip-label" id="micBtnLabel">Speak</span>
+                      </button>
+                      <button type="button" id="pasteBtn" class="tool-chip" title="Paste from clipboard">
+                        <span>📋</span><span class="tool-chip-label">Paste</span>
+                      </button>
+                      <button type="button" id="sourceListenBtn" class="tool-chip" title="Listen to pronunciation">
+                        🔊
+                      </button>
+                      <button type="button" id="clearBtn" class="tool-chip hidden" title="Clear text">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Target Output Panel -->
+                <div class="panel-box panel-target">
+                  <div style="display:flex;flex-direction:column;flex:1 1 auto;min-width:0;width:100%;">
+                    <div class="panel-head">
+                      <span class="panel-label" id="targetLabelHead">Translation (Urdu)</span>
+                      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <span id="confidenceBadge" class="confidence-pill hidden">99% Match</span>
+                        <span id="resultStatus" class="status-pill">Waiting</span>
+                      </div>
+                    </div>
+                    <div id="output" class="output-area" aria-live="polite">
+                      <span class="output-placeholder">Translation will appear here...</span>
+                    </div>
+                  </div>
+                  <div class="panel-foot">
+                    <button type="button" id="voiceGenderBtn" style="border:0;background:none;padding:0;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;" title="Toggle voice gender">
+                      🗣️ <span class="tool-chip-label" id="voiceGenderLabel">Female</span>
+                    </button>
+                    <div class="toolbar-group">
+                      <button type="button" id="copyBtn" class="tool-chip primary" title="Copy translation">
+                        <span>📋</span><span class="tool-chip-label">Copy</span>
+                      </button>
+                      <button type="button" id="listenBtn" class="tool-chip primary" title="Listen to translation">
+                        <span>🔊</span><span class="tool-chip-label">Listen</span>
+                      </button>
+                      <button type="button" id="saveBtn" class="tool-chip" title="Save to favorites">⭐</button>
+                      <button type="button" id="shareBtn" class="tool-chip" title="Share translation">↗</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Embedded History Section Card -->
+          <section id="historySection" class="lafz-card">
+            <div class="history-head">
+              <div>
+                <h2 style="font-size:20px;font-weight:700;color:var(--navy);">Recent Translations</h2>
+                <p style="font-size:12px;color:var(--muted);margin:4px 0 0;">Saved securely on your device for instant offline review.</p>
+              </div>
+              <div class="history-controls">
+                <input id="historySearch" type="text" class="search-input" placeholder="Search history..." />
+                <button type="button" id="clearHistory" class="danger-btn hidden">Clear</button>
+              </div>
+            </div>
+            <div id="historyList" class="history-list"></div>
+          </section>
+        </div>
+
+        <!-- Home Informational Guide (UNBOXED CLEAN READING COLUMN) -->
+        <article id="homeGuide" aria-label="About LAFZ Translation Guide" class="lafz-home-guide">
+          <h2 class="prose-h2">What LAFZ Translation Is</h2>
+          <p class="prose-p">
+            LAFZ Translation is a free, straightforward web interface built to translate everyday words, sentences, and short paragraphs across English, Urdu, and over 100 global languages. All text translations are performed on our server through the connected translation service, so there are no accounts to register and no downloads required to begin. Whether you are reading an article, writing a message, or checking an unfamiliar phrase, everything loads in one clean screen. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+          </p>
+
+          <h2 class="prose-h2">How to Translate Text Step by Step</h2>
+          <p class="prose-p">
+            Start by picking your source language in the left dropdown menu and your target language in the right dropdown menu, or tap Swap to reverse both directions at once. Next, type your text or tap Paste to insert copied text into the source box. Click Translate or pause briefly for the translated wording to appear in the output box, where you can copy, save, or clear your text in a single tap.
+          </p>
+
+          <h2 class="prose-h2">Voice Input, Spoken Output, and Camera OCR</h2>
+          <p class="prose-p">
+            If you prefer speaking over typing, tap Speak and allow microphone access in your browser. When voice input records audio from your microphone, that audio is sent to the server to convert your speech into text for translation. Tap Listen next to the result to hear spoken output powered by your browser and device speech features. To translate printed menus, street signs, receipts, or documents, open Camera OCR to pick an image and send it to the server so its text can be extracted and translated.
+          </p>
+
+          <h2 class="prose-h2">Language Choices, History, and Helpful Tips</h2>
+          <p class="prose-p">
+            Right-to-left scripts such as Urdu, Arabic, and Punjabi align properly on the page so text remains easy to read. Your recent translations are saved locally in your browser's localStorage and are not synced between devices, and you can search or clear entries whenever you want. For better results, use clear spelling, standard punctuation, and short complete sentences rather than slang or heavy abbreviations. Because translations are generated automatically by a machine, they may not always be perfect, so please check important wording carefully before sharing it.
+          </p>
+        </article>
+      </section>
+
+      <!-- ===========================================================
+           CAMERA OCR TOOL SCREEN
+           =========================================================== -->
+      <section id="page-image" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <input id="imageInput" type="file" accept="image/*" class="hidden" />
+          <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hidden" />
+
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Camera &amp; Photo OCR</span>
+          </div>
+
+          <div class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div class="lang-bar">
+              <div class="lang-selectors">
+                <select id="ocrSource" class="lafz-select" aria-label="OCR Source Language"></select>
+                <button type="button" id="ocrSwapBtn" class="swap-btn" title="Swap Languages">⇄</button>
+                <select id="ocrTarget" class="lafz-select" aria-label="OCR Target Language"></select>
+              </div>
+              <div class="ocr-actions-bar">
+                <button type="button" id="extractBtn" class="lafz-primary-btn" style="padding:10px 18px;font-size:13px;" disabled>Translate Image</button>
+                <button type="button" id="clearImage" class="mini-btn hidden" style="padding:9px 14px;">Clear</button>
+              </div>
+            </div>
+
+            <div id="uploadBox" class="upload-zone">
+              <div style="width:64px;height:64px;border-radius:16px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:30px;">📸</div>
+              <div>
+                <h2 style="font-size:20px;font-weight:700;color:var(--navy);">Upload an Image or Take a Photo</h2>
+                <p style="font-size:13px;color:var(--muted);margin:6px 0 0;">Supports JPG, PNG, and WebP documents, signs, menus, and receipts.</p>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;">
+                <button type="button" id="takePhotoBtn" class="lafz-primary-btn" style="padding:10px 18px;font-size:13px;">📷 Take Photo</button>
+                <button type="button" id="chooseFileBtn" class="mini-btn blue" style="padding:10px 18px;font-size:13px;border-radius:14px;">📁 Choose File</button>
+              </div>
+            </div>
+
+            <div id="ocrPreviewWrap" class="hidden" style="display:flex;flex-direction:column;gap:20px;">
+              <div id="imagePreview" class="preview-box">
+                <img id="previewImg" src="" alt="Uploaded scan preview" />
+                <div class="preview-actions">
+                  <button type="button" id="replaceImage" class="mini-btn" style="background:rgba(0,0,0,0.65);color:#fff;border:0;">Replace</button>
+                  <button type="button" id="removeImage" class="mini-btn" style="background:rgba(220,38,38,0.85);color:#fff;border:0;">Remove</button>
+                </div>
+              </div>
+
+              <div id="ocrLoading" class="sub-card hidden" style="text-align:center;padding:28px;">
+                <strong style="font-size:14px;color:var(--navy);">Detecting and translating text...</strong>
+              </div>
+
+              <div id="ocrResults" class="dual-grid hidden">
+                <div class="panel-box panel-source" style="min-height:190px;">
+                  <div>
+                    <div class="panel-head">
+                      <span id="ocrSourceLabel">Detected Text (English)</span>
+                      <button type="button" id="copyExtracted" class="back-link" style="font-size:12px;">Copy</button>
+                    </div>
+                    <div id="extractedText" style="font-size:14px;color:var(--ink);white-space:pre-wrap;word-break:break-word;line-height:1.6;"></div>
+                  </div>
+                </div>
+
+                <div class="panel-box panel-target" style="min-height:190px;">
+                  <div>
+                    <div class="panel-head">
+                      <span id="ocrTargetLabel" style="color:var(--blue);">Translation (Urdu)</span>
+                      <div style="display:flex;gap:12px;">
+                        <button type="button" id="ocrListenBtn" class="back-link" style="font-size:12px;">🔊 Listen</button>
+                        <button type="button" id="copyImageResult" class="back-link" style="font-size:12px;">Copy</button>
+                      </div>
+                    </div>
+                    <div id="imageOutput" style="font-size:16px;font-weight:600;color:var(--navy);white-space:pre-wrap;word-break:break-word;line-height:1.6;"></div>
+                  </div>
+                  <div style="padding-top:12px;margin-top:12px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;">
+                    <button type="button" id="imageTranslateBtn" class="back-link" style="font-size:12px;">Open in Text Translator →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           VOICE TRANSLATION TOOL SCREEN
+           =========================================================== -->
+      <section id="page-voice-translation" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;">Voice Speech Engine</span>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
+              <h1 class="prose-h1" style="margin-bottom:8px;">Real-Time Voice &amp; Speech Translation</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0;">
+                Communicate effortlessly across language barriers using your natural voice. Powered by speech recognition and text-to-speech synthesis.
+              </p>
+            </div>
+            <div class="tool-grid-2">
+              <div class="sub-card">
+                <div style="font-size:24px;margin-bottom:6px;">🎙️</div>
+                <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;">Continuous Speech Recognition</h2>
+                <p style="font-size:13px;color:var(--muted);margin:0;">Speak full sentences without worrying about short pauses. The mic keeps recording until you choose to stop.</p>
+              </div>
+              <div class="sub-card">
+                <div style="font-size:24px;margin-bottom:6px;">🗣️</div>
+                <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;">Bilingual Speech Synthesis</h2>
+                <p style="font-size:13px;color:var(--muted);margin:0;">Listen to clear pronunciations in male or female voices for English, Urdu, and more.</p>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <h2 style="font-size:18px;font-weight:700;color:var(--navy);">Voice Translation Guide</h2>
+              <div class="sub-card">
+                <h3 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">How do I grant microphone access?</h3>
+                <p style="font-size:13px;color:var(--muted);margin:0;">When prompted by your browser, tap Allow. You can also adjust permissions anytime in your browser site settings.</p>
+              </div>
+              <div class="sub-card">
+                <h3 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">Does voice translation work in noisy environments?</h3>
+                <p style="font-size:13px;color:var(--muted);margin:0;">Yes, our audio pre-processing and Opus compression optimize voice clarity before transcription to maintain high accuracy.</p>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:center;">
+              <button type="button" class="lafz-primary-btn" data-nav="translate">Open Voice Translator ➔</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           TEXT TRANSLATION TOOL SCREEN
+           =========================================================== -->
+      <section id="page-text-translation" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;">Text Engine</span>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
+              <h1 class="prose-h1" style="margin-bottom:8px;">Instant Text Translation</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0;">Fast, readable text translation across 100+ languages for formal writing, natural dialogue, and daily notes.</p>
+            </div>
+            <div class="tool-grid-3">
+              <div class="sub-card">
+                <div style="font-size:22px;margin-bottom:4px;">⚡</div>
+                <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;">Fast Local Cache</h2>
+                <p style="font-size:13px;color:var(--muted);margin:0;">Frequently translated phrases respond quickly with local browser caching.</p>
+              </div>
+              <div class="sub-card">
+                <div style="font-size:22px;margin-bottom:4px;">🗣️</div>
+                <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;">Voice Pronunciation</h2>
+                <p style="font-size:13px;color:var(--muted);margin:0;">Listen to translated output with speech synthesis in male and female voices.</p>
+              </div>
+              <div class="sub-card">
+                <div style="font-size:22px;margin-bottom:4px;">📋</div>
+                <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;">Copy &amp; Share</h2>
+                <p style="font-size:13px;color:var(--muted);margin:0;">One-click copying to clipboard and direct sharing to Messages or email.</p>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:center;">
+              <button type="button" class="lafz-primary-btn" data-nav="translate">Open Translator Editor ➔</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           HISTORY TOOL SCREEN
+           =========================================================== -->
+      <section id="page-history" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <button type="button" id="clearAllHistoryPageBtn" class="danger-btn hidden">Clear All History</button>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
+              <h1 class="prose-h1" style="margin-bottom:6px;">Your Translation History</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0;">LAFZ Translation stores your recent activity locally in your browser for quick access, offline replay, and privacy protection.</p>
+            </div>
+            <div class="tool-grid-3">
+              <div class="sub-card">
+                <div style="font-size:20px;margin-bottom:4px;">🔒</div>
+                <h2 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">100% Private</h2>
+                <p style="font-size:12px;color:var(--muted);margin:0;">Saved strictly in local device storage.</p>
+              </div>
+              <div class="sub-card">
+                <div style="font-size:20px;margin-bottom:4px;">🔊</div>
+                <h2 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">Instant Audio</h2>
+                <p style="font-size:12px;color:var(--muted);margin:0;">Listen to pronunciations anytime.</p>
+              </div>
+              <div class="sub-card">
+                <div style="font-size:20px;margin-bottom:4px;">⚡</div>
+                <h2 style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">One-Click Reuse</h2>
+                <p style="font-size:12px;color:var(--muted);margin:0;">Load past translations right back into the editor.</p>
+              </div>
+            </div>
+            <h2 id="fullHistoryHeading" style="font-size:16px;font-weight:700;color:var(--navy);">Stored History Entries (0)</h2>
+            <div id="fullHistoryList" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           SAVED FAVORITES SCREEN
+           =========================================================== -->
+      <section id="page-saved" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <button type="button" id="clearAllSavedBtn" class="danger-btn hidden">Clear Saved</button>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:18px;">
+            <div>
+              <h1 class="prose-h1" style="margin-bottom:6px;">Saved</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0;">Keep translations you want to use again.</p>
+            </div>
+            <div id="savedList" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           SUPPORTED LANGUAGES DIRECTORY SCREEN
+           =========================================================== -->
+      <section id="page-languages" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;">Languages</span>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div>
+              <h1 class="prose-h1" style="margin-bottom:8px;">Supported Languages &amp; Dialects</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0 0 12px;">
+                LAFZ Translation supports over 100+ global languages with native scripts, RTL/LTR layout support, and voice synthesis.
+              </p>
+              <p style="font-size:13px;color:var(--slate);background:var(--soft);padding:14px;border-radius:14px;border:1px solid #dbe9fa;margin:0;">
+                <strong>How to pick and use languages:</strong> Select your source language and target language using the dropdown selectors or the quick language swap button. Right-to-left (RTL) languages such as Urdu and Arabic display automatically in proper direction.
+              </p>
+            </div>
+            <div id="languagesCatalogGrid" class="lang-grid"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           SITEMAP DIRECTORY SCREEN
+           =========================================================== -->
+      <section id="page-sitemap" class="page-view">
+        <div class="lafz-wrap tool-stack">
+          <div class="sub-topbar">
+            <button type="button" class="back-link" data-nav="translate">← Back to Translator</button>
+            <span style="font-size:12px;font-weight:700;color:var(--muted);">Sitemap &amp; Directory</span>
+          </div>
+          <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
+            <div>
+              <h1 class="prose-h1" style="margin-bottom:6px;">LAFZ Translation: Sitemap &amp; Tools Index</h1>
+              <p style="font-size:14px;color:var(--muted);margin:0;">Complete directory of tools and informational pages on LAFZ Translation.</p>
+            </div>
+            <div class="sitemap-table-wrap">
+              <table class="sitemap-table">
+                <thead>
+                  <tr>
+                    <th>Page Name</th>
+                    <th>Route</th>
+                    <th>Primary Purpose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Home Translator</strong></td>
+                    <td><a href="/" class="prose-link" data-route="translate">/</a></td>
+                    <td>Core translation workspace and step-by-step usage guide</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Camera OCR Translation</strong></td>
+                    <td><a href="/camera" class="prose-link" data-route="image">/camera</a></td>
+                    <td>Image text extraction and photo scan translation</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Voice Translation</strong></td>
+                    <td><a href="/voice" class="prose-link" data-route="voice-translation">/voice</a></td>
+                    <td>Microphone speech input and spoken output guide</td>
+                  </tr>
+                  <tr>
+                    <td><strong>About LAFZ Translation</strong></td>
+                    <td><a href="/about" class="prose-link" data-route="about">/about</a></td>
+                    <td>Mission, simplicity overview, audience, and responsive design</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Privacy Policy</strong></td>
+                    <td><a href="/privacy" class="prose-link" data-route="privacy">/privacy</a></td>
+                    <td>Server processing, browser localStorage, voice, and clearing history</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Terms of Use</strong></td>
+                    <td><a href="/terms" class="prose-link" data-route="terms">/terms</a></td>
+                    <td>Acceptable use, disclaimers, service availability, and ownership</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Contact Us</strong></td>
+                    <td><a href="/contact" class="prose-link" data-route="contact">/contact</a></td>
+                    <td>Email contact details and bug report guidelines</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===========================================================
+           TEXT PAGE 2: ABOUT (UNBOXED CLEAN READING COLUMN)
+           =========================================================== -->
+      <section id="page-about" class="page-view">
+        <article class="lafz-prose-page">
+          <button type="button" class="prose-back" data-nav="translate">← Back to Translator</button>
+
+          <h1 class="prose-h1">About LAFZ Translation</h1>
+          <p class="prose-p">
+            Clear, direct language translation for English, Urdu, and everyday global communication without clutter or sign-up walls.
+          </p>
+
+          <h2 class="prose-h2">Our Mission</h2>
+          <p class="prose-p">
+            LAFZ Translation exists to make everyday translation straightforward for people who need quick, readable results. Many translation websites crowd the screen with pop-ups, complicated menus, or mandatory sign-in prompts. Our mission is to provide one clean web workspace where anyone can open the page and translate words, sentences, spoken phrases, or printed text from images right away. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+          </p>
+
+          <h2 class="prose-h2">What Keeps the Tool Simple</h2>
+          <p class="prose-p">
+            Every core feature lives in an uncluttered workspace. Pick your source and target languages, enter your text, tap Speak for microphone voice input, or open Camera OCR to extract printed text from a photo. Text, recorded voice audio, and chosen images are sent to the server and handled through the connected translation service, while Listen uses browser and device speech features.
+          </p>
+          <p class="prose-p">
+            Quick controls let you swap languages, paste from the clipboard, copy results in one tap, or save useful phrases. Recent translation history stays locally inside your browser's localStorage under your device control and is not synced across other devices, so you can review or clear entries anytime.
+          </p>
+
+          <h2 class="prose-h2">Who LAFZ Translation Is For</h2>
+          <p class="prose-p">
+            Students use LAFZ Translation to check vocabulary, reading notes, and homework sentences across English and Urdu. Travellers rely on quick text input and photo scanning to understand street signs, restaurant menus, and everyday directions. Language learners practice reading sentences and listening to pronunciation side by side, while professionals draft clear daily messages across languages without slow setup steps.
+          </p>
+
+          <h2 class="prose-h2">Clear Design on Phones and Desktops</h2>
+          <p class="prose-p">
+            The layout adjusts naturally to whatever screen you are using. On mobile phones, controls stack cleanly with comfortable spacing and readable type so dropdown menus, buttons, and paragraphs stay inside the screen without sideways scrolling. On tablets and desktop monitors, source and output boxes appear side by side, with proper right-to-left alignment for scripts including Urdu and Arabic. Every page follows the same clean structure for quick reading.
+          </p>
+
+          <h2 class="prose-h2">Have Questions or Feedback?</h2>
+          <p class="prose-p">
+            We welcome suggestions, bug reports, and general questions by email anytime. Email <a href="mailto:azizme12345@gmail.com" class="prose-link">azizme12345@gmail.com</a>.
+          </p>
+        </article>
+      </section>
+
+      <!-- ===========================================================
+           TEXT PAGE 3: PRIVACY (UNBOXED CLEAN READING COLUMN)
+           =========================================================== -->
+      <section id="page-privacy" class="page-view">
+        <article class="lafz-prose-page">
+          <button type="button" class="prose-back" data-nav="translate">← Back to Translator</button>
+
+          <h1 class="prose-h1">Privacy Policy</h1>
+          <p class="prose-p">
+            This policy explains in plain, honest language how LAFZ Translation handles the text, voice audio, and images you translate, and what information stays inside your own web browser.
+          </p>
+
+          <h2 class="prose-h2">How Text and Images Are Sent to the Server</h2>
+          <p class="prose-p">
+            No user account, sign-in, or personal profile is needed to use LAFZ Translation. When you enter written text and request a translation, that text is sent to our server and processed through the connected translation service so the result can be returned to your screen. When you choose Camera OCR, the selected image is sent to the server to extract printed text and translate it.
+          </p>
+
+          <h2 class="prose-h2">How Voice Input and Spoken Output Work</h2>
+          <p class="prose-p">
+            Microphone access starts only when you press Speak and approve permission in your browser. When voice input records audio from your microphone, that audio is sent to the server to convert speech into text before translation. When you press Listen, spoken playback uses your browser and device speech features so you can hear how translated text sounds.
+          </p>
+
+          <h2 class="prose-h2">What Is Stored in Your Browser</h2>
+          <p class="prose-p">
+            Your recent translation history, saved items, and basic interface preferences are stored locally inside your browser's localStorage. This browser storage stays strictly inside the current browser on your phone, tablet, or computer and is not synced across different devices or uploaded to build a user profile. Keeping history local helps you revisit recent translations quickly while keeping control on your own device.
+          </p>
+
+          <h2 class="prose-h2">Information You Should Not Submit</h2>
+          <p class="prose-p">
+            Please never type, speak, or upload passwords, bank account numbers, payment card details, government identity documents, private medical records, or other sensitive personal information. Any text, audio, or image submitted for translation travels over the network to the server for processing.
+          </p>
+
+          <h2 class="prose-h2">How to Clear History and Independent Notice</h2>
+          <p class="prose-p">
+            You can remove individual translations or clear your entire history at any time using the Clear button on the Home page or History page, or by clearing site storage inside your browser settings. Once cleared, those saved entries are removed from that browser. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+          </p>
+
+          <h2 class="prose-h2">Questions About Privacy</h2>
+          <p class="prose-p">
+            If you have questions about how your inputs or browser storage are handled, visit <a href="/contact" class="prose-link" data-route="contact">Contact</a> or read our <a href="/terms" class="prose-link" data-route="terms">Terms</a>.
+          </p>
+        </article>
+      </section>
+
+      <!-- ===========================================================
+           TEXT PAGE 4: CONTACT (UNBOXED CLEAN READING COLUMN)
+           =========================================================== -->
+      <section id="page-contact" class="page-view">
+        <article class="lafz-prose-page">
+          <button type="button" class="prose-back" data-nav="translate">← Back to Translator</button>
+
+          <h1 class="prose-h1">Contact LAFZ Translation</h1>
+          <p class="prose-p">
+            If you have a question about how LAFZ Translation works, spot an error on the site, or want to share helpful feedback, you can reach us directly by email.
+          </p>
+
+          <h2 class="prose-h2">How to Reach Us</h2>
+          <p class="prose-p">
+            The simplest way to reach us is by sending an email with a clear subject line that summarizes your question, feedback, or technical note. We do not use embedded contact forms, pop-up chat widgets, or user accounts on this site, so writing directly to our email address ensures your message arrives cleanly without extra steps.
+          </p>
+          <p class="prose-p">
+            Email: <a href="mailto:azizme12345@gmail.com" class="prose-link">azizme12345@gmail.com</a>
+          </p>
+
+          <h2 class="prose-h2">What Kinds of Messages Are Welcome</h2>
+          <p class="prose-p">
+            We welcome general feedback about page readability, ideas for practical new features, bug reports when a button or screen fails to work, reports of confusing or broken translation results, and business or partnership questions related to the website. Notes from everyday visitors on both mobile phones and desktop browsers help make the translator steadier, clearer, and easier to use for everyone.
+          </p>
+
+          <h2 class="prose-h2">What to Include in a Bug or Translation-Error Report</h2>
+          <p class="prose-p">
+            When reporting a technical bug or an inaccurate translation, sharing clear details helps us investigate much faster. Please include the type of device you are using such as an Android phone, iPhone, or desktop computer, the browser name and version, the exact steps you took before the issue happened, the source and target languages chosen, which tool you opened such as text, voice, or Camera OCR, and what you expected to see compared with the actual result on screen.
+          </p>
+          <p class="prose-p">
+            To protect your privacy, never include passwords, financial account details, identification numbers, or private personal messages when emailing sample text or screenshots.
+          </p>
+
+          <h2 class="prose-h2">Replies and What to Expect</h2>
+          <p class="prose-p">
+            All incoming messages are read as time permits, and replies may take a little while depending on inbox volume and ongoing updates to the site. We cannot promise a specific response window, so including complete details in your first email helps reduce follow-up questions. Please note that LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider. Before emailing about browser storage or site rules, you may also check our <a href="/privacy" class="prose-link" data-route="privacy">Privacy Policy</a> and <a href="/terms" class="prose-link" data-route="terms">Terms of Use</a>.
+          </p>
+        </article>
+      </section>
+
+      <!-- ===========================================================
+           TEXT PAGE 5: TERMS (UNBOXED CLEAN READING COLUMN)
+           =========================================================== -->
+      <section id="page-terms" class="page-view">
+        <article class="lafz-prose-page">
+          <button type="button" class="prose-back" data-nav="translate">← Back to Translator</button>
+
+          <h1 class="prose-h1">Terms of Use</h1>
+          <p class="prose-p">
+            By opening and using LAFZ Translation, you agree to follow these simple rules. Please read them carefully before using the text, voice, or camera translation tools.
+          </p>
+
+          <h2 class="prose-h2">Acceptable Use</h2>
+          <p class="prose-p">
+            You may use LAFZ Translation for everyday personal, educational, travel, and work communication. You must not use this site to process or share illegal content, harass or harm others, send spam, run automated scraping scripts, or attempt to overload, damage, or interfere with the server and its translation service. Please respect these rules so the website stays reliable for all visitors.
+          </p>
+
+          <h2 class="prose-h2">Translations Provided As Is Without Guarantees</h2>
+          <p class="prose-p">
+            All translations, speech transcripts, and image text extractions are generated automatically by software and are provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis without any guarantee of accuracy, completeness, or reliability. Automated tools can miss idioms, tone, spelling variations, or regional context.
+          </p>
+
+          <h2 class="prose-h2">Check Important Translations Yourself</h2>
+          <p class="prose-p">
+            Because automated output is not always exact, you are responsible for checking any result before relying on it. Do not depend solely on machine translation for medical instructions, legal agreements, financial paperwork, emergency situations, or official forms. When accuracy matters, ask a qualified human speaker or translator to review the wording.
+          </p>
+
+          <h2 class="prose-h2">Service Changes and Interruptions</h2>
+          <p class="prose-p">
+            LAFZ Translation is offered as an online utility whose features, supported languages, or server capacity may change over time. The service may be updated, limited, temporarily paused, or interrupted at any point due to maintenance, server load, or technical issues without prior notice to visitors.
+          </p>
+
+          <h2 class="prose-h2">Ownership of Design and Content</h2>
+          <p class="prose-p">
+            The LAFZ Translation name, logo artwork, page layout, styling, and original site text belong to the site owner and may not be copied or republished as your own service. Text you enter and translations generated for your own use remain yours. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+          </p>
+
+          <h2 class="prose-h2">Updates to These Terms</h2>
+          <p class="prose-p">
+            These Terms of Use may be updated from time to time as the website evolves. Any changes take effect once posted on this page, and continuing to use the site means you accept the updated terms. You can also review our <a href="/privacy" class="prose-link" data-route="privacy">Privacy Policy</a> or reach out via <a href="/contact" class="prose-link" data-route="contact">Contact</a>.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="lafz-footer">
+      <div class="lafz-wrap footer-inner">
+        <div class="footer-brand">
+          <img src="/lafz-logo-icon.png" alt="LAFZ Translation Logo" class="footer-logo" />
+          <span style="font-family:'Manrope','Inter',sans-serif;font-weight:800;font-size:14px;color:var(--navy);">LAFZ Translation</span>
+        </div>
+
+        <nav aria-label="Footer Navigation" class="footer-nav" id="footerNav">
+          <a href="/" data-route="translate" class="active">Home</a>
+          <a href="/about" data-route="about">About</a>
+          <a href="/privacy" data-route="privacy">Privacy</a>
+          <a href="/terms" data-route="terms">Terms</a>
+          <a href="/contact" data-route="contact">Contact</a>
+        </nav>
+
+        <div>&copy; <span id="year"></span> LAFZ Translation. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <!-- iOS Install Modal -->
+    <div id="iosInstallModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h3 style="margin:0 0 10px;font-size:18px;font-weight:700;color:var(--navy);">Install on iOS</h3>
+        <p style="color:var(--muted);font-size:14px;line-height:1.6;margin:0;">
+          1. Tap the <strong>Share</strong> button in Safari's bottom toolbar.<br />
+          2. Scroll down and tap <strong>Add to Home Screen</strong>.<br />
+          3. Tap <strong>Add</strong> in the top-right corner.
+        </p>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+          <button type="button" id="closeIosModalBtn" class="lafz-primary-btn" style="padding:9px 18px;font-size:13px;">Got it</button>
+        </div>
+      </div>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="lafz-toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        var SITE_URL = 'https://nova-translate-orpin.vercel.app';
+        var PLACEHOLDER_OUTPUT = 'Translation will appear here...';
+        var HISTORY_KEY = 'nova_translation_history';
+        var SAVED_KEY = 'nova_saved_items';
+        var CACHE_KEY = 'nova_translation_cache_v2';
+        var API_KEY_STORAGE = 'novaGeminiApiKey';
+        var VOICE_GENDER_KEY = 'novaVoiceGender';
+        var FORCE_OFFLINE_KEY = 'nova_force_offline';
+        var CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+        var MAX_CACHE_SIZE = 250;
+
+        var LANGUAGES = [
+          { code: 'en', name: 'English', label: 'English 🇬🇧', nativeName: 'English', direction: 'ltr' },
+          { code: 'ur', name: 'Urdu', label: 'Urdu 🇵🇰', nativeName: 'اردو', direction: 'rtl' },
+          { code: 'ar', name: 'Arabic', label: 'Arabic 🇸🇦', nativeName: 'العربية', direction: 'rtl' },
+          { code: 'ja', name: 'Japanese', label: 'Japanese 🇯🇵', nativeName: '日本語', direction: 'ltr' },
+          { code: 'pa', name: 'Punjabi', label: 'Punjabi 🇵🇰', nativeName: 'پنجابی', direction: 'rtl' },
+          { code: 'es', name: 'Spanish', label: 'Spanish 🇪🇸', nativeName: 'Español', direction: 'ltr' },
+          { code: 'fr', name: 'French', label: 'French 🇫🇷', nativeName: 'Français', direction: 'ltr' },
+          { code: 'de', name: 'German', label: 'German 🇩🇪', nativeName: 'Deutsch', direction: 'ltr' },
+          { code: 'hi', name: 'Hindi', label: 'Hindi 🇮🇳', nativeName: 'हिन्दी', direction: 'ltr' }
+        ];
+
+        var OFFLINE_DICTIONARY = {
+          en_to_ur: {
+            'hello': 'سلام / ہیلو',
+            'welcome': 'خوش آمدید',
+            'how are you': 'آپ کیسے ہیں؟',
+            'thank you': 'شکریہ',
+            'thanks': 'شکریہ',
+            'good morning': 'صبح بخیر',
+            'good evening': 'شام بخیر',
+            'good night': 'شب بخیر',
+            'yes': 'جی ہاں',
+            'no': 'جی نہیں',
+            'please': 'براہ کرم',
+            'sorry': 'معذرت / معاف کیجیے',
+            'goodbye': 'خدا حافظ',
+            'bye': 'اللہ حافظ',
+            'what is your name': 'آپ کا نام کیا ہے؟',
+            'my name is': 'میرا نام ... ہے',
+            'where is the bathroom': 'باتھ روم کہاں ہے؟',
+            'help': 'مدد کریں',
+            'i love you': 'میں آپ سے محبت کرتا ہوں',
+            'how much is this': 'یہ کتنے کا ہے؟',
+            'water': 'پانی',
+            'food': 'کھانا',
+            'hospital': 'ہسپتال',
+            'doctor': 'ڈاکٹر'
+          },
+          ur_to_en: {
+            'سلام': 'Hello / Peace be upon you',
+            'ہیلو': 'Hello',
+            'خوش آمدید': 'Welcome',
+            'آپ کیسے ہیں': 'How are you?',
+            'آپ کیسے ہیں؟': 'How are you?',
+            'شکریہ': 'Thank you',
+            'صبح بخیر': 'Good morning',
+            'شام بخیر': 'Good evening',
+            'شب بخیر': 'Good night',
+            'جی ہاں': 'Yes',
+            'جی نہیں': 'No',
+            'براہ کرم': 'Please',
+            'معذرت': 'Sorry',
+            'خدا حافظ': 'Goodbye',
+            'الله حافظ': 'Goodbye',
+            'آپ کا نام کیا ہے؟': 'What is your name?',
+            'پانی': 'Water',
+            'کھانا': 'Food',
+            'ہسپتال': 'Hospital',
+            'مدد': 'Help'
+          },
+          en_to_ar: {
+            'hello': 'مرحباً / السلام عليكم',
+            'welcome': 'أهلاً وسهلاً',
+            'how are you': 'كيف حالك؟',
+            'thank you': 'شكراً جزيلاً',
+            'good morning': 'صباح الخير',
+            'good evening': 'مساء الخير',
+            'yes': 'نعم',
+            'no': 'لا',
+            'please': 'من فضلك',
+            'sorry': 'آسف',
+            'goodbye': 'مع السلامة'
+          },
+          en_to_hi: {
+            'hello': 'नमस्ते (Namaste)',
+            'welcome': 'स्वागत है',
+            'how are you': 'आप कैसे हैं?',
+            'thank you': 'धन्यवाद / शुक्रिया',
+            'good morning': 'सुप्रभात',
+            'yes': 'हाँ',
+            'no': 'नहीं',
+            'please': 'कृपया',
+            'sorry': 'क्षमा करें',
+            'goodbye': 'अलविदा'
+          },
+          en_to_es: {
+            'hello': 'Hola',
+            'welcome': 'Bienvenido',
+            'how are you': '¿Cómo estás?',
+            'thank you': 'Gracias',
+            'good morning': 'Buenos días',
+            'yes': 'Sí',
+            'no': 'No',
+            'please': 'Por favor',
+            'sorry': 'Lo siento',
+            'goodbye': 'Adiós'
+          }
+        };
+
+        var ROUTES = {
+          translate: {
+            path: '/',
+            title: 'LAFZ Translation — Simple Language Translation',
+            desc: 'LAFZ Translation helps you translate text and images with a simple, clear and easy-to-use experience.'
+          },
+          'text-translation': {
+            path: '/text-translation',
+            title: 'Text Translation – LAFZ Translation',
+            desc: 'Instant bidirectional text translation supporting English, Urdu, and 100+ languages.'
+          },
+          'voice-translation': {
+            path: '/voice',
+            title: 'Voice Translator & Speech-to-Text – LAFZ Translation',
+            desc: 'Speak naturally and translate your voice between English and Urdu with spoken output.'
+          },
+          image: {
+            path: '/camera',
+            title: 'Camera OCR & Photo Translator – LAFZ Translation',
+            desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents using your camera or uploaded image.'
+          },
+          history: {
+            path: '/history',
+            title: 'Translation History & Activity Log – LAFZ Translation',
+            desc: 'View, search, replay, and manage your recent translations stored privately in your browser.'
+          },
+          saved: {
+            path: '/saved',
+            title: 'Saved Translations – LAFZ Translation',
+            desc: 'Review and reuse your saved translations stored privately in your browser.'
+          },
+          languages: {
+            path: '/languages',
+            title: 'Supported Languages Directory – LAFZ Translation',
+            desc: 'Explore 100+ supported international languages, dialects, native scripts, and spoken playback.'
+          },
+          about: {
+            path: '/about',
+            title: 'About LAFZ Translation — Simple Language Translation',
+            desc: 'Learn about LAFZ Translation: its mission, what keeps the interface simple, who it helps, and how it stays clear on phones and desktops.'
+          },
+          privacy: {
+            path: '/privacy',
+            title: 'Privacy Policy — LAFZ Translation',
+            desc: 'Privacy Policy for LAFZ Translation. Learn what text, voice audio, and images are sent to the server, what stays in your browser storage, and how to clear history.'
+          },
+          contact: {
+            path: '/contact',
+            title: 'Contact Us — LAFZ Translation',
+            desc: 'Contact LAFZ Translation with questions, feedback, feature suggestions, or bug reports.'
+          },
+          terms: {
+            path: '/terms',
+            title: 'Terms of Use — LAFZ Translation',
+            desc: 'Terms of Use for LAFZ Translation covering acceptable use, machine translation limitations, service availability, and content ownership.'
+          },
+          sitemap: {
+            path: '/sitemap',
+            title: 'Sitemap & Tools Directory – LAFZ Translation',
+            desc: 'Explore all translation tools, features, and pages on LAFZ Translation.'
+          }
+        };
+
+        /* Sanitize invalid hash on initial load */
+        var allowedHashes = [
+          '#home', '#translate', '#text-translation', '#voice', '#voice-translation',
+          '#image', '#camera', '#history', '#saved', '#languages', '#about', '#privacy',
+          '#contact', '#terms', '#sitemap', '#content', '#historySection'
+        ];
+        if (window.location.hash && allowedHashes.indexOf(window.location.hash) === -1) {
+          try {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          } catch (e) {}
+        }
+
+        /* State */
+        var activeView = 'translate';
+        var historyItems = readStorage(HISTORY_KEY, []);
+        var savedItems = readStorage(SAVED_KEY, []);
+        var currentOutputText = '';
+        var isTranslating = false;
+        var debounceTimer = null;
+        var toastTimer = null;
+
+        /* Voice/Mic state */
+        var isListening = false;
+        var recognition = null;
+        var mediaRecorder = null;
+        var mediaStream = null;
+        var audioChunks = [];
+        var liveRecognized = false;
+
+        /* Audio playback state */
+        var isPlayingAudio = false;
+        var speakingField = null;
+        var audioChunksQueue = [];
+        var audioChunkIdx = 0;
+        var audioPlayLang = 'English 🇬🇧';
+        var currentHtmlAudio = null;
+        var nextHtmlAudio = null;
+        var chromeResumeInterval = null;
+        var voiceGender = getSavedVoiceGender();
+
+        /* OCR state */
+        var scannedImageBase64 = '';
+        var ocrExtractedText = '';
+        var ocrTranslatedText = '';
+        var isOcrLoading = false;
+
+        /* DOM Refs */
+        var yearEl = document.getElementById('year');
+        var toastEl = document.getElementById('toast');
+        var menuToggle = document.getElementById('menuToggle');
+        var mobileMenu = document.getElementById('mobileMenu');
+        var pwaInstallBtn = document.getElementById('pwaInstallBtn');
+        var iosInstallModal = document.getElementById('iosInstallModal');
+        var closeIosModalBtn = document.getElementById('closeIosModalBtn');
+
+        var sourceLangEl = document.getElementById('sourceLang');
+        var targetLangEl = document.getElementById('targetLang');
+        var swapLangEl = document.getElementById('swapLang');
+        var translateForm = document.getElementById('translateForm');
+        var translateBtn = document.getElementById('translateBtn');
+        var sourceTextEl = document.getElementById('sourceText');
+        var outputEl = document.getElementById('output');
+        var charCountEl = document.getElementById('charCount');
+        var resultStatusEl = document.getElementById('resultStatus');
+        var confidenceBadgeEl = document.getElementById('confidenceBadge');
+        var sourceLabelHead = document.getElementById('sourceLabelHead');
+        var targetLabelHead = document.getElementById('targetLabelHead');
+        var listeningIndicator = document.getElementById('listeningIndicator');
+
+        var micBtn = document.getElementById('micBtn');
+        var micBtnLabel = document.getElementById('micBtnLabel');
+        var pasteBtn = document.getElementById('pasteBtn');
+        var clearBtn = document.getElementById('clearBtn');
+        var sourceListenBtn = document.getElementById('sourceListenBtn');
+        var copyBtn = document.getElementById('copyBtn');
+        var listenBtn = document.getElementById('listenBtn');
+        var saveBtn = document.getElementById('saveBtn');
+        var shareBtn = document.getElementById('shareBtn');
+        var voiceGenderBtn = document.getElementById('voiceGenderBtn');
+        var voiceGenderLabel = document.getElementById('voiceGenderLabel');
+
+        var historySectionEl = document.getElementById('historySection');
+        var historySearchEl = document.getElementById('historySearch');
+        var clearHistoryEl = document.getElementById('clearHistory');
+        var historyListEl = document.getElementById('historyList');
+        var fullHistoryListEl = document.getElementById('fullHistoryList');
+        var fullHistoryHeading = document.getElementById('fullHistoryHeading');
+        var clearAllHistoryPageBtn = document.getElementById('clearAllHistoryPageBtn');
+        var savedListEl = document.getElementById('savedList');
+        var clearAllSavedBtn = document.getElementById('clearAllSavedBtn');
+        var languagesCatalogGrid = document.getElementById('languagesCatalogGrid');
+
+        /* Camera OCR Refs */
+        var imageInput = document.getElementById('imageInput');
+        var cameraInput = document.getElementById('cameraInput');
+        var uploadBox = document.getElementById('uploadBox');
+        var takePhotoBtn = document.getElementById('takePhotoBtn');
+        var chooseFileBtn = document.getElementById('chooseFileBtn');
+        var ocrPreviewWrap = document.getElementById('ocrPreviewWrap');
+        var imagePreview = document.getElementById('imagePreview');
+        var previewImg = document.getElementById('previewImg');
+        var replaceImage = document.getElementById('replaceImage');
+        var removeImage = document.getElementById('removeImage');
+        var ocrSourceEl = document.getElementById('ocrSource');
+        var ocrTargetEl = document.getElementById('ocrTarget');
+        var ocrSwapBtn = document.getElementById('ocrSwapBtn');
+        var extractBtn = document.getElementById('extractBtn');
+        var clearImageBtn = document.getElementById('clearImage');
+        var ocrLoadingEl = document.getElementById('ocrLoading');
+        var ocrResultsEl = document.getElementById('ocrResults');
+        var extractedTextEl = document.getElementById('extractedText');
+        var imageOutputEl = document.getElementById('imageOutput');
+        var copyExtractedBtn = document.getElementById('copyExtracted');
+        var copyImageResultBtn = document.getElementById('copyImageResult');
+        var ocrListenBtn = document.getElementById('ocrListenBtn');
+        var imageTranslateBtn = document.getElementById('imageTranslateBtn');
+        var ocrSourceLabel = document.getElementById('ocrSourceLabel');
+        var ocrTargetLabel = document.getElementById('ocrTargetLabel');
+
+        function readStorage(key, fallback) {
+          try {
+            var raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+          } catch (e) {
+            return fallback;
+          }
+        }
+
+        function writeStorage(key, value) {
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch (e) {}
+        }
+
+        function getSavedVoiceGender() {
+          try {
+            var g = localStorage.getItem(VOICE_GENDER_KEY);
+            if (g === 'male' || g === 'female') return g;
+          } catch (e) {}
+          return 'female';
+        }
+
+        function showToast(msg) {
+          if (!toastEl) return;
+          toastEl.textContent = msg;
+          toastEl.classList.add('show');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastEl.classList.remove('show');
+          }, 2200);
+        }
+
+        function escapeHtml(str) {
+          return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function isRtlLang(langLabel) {
+          var l = String(langLabel || '');
+          return l.indexOf('Urdu') !== -1 || l.indexOf('Arabic') !== -1 || l.indexOf('Punjabi') !== -1 || l.indexOf('Hebrew') !== -1 || l.indexOf('Persian') !== -1;
+        }
+
+        /* Cache Helpers (nova_translation_cache_v2) */
+        function normalizeCacheKey(text, src, tgt) {
+          return encodeURIComponent(
+            String(src || 'auto').trim().toLowerCase() + ':' +
+            String(tgt || 'ur').trim().toLowerCase() + ':' +
+            String(text || '').trim().toLowerCase()
+          );
+        }
+
+        function getCachedTranslation(text, src, tgt) {
+          try {
+            var cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            var key = normalizeCacheKey(text, src, tgt);
+            var entry = cache[key];
+            if (!entry) return null;
+            if (Date.now() - entry.timestamp > CACHE_TTL) {
+              delete cache[key];
+              localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+              return null;
+            }
+            return entry.result;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function setCachedTranslation(text, src, tgt, result) {
+          if (!text || !result || !result.translatedText) return;
+          try {
+            var cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            var key = normalizeCacheKey(text, src, tgt);
+            var keys = Object.keys(cache);
+            if (keys.length >= MAX_CACHE_SIZE) {
+              keys.sort(function (a, b) { return cache[a].timestamp - cache[b].timestamp; });
+              keys.slice(0, keys.length - MAX_CACHE_SIZE + 1).forEach(function (k) { delete cache[k]; });
+            }
+            cache[key] = { result: result, timestamp: Date.now() };
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+          } catch (e) {}
+        }
+
+        function translateOffline(text, srcLang, tgtLang) {
+          var clean = text.trim();
+          var lower = clean.toLowerCase();
+          var cached = getCachedTranslation(clean, srcLang, tgtLang);
+          if (cached) return cached;
+
+          var srcCode = String(srcLang || 'English').toLowerCase().slice(0, 2);
+          var tgtCode = String(tgtLang || 'Urdu').toLowerCase().slice(0, 2);
+          var dict = OFFLINE_DICTIONARY[srcCode + '_to_' + tgtCode];
+          var translated = '';
+
+          if (dict && dict[lower]) {
+            translated = dict[lower];
+          } else if (dict) {
+            translated = clean.split(/\s+/).map(function (w) {
+              var cw = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return dict[cw] || w;
+            }).join(' ');
+          }
+
+          if (!translated) {
+            translated = '[Offline Mode] ' + clean;
+          }
+
+          var res = {
+            originalText: clean,
+            translatedText: translated,
+            sourceLanguage: srcLang,
+            targetLanguage: tgtLang,
+            confidence: 0.9,
+            fromCache: true
+          };
+          setCachedTranslation(clean, srcLang, tgtLang, res);
+          return res;
+        }
+
+        function buildApiHeaders(extra) {
+          var headers = { 'Content-Type': 'application/json' };
+          if (extra) {
+            Object.keys(extra).forEach(function (k) { headers[k] = extra[k]; });
+          }
+          try {
+            var customKey = (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+            if (customKey) headers['x-gemini-api-key'] = customKey;
+          } catch (e) {}
+          return headers;
+        }
+
+        async function parseApiResponse(res) {
+          var ct = res.headers.get('content-type') || '';
+          if (ct.indexOf('application/json') !== -1) {
+            var json = await res.json();
+            if (!res.ok || (json.success === false && json.data === undefined)) {
+              throw new Error((json.error && json.error.message) || ('Request failed with HTTP status ' + res.status));
+            }
+            return json.data !== undefined ? json.data : json;
+          }
+          var txt = await res.text();
+          if (res.status === 413 || txt.indexOf('Request Entity Too Large') !== -1 || txt.indexOf('Payload Too Large') !== -1) {
+            throw new Error('The uploaded file or payload exceeds the allowed server limit. Please use a smaller file.');
+          }
+          if (!res.ok) {
+            throw new Error(txt.slice(0, 150) || ('Server error (HTTP ' + res.status + ')'));
+          }
+          throw new Error('Unexpected response from server (HTTP ' + res.status + ')');
+        }
+
+        /* Populate Language Dropdowns & Directory */
+        function initLanguages() {
+          var selects = [sourceLangEl, targetLangEl, ocrSourceEl, ocrTargetEl];
+          selects.forEach(function (sel, idx) {
+            if (!sel) return;
+            sel.innerHTML = LANGUAGES.map(function (l) {
+              return '<option value="' + escapeHtml(l.label) + '">' + escapeHtml(l.label) + '</option>';
+            }).join('');
+            sel.value = idx % 2 === 0 ? 'English 🇬🇧' : 'Urdu 🇵🇰';
+          });
+
+          if (languagesCatalogGrid) {
+            languagesCatalogGrid.innerHTML = LANGUAGES.map(function (l) {
+              return (
+                '<div class="lang-card">' +
+                  '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+                    '<strong style="font-size:16px;color:var(--navy);">' + escapeHtml(l.label) + '</strong>' +
+                    '<span style="font-size:11px;font-weight:700;background:#dbeafe;color:var(--blue);padding:2px 8px;border-radius:999px;text-transform:uppercase;">' + escapeHtml(l.code) + '</span>' +
+                  '</div>' +
+                  '<div style="font-size:13px;color:var(--muted);">Native Name: <strong style="color:var(--ink);">' + escapeHtml(l.nativeName) + '</strong></div>' +
+                  '<div style="font-size:12px;color:var(--muted);">Text &amp; Voice Translation: <strong style="color:var(--blue);">Supported</strong></div>' +
+                '</div>'
+              );
+            }).join('');
+          }
+          syncTranslatorDirections();
+        }
+
+        function syncTranslatorDirections() {
+          var src = sourceLangEl.value || 'English 🇬🇧';
+          var tgt = targetLangEl.value || 'Urdu 🇵🇰';
+          sourceLabelHead.textContent = 'Source (' + src.split(' ')[0] + ')';
+          targetLabelHead.textContent = 'Translation (' + tgt.split(' ')[0] + ')';
+
+          var srcRtl = isRtlLang(src);
+          sourceTextEl.setAttribute('dir', srcRtl ? 'rtl' : 'ltr');
+          sourceTextEl.classList.toggle('rtl-text', srcRtl);
+
+          var hasResult = currentOutputText && currentOutputText !== PLACEHOLDER_OUTPUT && !isTranslating;
+          var tgtRtl = isRtlLang(tgt) && hasResult;
+          outputEl.setAttribute('dir', tgtRtl ? 'rtl' : 'ltr');
+          outputEl.classList.toggle('rtl-text', tgtRtl);
+
+          if (ocrSourceEl && ocrSourceLabel) {
+            ocrSourceLabel.textContent = 'Detected Text (' + (ocrSourceEl.value || 'English').split(' ')[0] + ')';
+          }
+          if (ocrTargetEl && ocrTargetLabel) {
+            var ot = ocrTargetEl.value || 'Urdu 🇵🇰';
+            ocrTargetLabel.textContent = 'Translation (' + ot.split(' ')[0] + ')';
+            imageOutputEl.setAttribute('dir', isRtlLang(ot) ? 'rtl' : 'ltr');
+          }
+        }
+
+        function renderOutputState() {
+          syncTranslatorDirections();
+          if (isTranslating) {
+            resultStatusEl.textContent = 'Translating...';
+            resultStatusEl.className = 'status-pill busy';
+            outputEl.innerHTML = '<span style="color:var(--blue);font-weight:500;">Translating smoothly...</span>';
+            confidenceBadgeEl.classList.add('hidden');
+            translateBtn.disabled = true;
+            translateBtn.innerHTML = '<span>Translating...</span>';
+          } else if (currentOutputText) {
+            resultStatusEl.textContent = 'Ready';
+            resultStatusEl.className = 'status-pill ready';
+            outputEl.textContent = currentOutputText;
+            translateBtn.disabled = false;
+            translateBtn.innerHTML = '<span>Translate</span><span style="font-size:12px;opacity:0.85;">↵</span>';
+          } else {
+            resultStatusEl.textContent = 'Waiting';
+            resultStatusEl.className = 'status-pill';
+            outputEl.innerHTML = '<span class="output-placeholder">' + PLACEHOLDER_OUTPUT + '</span>';
+            confidenceBadgeEl.classList.add('hidden');
+            translateBtn.disabled = false;
+            translateBtn.innerHTML = '<span>Translate</span><span style="font-size:12px;opacity:0.85;">↵</span>';
+          }
+        }
+
+        function addHistoryEntry(item) {
+          var exists = historyItems.some(function (i) {
+            return i.input.trim() === item.input.trim() && i.to === item.to;
+          });
+          if (exists) return;
+          historyItems = [item].concat(historyItems).slice(0, 100);
+          writeStorage(HISTORY_KEY, historyItems);
+          renderHistory();
+        }
+
+        function deleteHistoryEntry(id) {
+          historyItems = historyItems.filter(function (i) { return i.id !== id; });
+          writeStorage(HISTORY_KEY, historyItems);
+          renderHistory();
+          showToast('History item deleted');
+        }
+
+        function clearAllHistory() {
+          historyItems = [];
+          try { localStorage.removeItem(HISTORY_KEY); } catch (e) {}
+          renderHistory();
+          showToast('History cleared');
+        }
+
+        function loadEntryIntoTranslator(item) {
+          sourceLangEl.value = item.from || 'English 🇬🇧';
+          targetLangEl.value = item.to || 'Urdu 🇵🇰';
+          sourceTextEl.value = item.input || '';
+          currentOutputText = item.output || '';
+          confidenceBadgeEl.textContent = '99% Match';
+          confidenceBadgeEl.classList.remove('hidden');
+          updateCharCount();
+          renderOutputState();
+          navigateTo('translate', true);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showToast('Loaded into translator');
+        }
+
+        function renderHistory() {
+          if (clearHistoryEl) {
+            clearHistoryEl.classList.toggle('hidden', historyItems.length === 0);
+          }
+          if (clearAllHistoryPageBtn) {
+            clearAllHistoryPageBtn.classList.toggle('hidden', historyItems.length === 0);
+          }
+          if (fullHistoryHeading) {
+            fullHistoryHeading.textContent = 'Stored History Entries (' + historyItems.length + ')';
+          }
+
+          var term = (historySearchEl && historySearchEl.value ? historySearchEl.value : '').trim().toLowerCase();
+          var filtered = historyItems.filter(function (item) {
+            if (!term) return true;
+            return (
+              item.input.toLowerCase().indexOf(term) !== -1 ||
+              item.output.toLowerCase().indexOf(term) !== -1 ||
+              item.from.toLowerCase().indexOf(term) !== -1 ||
+              item.to.toLowerCase().indexOf(term) !== -1
+            );
+          });
+
+          function buildHistoryCards(list, emptyMsg) {
+            if (list.length === 0) {
+              return '<div style="text-align:center;padding:32px 12px;color:var(--muted-light);font-size:14px;">' + escapeHtml(emptyMsg) + '</div>';
+            }
+            return list.map(function (item) {
+              return (
+                '<div class="history-item" data-id="' + escapeHtml(item.id) + '">' +
+                  '<div style="min-width:0;flex:1 1 auto;">' +
+                    '<div class="history-meta">' +
+                      '<span>' + escapeHtml(item.from.split(' ')[0]) + '</span>' +
+                      '<span>→</span>' +
+                      '<span class="to-lang">' + escapeHtml(item.to.split(' ')[0]) + '</span>' +
+                      (item.time ? '<span>• ' + escapeHtml(item.time) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="history-src">' + escapeHtml(item.input) + '</div>' +
+                    '<div class="history-out">' + escapeHtml(item.output) + '</div>' +
+                  '</div>' +
+                  '<div class="history-actions">' +
+                    '<button type="button" class="mini-btn blue" data-action="use" data-id="' + escapeHtml(item.id) + '">Use</button>' +
+                    '<button type="button" class="mini-btn" data-action="copy" data-id="' + escapeHtml(item.id) + '">Copy</button>' +
+                    '<button type="button" class="mini-btn" data-action="speak" data-id="' + escapeHtml(item.id) + '" title="Speak">🔊</button>' +
+                    '<button type="button" class="mini-btn" data-action="del" data-id="' + escapeHtml(item.id) + '" title="Delete">✕</button>' +
+                  '</div>' +
+                '</div>'
+              );
+            }).join('');
+          }
+
+          if (historyListEl) {
+            historyListEl.innerHTML = buildHistoryCards(
+              filtered.slice(0, 1),
+              historyItems.length === 0
+                ? 'No translations recorded yet. Enter text or use voice to get started.'
+                : 'No matching history entries found.'
+            );
+          }
+
+          if (fullHistoryListEl) {
+            fullHistoryListEl.innerHTML = buildHistoryCards(
+              historyItems,
+              'No translations recorded yet. Start translating to build your history log.'
+            );
+          }
+        }
+
+        function renderSaved() {
+          var list = savedItems.length > 0 ? savedItems : [
+            { id: 's1', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Hello', output: 'ہیلو', timestamp: '♡ Saved' },
+            { id: 's2', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Welcome', output: 'خوش آمدید', timestamp: '♡ Saved' }
+          ];
+          if (clearAllSavedBtn) {
+            clearAllSavedBtn.classList.toggle('hidden', savedItems.length === 0);
+          }
+          if (savedListEl) {
+            savedListEl.innerHTML = list.map(function (item) {
+              return (
+                '<div class="history-item">' +
+                  '<div style="min-width:0;flex:1 1 auto;">' +
+                    '<div class="history-meta"><span>' + escapeHtml(item.from) + ' → ' + escapeHtml(item.to) + '</span><span>♡ Saved</span></div>' +
+                    '<div class="history-src">' + escapeHtml(item.input) + ' → ' + escapeHtml(item.output) + '</div>' +
+                  '</div>' +
+                  '<div class="history-actions">' +
+                    '<button type="button" class="mini-btn" data-saved-speak="' + escapeHtml(item.id) + '">🔊</button>' +
+                    '<button type="button" class="mini-btn" data-saved-copy="' + escapeHtml(item.id) + '">Copy</button>' +
+                    '<button type="button" class="mini-btn blue" data-saved-use="' + escapeHtml(item.id) + '">Translate →</button>' +
+                  '</div>' +
+                '</div>'
+              );
+            }).join('');
+          }
+        }
+
+        function updateCharCount() {
+          var len = (sourceTextEl.value || '').length;
+          charCountEl.textContent = len.toLocaleString() + ' / 5,000';
+          clearBtn.classList.toggle('hidden', len === 0);
+        }
+
+        /* Core Text Translation (exact /api/translate contract + cache + offline fallback) */
+        async function executeTranslation(textToTranslate, srcLang, tgtLang) {
+          var trimmed = String(textToTranslate || '').trim();
+          if (!trimmed) {
+            currentOutputText = '';
+            renderOutputState();
+            return;
+          }
+
+          isTranslating = true;
+          renderOutputState();
+
+          try {
+            var forceOffline = false;
+            try { forceOffline = localStorage.getItem(FORCE_OFFLINE_KEY) === '1'; } catch (e) {}
+            var online = !forceOffline && (typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+            var result = getCachedTranslation(trimmed, srcLang, tgtLang);
+            if (!result) {
+              if (!online) {
+                result = translateOffline(trimmed, srcLang, tgtLang);
+              } else {
+                try {
+                  var res = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: buildApiHeaders(),
+                    body: JSON.stringify({
+                      text: trimmed,
+                      sourceLanguage: srcLang,
+                      targetLanguage: tgtLang,
+                      tone: 'natural',
+                      model: 'gemini-1.5-flash'
+                    })
+                  });
+                  result = await parseApiResponse(res);
+                  setCachedTranslation(trimmed, srcLang, tgtLang, result);
+                } catch (networkErr) {
+                  result = translateOffline(trimmed, srcLang, tgtLang);
+                }
+              }
+            }
+
+            currentOutputText = result.translatedText || '';
+            isTranslating = false;
+            confidenceBadgeEl.textContent = Math.round((result.confidence || 0.99) * 100) + '% Match';
+            confidenceBadgeEl.classList.remove('hidden');
+            renderOutputState();
+
+            addHistoryEntry({
+              id: Date.now().toString(),
+              from: srcLang,
+              to: tgtLang,
+              input: trimmed,
+              output: currentOutputText,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+          } catch (err) {
+            isTranslating = false;
+            currentOutputText = err && err.message ? err.message : 'Translation failed. Please try again.';
+            renderOutputState();
+            showToast(currentOutputText);
+          }
+        }
+
+        /* TTS / Spoken Playback */
+        function getSpeechLangCode(langName) {
+          var l = String(langName || '').toLowerCase();
+          if (l.indexOf('ur') !== -1 || l.indexOf('urdu') !== -1) return 'ur-PK';
+          if (l.indexOf('en') !== -1 || l.indexOf('english') !== -1) return 'en-US';
+          if (l.indexOf('ar') !== -1 || l.indexOf('arabic') !== -1) return 'ar-SA';
+          if (l.indexOf('hi') !== -1 || l.indexOf('hindi') !== -1) return 'hi-IN';
+          if (l.indexOf('pa') !== -1 || l.indexOf('punjabi') !== -1) return 'pa-IN';
+          if (l.indexOf('es') !== -1 || l.indexOf('spanish') !== -1) return 'es-ES';
+          if (l.indexOf('fr') !== -1 || l.indexOf('french') !== -1) return 'fr-FR';
+          if (l.indexOf('de') !== -1 || l.indexOf('german') !== -1) return 'de-DE';
+          if (l.indexOf('ja') !== -1 || l.indexOf('japanese') !== -1) return 'ja-JP';
+          return 'en-US';
+        }
+
+        function splitTextIntoChunks(text, maxLen) {
+          var clean = String(text || '').trim();
+          if (!clean) return [];
+          var regex = /([۔!؟\?\.\n\r\t]+)/g;
+          var parts = clean.split(regex);
+          var sentences = [];
+          var cur = '';
+          for (var i = 0; i < parts.length; i++) {
+            var p = parts[i];
+            if (!p) continue;
+            if (p.match(regex)) {
+              cur += p;
+              if (cur.trim()) { sentences.push(cur.trim()); cur = ''; }
+            } else {
+              cur += p;
+            }
+          }
+          if (cur.trim()) sentences.push(cur.trim());
+          var chunks = [];
+          sentences.forEach(function (s) {
+            if (s.length <= maxLen) {
+              chunks.push(s);
+            } else {
+              var words = s.split(/([\s,،؛]+)/);
+              var c = '';
+              words.forEach(function (w) {
+                if ((c + w).length > maxLen) {
+                  if (c.trim()) chunks.push(c.trim());
+                  c = w;
+                } else {
+                  c += w;
+                }
+              });
+              if (c.trim()) chunks.push(c.trim());
+            }
+          });
+          return chunks;
+        }
+
+        function stopAudio() {
+          isPlayingAudio = false;
+          speakingField = null;
+          audioChunksQueue = [];
+          audioChunkIdx = 0;
+          sourceListenBtn.classList.remove('speaking');
+          listenBtn.classList.remove('speaking');
+          if (ocrListenBtn) ocrListenBtn.textContent = '🔊 Listen';
+          if ('speechSynthesis' in window) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+          }
+          if (chromeResumeInterval) {
+            clearInterval(chromeResumeInterval);
+            chromeResumeInterval = null;
+          }
+        }
+
+        function playSpeech(text, langName, field) {
+          var clean = String(text || '').trim();
+          if (!clean || clean === PLACEHOLDER_OUTPUT) {
+            showToast('No text to speak');
+            return;
+          }
+          if (!('speechSynthesis' in window)) {
+            showToast('Speech synthesis not supported on this browser');
+            return;
+          }
+
+          if (speakingField === field && isPlayingAudio) {
+            stopAudio();
+            return;
+          }
+          stopAudio();
+
+          try {
+            window.speechSynthesis.cancel();
+          } catch (e) {}
+
+          isPlayingAudio = true;
+          speakingField = field;
+          audioPlayLang = langName;
+          if (field === 'source') sourceListenBtn.classList.add('speaking');
+          if (field === 'target') listenBtn.classList.add('speaking');
+          if (field === 'ocr' && ocrListenBtn) ocrListenBtn.textContent = '🔊 Stop';
+
+          showToast('Speaking in ' + String(langName).split(' ')[0] + '…');
+
+          var targetLangCode = getSpeechLangCode(langName);
+          var baseLang = targetLangCode.split('-')[0].toLowerCase();
+
+          var voices = [];
+          try {
+            voices = window.speechSynthesis.getVoices() || [];
+          } catch (e) {}
+
+          var chosenVoice = null;
+          if (voices.length > 0) {
+            // 1. Exact match
+            chosenVoice = voices.find(function(v) {
+              return v.lang.toLowerCase() === targetLangCode.toLowerCase();
+            });
+            // 2. Same language with region (ur -> ur-PK)
+            if (!chosenVoice && targetLangCode.indexOf('-') === -1) {
+              chosenVoice = voices.find(function(v) {
+                return v.lang.toLowerCase().indexOf(targetLangCode.toLowerCase() + '-') === 0;
+              });
+            }
+            // 3. Any voice with the same base language
+            if (!chosenVoice) {
+              chosenVoice = voices.find(function(v) {
+                return v.lang.toLowerCase().split('-')[0] === baseLang;
+              });
+            }
+            // 4. Default voice
+            if (!chosenVoice) {
+              chosenVoice = voices.find(function(v) { return v.default; }) || voices[0];
+            }
+          }
+
+          var chunks = splitTextIntoChunks(clean, 180);
+          if (chunks.length === 0) {
+            stopAudio();
+            return;
+          }
+
+          audioChunksQueue = chunks;
+          audioChunkIdx = 0;
+
+          function speakNextChunk() {
+            if (!isPlayingAudio) return;
+            if (audioChunkIdx >= audioChunksQueue.length) {
+              stopAudio();
+              return;
+            }
+            var chunk = audioChunksQueue[audioChunkIdx];
+            try {
+              var utterance = new SpeechSynthesisUtterance(chunk);
+              if (chosenVoice) utterance.voice = chosenVoice;
+              utterance.lang = targetLangCode;
+              utterance.pitch = voiceGender === 'male' ? 0.82 : 1.08;
+              utterance.rate = voiceGender === 'male' ? 0.96 : 1.0;
+
+              var finished = false;
+              function advance() {
+                if (!finished) {
+                  finished = true;
+                  if (!isPlayingAudio) return;
+                  audioChunkIdx++;
+                  speakNextChunk();
+                }
+              }
+              utterance.onend = advance;
+              utterance.onerror = function() {
+                advance();
+              };
+              setTimeout(function() {
+                if (!finished && isPlayingAudio) advance();
+              }, 12000);
+
+              window.speechSynthesis.speak(utterance);
+            } catch (err) {
+              stopAudio();
+              showToast('Error during speech synthesis');
+            }
+          }
+
+          chromeResumeInterval = setInterval(function () {
+            if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+              window.speechSynthesis.resume();
+            }
+          }, 5000);
+
+          speakNextChunk();
+        }
+
+        /* Microphone / Speech-to-Text */
+        function stopMicrophone() {
+          isListening = false;
+          micBtn.classList.remove('recording');
+          micBtnLabel.textContent = 'Speak';
+          listeningIndicator.classList.add('hidden');
+          if (recognition) {
+            try { recognition.stop(); } catch (e) {}
+            recognition = null;
+          }
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try { mediaRecorder.stop(); } catch (e) {}
+          }
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(function (t) { t.stop(); });
+            mediaStream = null;
+          }
+        }
+
+        function blobToDataUrl(blob) {
+          return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onloadend = function () { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        async function startMicrophone() {
+          if (isListening) {
+            stopMicrophone();
+            return;
+          }
+          try {
+            var streamTest = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamTest.getTracks().forEach(function(t) { t.stop(); });
+          } catch (err) {
+            showToast("Microphone blocked. Allow microphone for this site and try again.");
+            stopMicrophone();
+            return;
+          }
+
+          liveRecognized = false;
+          var srcLang = sourceLangEl.value || 'English 🇬🇧';
+          var tgtLang = targetLangEl.value || 'Urdu 🇵🇰';
+          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+          if (SpeechRecognition) {
+            try {
+              recognition = new SpeechRecognition();
+              recognition.lang = getSpeechLangCode(srcLang);
+              recognition.interimResults = true;
+              recognition.continuous = true;
+
+              recognition.onstart = function () {
+                isListening = true;
+                micBtn.classList.add('recording');
+                micBtnLabel.textContent = 'Stop';
+                listeningIndicator.classList.remove('hidden');
+                showToast('🎙️ Listening in ' + srcLang.split(' ')[0] + '... Speak clearly!');
+              };
+
+              recognition.onresult = function (event) {
+                liveRecognized = true;
+                var transcript = '';
+                for (var i = 0; i < event.results.length; i++) {
+                  transcript += event.results[i][0].transcript;
+                }
+                if (transcript) {
+                  sourceTextEl.value = transcript;
+                  updateCharCount();
+                  if (event.results[event.results.length - 1].isFinal) {
+                    executeTranslation(transcript, sourceLangEl.value, targetLangEl.value);
+                  }
+                }
+              };
+
+              recognition.onerror = function (e) {
+                if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                  showToast("Microphone blocked. Allow microphone for this site and try again.");
+                  stopMicrophone();
+                }
+              };
+
+              recognition.onend = function () {
+                if (isListening && recognition) {
+                  try { recognition.start(); } catch (err) { stopMicrophone(); }
+                }
+              };
+
+              recognition.start();
+              return;
+            } catch (err) {}
+          }
+
+          try {
+            var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaStream = stream;
+            var mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+              ? 'audio/webm;codecs=opus'
+              : 'audio/webm';
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+            audioChunks = [];
+            mediaRecorder.ondataavailable = function (e) {
+              if (e.data && e.data.size > 0) audioChunks.push(e.data);
+            };
+            mediaRecorder.onstop = async function () {
+              stopMicrophone();
+              var blob = new Blob(audioChunks, { type: mimeType });
+              if (blob.size > 0 && !liveRecognized) {
+                showToast('🎙️ Converting speech to text...');
+                try {
+                  var base64Audio = await blobToDataUrl(blob);
+                  var res = await fetch('/api/speech-to-text', {
+                    method: 'POST',
+                    headers: buildApiHeaders(),
+                    body: JSON.stringify({
+                      audioBase64: base64Audio,
+                      mimeType: blob.type || mimeType,
+                      languageHint: srcLang,
+                      targetLanguage: tgtLang
+                    })
+                  });
+                  var stt = await parseApiResponse(res);
+                  var transcribed = stt.transcript || stt.text || '';
+                  if (transcribed) {
+                    sourceTextEl.value = transcribed;
+                    updateCharCount();
+                    if (stt.translatedText) {
+                      currentOutputText = stt.translatedText;
+                      confidenceBadgeEl.textContent = '99% Match';
+                      confidenceBadgeEl.classList.remove('hidden');
+                      renderOutputState();
+                      addHistoryEntry({
+                        id: Date.now().toString(),
+                        from: srcLang,
+                        to: tgtLang,
+                        input: transcribed,
+                        output: stt.translatedText,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      });
+                    } else {
+                      await executeTranslation(transcribed, srcLang, tgtLang);
+                    }
+                    showToast('Translation complete!');
+                  } else {
+                    showToast('No speech detected. Please try again.');
+                  }
+                } catch (err) {
+                  showToast((err && err.message) || 'Error in voice translation');
+                }
+              }
+            };
+            mediaRecorder.start(400);
+            isListening = true;
+            micBtn.classList.add('recording');
+            micBtnLabel.textContent = 'Stop';
+            listeningIndicator.classList.remove('hidden');
+            showToast('🎙️ Start speaking... Tap mic again to stop');
+          } catch (err) {
+            showToast("Microphone blocked. Allow microphone for this site and try again.");
+            stopMicrophone();
+          }
+        }
+
+        /* Camera OCR */
+        async function processOcrImage(dataUrl) {
+          scannedImageBase64 = dataUrl;
+          previewImg.src = dataUrl;
+          uploadBox.classList.add('hidden');
+          ocrPreviewWrap.classList.remove('hidden');
+          clearImageBtn.classList.remove('hidden');
+          extractBtn.disabled = true;
+          isOcrLoading = true;
+          ocrLoadingEl.classList.remove('hidden');
+          ocrResultsEl.classList.add('hidden');
+          showToast('Scanning and extracting text...');
+
+          var rawB64 = dataUrl.indexOf(',') !== -1 ? dataUrl.split(',')[1] : dataUrl;
+          var src = ocrSourceEl.value || 'English 🇬🇧';
+          var tgt = ocrTargetEl.value || 'Urdu 🇵🇰';
+
+          try {
+            var res = await fetch('/api/ocr-translate', {
+              method: 'POST',
+              headers: buildApiHeaders(),
+              body: JSON.stringify({
+                imageBase64: rawB64,
+                mimeType: 'image/jpeg',
+                sourceLanguage: src,
+                targetLanguage: tgt
+              })
+            });
+            var data = await parseApiResponse(res);
+            ocrExtractedText = data.extractedText || 'No text found';
+            ocrTranslatedText = data.translatedText || 'No translation available';
+            extractedTextEl.textContent = ocrExtractedText;
+            imageOutputEl.textContent = ocrTranslatedText;
+            syncTranslatorDirections();
+            ocrResultsEl.classList.remove('hidden');
+
+            addHistoryEntry({
+              id: Date.now().toString(),
+              from: src,
+              to: tgt,
+              input: ocrExtractedText,
+              output: ocrTranslatedText,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            showToast('Image processed successfully!');
+          } catch (err) {
+            showToast((err && err.message) || 'Error processing image');
+          } finally {
+            isOcrLoading = false;
+            ocrLoadingEl.classList.add('hidden');
+            extractBtn.disabled = false;
+          }
+        }
+
+        function handleOcrFileSelect(file) {
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            var rawUrl = reader.result;
+            var img = new Image();
+            img.onload = function () {
+              var canvas = document.createElement('canvas');
+              var w = img.width;
+              var h = img.height;
+              var maxDim = 1280;
+              if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                else { w = Math.round((w * maxDim) / h); h = maxDim; }
+              }
+              canvas.width = w;
+              canvas.height = h;
+              var ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, w, h);
+                processOcrImage(canvas.toDataURL('image/jpeg', 0.85));
+              } else {
+                processOcrImage(rawUrl);
+              }
+            };
+            img.src = rawUrl;
+          };
+          reader.readAsDataURL(file);
+        }
+
+        function clearOcrImage() {
+          scannedImageBase64 = '';
+          ocrExtractedText = '';
+          ocrTranslatedText = '';
+          previewImg.src = '';
+          ocrPreviewWrap.classList.add('hidden');
+          uploadBox.classList.remove('hidden');
+          clearImageBtn.classList.add('hidden');
+          extractBtn.disabled = true;
+          showToast('Image and results cleared');
+        }
+
+        /* Client Router (Path + Hash Support) */
+        function getViewFromLocation(pathname, hash) {
+          var h = String(hash || '').toLowerCase();
+          if (h === '#image' || h === '#camera') return 'image';
+          if (h === '#history') return 'history';
+          if (h === '#saved') return 'saved';
+          if (h === '#voice' || h === '#voice-translation') return 'voice-translation';
+          if (h === '#text-translation') return 'text-translation';
+          if (h === '#languages') return 'languages';
+          if (h === '#about' || h === '#content') return 'about';
+          if (h === '#privacy') return 'privacy';
+          if (h === '#contact') return 'contact';
+          if (h === '#terms') return 'terms';
+          if (h === '#sitemap') return 'sitemap';
+          if (h === '#home' || h === '#translate' || h === '#historySection') return 'translate';
+
+          var p = String(pathname || '/').toLowerCase();
+          if (p === '/camera' || p === '/camera-translation' || p === '/image') return 'image';
+          if (p === '/history') return 'history';
+          if (p === '/saved') return 'saved';
+          if (p === '/voice' || p === '/voice-translation') return 'voice-translation';
+          if (p === '/text-translation') return 'text-translation';
+          if (p === '/languages') return 'languages';
+          if (p === '/about' || p === '/about.html') return 'about';
+          if (p === '/privacy' || p === '/privacy.html') return 'privacy';
+          if (p === '/contact' || p === '/contact.html') return 'contact';
+          if (p === '/terms' || p === '/terms.html') return 'terms';
+          if (p === '/sitemap') return 'sitemap';
+          return 'translate';
+        }
+
+        function updateMeta(view) {
+          var info = ROUTES[view] || ROUTES.translate;
+          document.title = info.title;
+          var canonicalUrl = SITE_URL + info.path;
+          var descEl = document.querySelector('meta[name="description"]');
+          if (descEl) descEl.setAttribute('content', info.desc);
+          var canEl = document.querySelector('link[rel="canonical"]');
+          if (canEl) canEl.setAttribute('href', canonicalUrl);
+          var ogTitle = document.querySelector('meta[property="og:title"]');
+          if (ogTitle) ogTitle.setAttribute('content', info.title);
+          var ogDesc = document.querySelector('meta[property="og:description"]');
+          if (ogDesc) ogDesc.setAttribute('content', info.desc);
+          var ogUrl = document.querySelector('meta[property="og:url"]');
+          if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
+        }
+
+        function setMobileMenuOpen(open) {
+          mobileMenu.classList.toggle('hidden', !open);
+          menuToggle.textContent = open ? '✕' : '☰';
+          menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        function navigateTo(view, pushState, hashTarget) {
+          if (!ROUTES[view]) view = 'translate';
+          activeView = view;
+
+          document.querySelectorAll('.page-view').forEach(function (el) {
+            el.classList.toggle('active', el.id === 'page-' + view);
+          });
+
+          document.querySelectorAll('[data-nav]').forEach(function (btn) {
+            var v = btn.getAttribute('data-nav');
+            btn.classList.toggle('active', v === view || (v === 'translate' && view === 'text-translation'));
+          });
+
+          document.querySelectorAll('#footerNav a[data-route]').forEach(function (a) {
+            a.classList.toggle('active', a.getAttribute('data-route') === view);
+          });
+
+          updateMeta(view);
+          setMobileMenuOpen(false);
+
+          if (pushState) {
+            var nextUrl = (ROUTES[view] ? ROUTES[view].path : '/') + (hashTarget || '');
+            if (window.location.pathname + window.location.hash !== nextUrl) {
+              try { window.history.pushState({}, '', nextUrl); } catch (e) {}
+            }
+          }
+
+          if (hashTarget === '#historySection' && historySectionEl) {
+            setTimeout(function () { historySectionEl.scrollIntoView({ behavior: 'smooth' }); }, 50);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }
+
+        /* Event Bindings */
+        if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+        menuToggle.addEventListener('click', function () {
+          setMobileMenuOpen(mobileMenu.classList.contains('hidden'));
+        });
+
+        document.addEventListener('click', function (e) {
+          var navBtn = e.target.closest('[data-nav]');
+          if (navBtn) {
+            navigateTo(navBtn.getAttribute('data-nav'), true);
+            return;
+          }
+          var routeLink = e.target.closest('a[data-route]');
+          if (routeLink) {
+            e.preventDefault();
+            navigateTo(routeLink.getAttribute('data-route'), true);
+            return;
+          }
+        });
+
+        window.addEventListener('popstate', function () {
+          navigateTo(getViewFromLocation(window.location.pathname, window.location.hash), false);
+        });
+        window.addEventListener('hashchange', function () {
+          navigateTo(getViewFromLocation(window.location.pathname, window.location.hash), false);
+        });
+
+        /* Translator Form Events */
+        sourceLangEl.addEventListener('change', function () {
+          syncTranslatorDirections();
+          if (sourceTextEl.value.trim()) executeTranslation(sourceTextEl.value, sourceLangEl.value, targetLangEl.value);
+        });
+        targetLangEl.addEventListener('change', function () {
+          syncTranslatorDirections();
+          if (sourceTextEl.value.trim()) executeTranslation(sourceTextEl.value, sourceLangEl.value, targetLangEl.value);
+        });
+        swapLangEl.addEventListener('click', function () {
+          var tmp = sourceLangEl.value;
+          sourceLangEl.value = targetLangEl.value;
+          targetLangEl.value = tmp;
+          if (currentOutputText && currentOutputText !== PLACEHOLDER_OUTPUT) {
+            var prevIn = sourceTextEl.value;
+            sourceTextEl.value = currentOutputText;
+            currentOutputText = prevIn;
+            updateCharCount();
+            renderOutputState();
+          } else {
+            syncTranslatorDirections();
+          }
+          showToast('Languages swapped');
+        });
+        sourceTextEl.addEventListener('input', function () {
+          updateCharCount();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          var val = sourceTextEl.value;
+          if (val.trim().length > 1) {
+            debounceTimer = setTimeout(function () {
+              executeTranslation(val, sourceLangEl.value, targetLangEl.value);
+            }, 350);
+          } else if (!val.trim()) {
+            currentOutputText = '';
+            renderOutputState();
+          }
+        });
+        translateForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          executeTranslation(sourceTextEl.value, sourceLangEl.value, targetLangEl.value);
+        });
+        micBtn.addEventListener('click', startMicrophone);
+        pasteBtn.addEventListener('click', async function () {
+          try {
+            var text = await navigator.clipboard.readText();
+            if (text) {
+              sourceTextEl.value = text;
+              updateCharCount();
+              executeTranslation(text, sourceLangEl.value, targetLangEl.value);
+              showToast('Text pasted from clipboard');
+            }
+          } catch (e) {
+            showToast('Unable to read clipboard. Please paste manually.');
+          }
+        });
+        clearBtn.addEventListener('click', function () {
+          sourceTextEl.value = '';
+          currentOutputText = '';
+          updateCharCount();
+          renderOutputState();
+          showToast('Text cleared');
+        });
+        sourceListenBtn.addEventListener('click', function () {
+          playSpeech(sourceTextEl.value, sourceLangEl.value, 'source');
+        });
+        listenBtn.addEventListener('click', function () {
+          playSpeech(currentOutputText, targetLangEl.value, 'target');
+        });
+        copyBtn.addEventListener('click', function () {
+          if (!currentOutputText) return;
+          navigator.clipboard.writeText(currentOutputText);
+          showToast('Translation copied!');
+        });
+        saveBtn.addEventListener('click', function () {
+          if (!currentOutputText) return;
+          var item = {
+            id: Date.now().toString(),
+            from: sourceLangEl.value,
+            to: targetLangEl.value,
+            input: sourceTextEl.value.trim() || 'Translation item',
+            output: currentOutputText,
+            timestamp: '♡ Saved'
+          };
+          var exists = savedItems.some(function (i) { return i.input === item.input && i.to === item.to; });
+          if (!exists) {
+            savedItems = [item].concat(savedItems);
+            writeStorage(SAVED_KEY, savedItems);
+            renderSaved();
+          }
+          showToast('Saved to Favorites');
+        });
+        shareBtn.addEventListener('click', async function () {
+          if (!currentOutputText) return;
+          if (navigator.share) {
+            try {
+              await navigator.share({ title: 'LAFZ Translation', text: sourceTextEl.value + '\n\n' + currentOutputText });
+              return;
+            } catch (e) {}
+          }
+          navigator.clipboard.writeText(currentOutputText);
+          showToast('Translation copied to share');
+        });
+        if (voiceGenderLabel) voiceGenderLabel.textContent = voiceGender === 'male' ? 'Male' : 'Female';
+        voiceGenderBtn.addEventListener('click', function () {
+          voiceGender = voiceGender === 'female' ? 'male' : 'female';
+          try { localStorage.setItem(VOICE_GENDER_KEY, voiceGender); } catch (e) {}
+          voiceGenderLabel.textContent = voiceGender === 'male' ? 'Male' : 'Female';
+          showToast('Voice set to ' + (voiceGender === 'male' ? 'Male' : 'Female'));
+        });
+
+        /* History & Saved Events */
+        historySearchEl.addEventListener('input', renderHistory);
+        clearHistoryEl.addEventListener('click', clearAllHistory);
+        clearAllHistoryPageBtn.addEventListener('click', clearAllHistory);
+
+        [historyListEl, fullHistoryListEl].forEach(function (container) {
+          if (!container) return;
+          container.addEventListener('click', function (e) {
+            var btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            var action = btn.getAttribute('data-action');
+            var id = btn.getAttribute('data-id');
+            var item = historyItems.find(function (i) { return i.id === id; });
+            if (!item) return;
+            if (action === 'use') loadEntryIntoTranslator(item);
+            else if (action === 'copy') { navigator.clipboard.writeText(item.output); showToast('Translation copied!'); }
+            else if (action === 'speak') playSpeech(item.output, item.to, 'history');
+            else if (action === 'del') deleteHistoryEntry(id);
+          });
+        });
+
+        if (savedListEl) {
+          savedListEl.addEventListener('click', function (e) {
+            var allSaved = savedItems.length > 0 ? savedItems : [
+              { id: 's1', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Hello', output: 'ہیلو' },
+              { id: 's2', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Welcome', output: 'خوش آمدید' }
+            ];
+            var btnSpeak = e.target.closest('[data-saved-speak]');
+            var btnCopy = e.target.closest('[data-saved-copy]');
+            var btnUse = e.target.closest('[data-saved-use]');
+            var id = (btnSpeak || btnCopy || btnUse) && (btnSpeak || btnCopy || btnUse).getAttribute(btnSpeak ? 'data-saved-speak' : btnCopy ? 'data-saved-copy' : 'data-saved-use');
+            var item = allSaved.find(function (i) { return i.id === id; });
+            if (!item) return;
+            if (btnSpeak) playSpeech(item.output, item.to, 'saved');
+            else if (btnCopy) { navigator.clipboard.writeText(item.output); showToast('Copied'); }
+            else if (btnUse) loadEntryIntoTranslator(item);
+          });
+        }
+        clearAllSavedBtn.addEventListener('click', function () {
+          savedItems = [];
+          try { localStorage.removeItem(SAVED_KEY); } catch (e) {}
+          renderSaved();
+          showToast('Favorites cleared');
+        });
+
+        /* OCR Events */
+        uploadBox.addEventListener('click', function () { imageInput.click(); });
+        takePhotoBtn.addEventListener('click', function (e) { e.stopPropagation(); cameraInput.click(); });
+        chooseFileBtn.addEventListener('click', function (e) { e.stopPropagation(); imageInput.click(); });
+        replaceImage.addEventListener('click', function () { imageInput.click(); });
+        removeImage.addEventListener('click', clearOcrImage);
+        clearImageBtn.addEventListener('click', clearOcrImage);
+        imageInput.addEventListener('change', function (e) {
+          handleOcrFileSelect(e.target.files && e.target.files[0]);
+          e.target.value = '';
+        });
+        cameraInput.addEventListener('change', function (e) {
+          handleOcrFileSelect(e.target.files && e.target.files[0]);
+          e.target.value = '';
+        });
+        ocrSourceEl.addEventListener('change', syncTranslatorDirections);
+        ocrTargetEl.addEventListener('change', syncTranslatorDirections);
+        ocrSwapBtn.addEventListener('click', function () {
+          var tmp = ocrSourceEl.value;
+          ocrSourceEl.value = ocrTargetEl.value;
+          ocrTargetEl.value = tmp;
+          if (ocrExtractedText && ocrTranslatedText) {
+            var t = ocrExtractedText;
+            ocrExtractedText = ocrTranslatedText;
+            ocrTranslatedText = t;
+            extractedTextEl.textContent = ocrExtractedText;
+            imageOutputEl.textContent = ocrTranslatedText;
+          }
+          syncTranslatorDirections();
+          showToast('Languages swapped');
+        });
+        extractBtn.addEventListener('click', function () {
+          if (scannedImageBase64) processOcrImage(scannedImageBase64);
+        });
+        copyExtractedBtn.addEventListener('click', function () {
+          if (!ocrExtractedText) return;
+          navigator.clipboard.writeText(ocrExtractedText);
+          showToast('Copied original text');
+        });
+        copyImageResultBtn.addEventListener('click', function () {
+          if (!ocrTranslatedText) return;
+          navigator.clipboard.writeText(ocrTranslatedText);
+          showToast('Copied translation!');
+        });
+        ocrListenBtn.addEventListener('click', function () {
+          playSpeech(ocrTranslatedText, ocrTargetEl.value, 'ocr');
+        });
+        imageTranslateBtn.addEventListener('click', function () {
+          loadEntryIntoTranslator({
+            from: ocrSourceEl.value,
+            to: ocrTargetEl.value,
+            input: ocrExtractedText,
+            output: ocrTranslatedText
+          });
+        });
+
+        /* PWA Install Handling */
+        var deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+        });
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+          pwaInstallBtn.classList.add('hidden');
+        }
+        pwaInstallBtn.addEventListener('click', async function () {
+          var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            showToast('LAFZ Translation installed successfully!');
+          } else if (isIOS) {
+            iosInstallModal.classList.remove('hidden');
+          } else {
+            showToast('PWA is ready. Install via browser menu (⋮ or Share).');
+          }
+        });
+        closeIosModalBtn.addEventListener('click', function () {
+          iosInstallModal.classList.add('hidden');
+        });
+        iosInstallModal.addEventListener('click', function (e) {
+          if (e.target === iosInstallModal) iosInstallModal.classList.add('hidden');
+        });
+
+        /* Initialize */
+        initLanguages();
+        updateCharCount();
+        renderOutputState();
+        renderHistory();
+        renderSaved();
+        navigateTo(getViewFromLocation(window.location.pathname, window.location.hash), false, window.location.hash === '#historySection' ? '#historySection' : '');
+      })();
+    </script>
   </body>
 </html>

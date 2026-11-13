@@ -38,7 +38,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 
   return (
     <section id="settings" className="screen active">
-      <div className="eyebrow">NOVA CONTROL CENTER</div>
+      <div className="eyebrow">LAFZ TRANSLATION CONTROL CENTER</div>
       <h1>Settings</h1>
       <p className="sub">Customize your translation experience & Gemini API connection.</p>
 

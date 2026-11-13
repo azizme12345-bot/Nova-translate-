@@ -35,13 +35,28 @@ const pages = [
   },
   {
     path: '/about',
-    title: 'About Lafz Translator – Mission & Multilingual AI',
-    desc: 'Discover the technology, mission, and accessibility features behind Lafz Translator, bridging global communication gaps.',
+    title: 'About LAFZ Translation – Simple Language Translation',
+    desc: 'Learn about LAFZ Translation: its mission, what keeps the interface simple, who it helps, and how it stays clear on phones and desktops.',
+  },
+  {
+    path: '/privacy',
+    title: 'Privacy Policy – LAFZ Translation',
+    desc: 'Privacy Policy for LAFZ Translation. Learn what text, voice audio, and images are sent to the server, what stays in your browser storage, and how to clear history.',
+  },
+  {
+    path: '/terms',
+    title: 'Terms of Use – LAFZ Translation',
+    desc: 'Terms of Use for LAFZ Translation covering acceptable use, machine translation limitations, service availability, and content ownership.',
+  },
+  {
+    path: '/contact',
+    title: 'Contact Us – LAFZ Translation',
+    desc: 'Contact LAFZ Translation with questions, feedback, feature suggestions, or bug reports.',
   },
   {
     path: '/sitemap',
-    title: 'Sitemap & Tools Directory – Lafz Translator',
-    desc: 'Explore all translation tools, features, and indexable pages on Lafz Translator. Complete navigation directory for users and search engines.',
+    title: 'Sitemap & Tools Directory – LAFZ Translation',
+    desc: 'Explore all translation tools, features, and indexable pages on LAFZ Translation. Complete navigation directory for users and search engines.',
   },
 ];
 

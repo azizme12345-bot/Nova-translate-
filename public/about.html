@@ -3,71 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>About – Lafz Translator</title>
-    <meta name="description" content="Learn how to use Lafz Translator, why people choose it for English and Urdu translation, and answers to common questions." />
+    <title>About LAFZ Translation — Simple Language Translation</title>
+    <meta name="description" content="Learn about LAFZ Translation: its mission, what keeps the interface simple, who it helps, and how it stays clear on phones and desktops." />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://nova-translate-orpin.vercel.app/about.html" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/favicon.png?v=2" />
     <style>
-      body { font-family: system-ui, -apple-system, sans-serif; background: #f0f0f0; color: #1f2937; margin: 0; padding: 0; line-height: 1.6; }
-      header { background: #2e7d32; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
-      header a { color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; }
-      main { max-width: 820px; margin: 24px auto; background: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e5e7eb; }
-      h1 { font-size: 24px; margin-top: 0; color: #111827; }
-      h2 { font-size: 18px; color: #2e7d32; margin-top: 24px; }
-      h3 { font-size: 15px; color: #111827; margin-bottom: 4px; }
-      p, li { font-size: 14px; color: #4b5563; }
-      ol, ul { padding-left: 20px; }
-      li { margin-bottom: 8px; }
-      .faq-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-      footer { max-width: 820px; margin: 20px auto 32px; text-align: center; font-size: 13px; color: #6b7280; }
-      footer a { color: #2e7d32; text-decoration: none; margin: 0 10px; font-weight: 600; }
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { max-width: 100%; overflow-x: clip; margin: 0; padding: 0; }
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Inter', Arial, sans-serif;
+        background:
+          radial-gradient(1100px 500px at 92% -10%, #dcebff 0%, transparent 60%),
+          radial-gradient(900px 480px at -10% 8%, #d9f5ee 0%, transparent 55%),
+          #f4f7fb;
+        color: #16263b;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      header {
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid #e3eaf3;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      header a { color: #1d5fb8; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+      header img { height: 34px; width: auto; border-radius: 8px; }
+      main {
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+        flex: 1 1 auto;
+        text-align: left;
+      }
+      h1 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1.2;
+        color: #0f2a4a;
+        margin: 0 0 14px;
+      }
+      h2 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.3;
+        color: #0f2a4a;
+        margin: 36px 0 12px;
+      }
+      p {
+        font-size: 17px;
+        color: #55657b;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      }
+      p a { color: #1d5fb8; font-weight: 600; }
+      @media (min-width: 768px) {
+        h1 { font-size: 30px; }
+        p { font-size: 18px; }
+      }
+      footer {
+        border-top: 1px solid #e3eaf3;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 20px;
+        text-align: center;
+        font-size: 13px;
+        color: #6b7a8f;
+      }
+      footer a { color: #1d5fb8; text-decoration: none; margin: 0 10px; font-weight: 600; }
       footer a:hover { text-decoration: underline; }
     </style>
   </head>
   <body>
     <header>
-      <a href="/">← Lafz Translator</a>
-      <span>About</span>
+      <a href="/"><img src="/lafz-logo-icon.png" alt="LAFZ Translation Logo" /><span>← LAFZ Translation</span></a>
+      <span style="font-size:13px;font-weight:700;color:#0f2a4a;">About</span>
     </header>
     <main>
-      <h1>About Lafz Translator</h1>
+      <h1>About LAFZ Translation</h1>
       <p>
-        Lafz Translator is a fast, clean web application built for everyday translation between English, Urdu, and more than 100 other languages.
+        Clear, direct language translation for English, Urdu, and everyday global communication without clutter or sign-up walls.
       </p>
 
-      <h2>How to use Lafz Translator</h2>
-      <ol>
-        <li><strong>Type or speak:</strong> Enter your text in the box, tap the microphone to speak, or scan printed text with your camera.</li>
-        <li><strong>Choose the language:</strong> Select your source and target languages, such as English and Urdu, or swap them with one tap.</li>
-        <li><strong>Read or listen to the translation:</strong> View the result right away, copy it to your clipboard, or tap the speaker icon to hear it aloud.</li>
-      </ol>
+      <h2>Our Mission</h2>
+      <p>
+        LAFZ Translation exists to make everyday translation straightforward for people who need quick, readable results. Many translation websites crowd the screen with pop-ups, complicated menus, or mandatory sign-in prompts. Our mission is to provide one clean web workspace where anyone can open the page and translate words, sentences, spoken phrases, or printed text from images right away. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+      </p>
 
-      <h2>Why Lafz Translator</h2>
-      <ul>
-        <li><strong>Fast results:</strong> Translations appear quickly so you can keep conversations moving without waiting.</li>
-        <li><strong>Simple layout:</strong> Clean controls for text, voice, and camera make it easy to use on any phone or computer.</li>
-        <li><strong>Privacy in the browser:</strong> Your translation history stays in your own browser storage, and you can clear it anytime.</li>
-      </ul>
+      <h2>What Keeps the Tool Simple</h2>
+      <p>
+        Every core feature lives in an uncluttered workspace. Pick your source and target languages, enter your text, tap Speak for microphone voice input, or open Camera OCR to extract printed text from a photo. Text, recorded voice audio, and chosen images are sent to the server and handled through the connected translation service, while Listen uses browser and device speech features.
+      </p>
+      <p>
+        Quick controls let you swap languages, paste from the clipboard, copy results in one tap, or save useful phrases. Recent translation history stays locally inside your browser's localStorage under your device control and is not synced across other devices, so you can review or clear entries anytime.
+      </p>
 
-      <h2>Frequently asked questions</h2>
-      <div class="faq-item">
-        <h3>Is it free?</h3>
-        <p>Yes, Lafz Translator is free to use for text, voice, and camera translation in your browser.</p>
-      </div>
-      <div class="faq-item">
-        <h3>Does it work on phones?</h3>
-        <p>Yes, it works on Android and iPhone browsers and can be added to your home screen like an app.</p>
-      </div>
-      <div class="faq-item">
-        <h3>Does it need an account?</h3>
-        <p>No account or sign-in is needed. Open the page and start translating right away.</p>
-      </div>
+      <h2>Who LAFZ Translation Is For</h2>
+      <p>
+        Students use LAFZ Translation to check vocabulary, reading notes, and homework sentences across English and Urdu. Travellers rely on quick text input and photo scanning to understand street signs, restaurant menus, and everyday directions. Language learners practice reading sentences and listening to pronunciation side by side, while professionals draft clear daily messages across languages without slow setup steps.
+      </p>
+
+      <h2>Clear Design on Phones and Desktops</h2>
+      <p>
+        The layout adjusts naturally to whatever screen you are using. On mobile phones, controls stack cleanly with comfortable spacing and readable type so dropdown menus, buttons, and paragraphs stay inside the screen without sideways scrolling. On tablets and desktop monitors, source and output boxes appear side by side, with proper right-to-left alignment for scripts including Urdu and Arabic. Every page follows the same clean structure for quick reading.
+      </p>
+
+      <h2>Have Questions or Feedback?</h2>
+      <p>
+        We welcome suggestions, bug reports, and general questions by email anytime. Email <a href="mailto:azizme12345@gmail.com">azizme12345@gmail.com</a>.
+      </p>
     </main>
     <footer>
       <a href="/">Home</a>
       <a href="/about.html">About</a>
       <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
       <a href="/contact.html">Contact</a>
     </footer>
   </body>

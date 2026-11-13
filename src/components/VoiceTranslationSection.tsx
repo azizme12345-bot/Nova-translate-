@@ -7,81 +7,109 @@ interface VoiceTranslationSectionProps {
 
 export const VoiceTranslationSection: React.FC<VoiceTranslationSectionProps> = ({ onBack, onNavigate }) => {
   useEffect(() => {
-    document.title = 'Voice Speech Translation & Live Call — Lafz Translator';
+    document.title = 'Voice Speech Translation & Live Audio — LAFZ Translation';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute('content', 'Speak naturally and translate your voice in real-time across 100+ languages with continuous voice recognition and AI speech synthesis.');
+      metaDesc.setAttribute(
+        'content',
+        'Speak naturally and translate your voice in real-time across 100+ languages with continuous voice recognition and AI speech synthesis.'
+      );
     }
   }, []);
 
   return (
-    <div className="flex flex-col flex-1 bg-[#f0f0f0] rounded-xl overflow-hidden shadow-sm border border-gray-200">
-      {/* Header */}
-      <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => { window.history.pushState({}, '', '/'); onBack(); }}
-            className="text-white hover:bg-white/10 px-2 py-1 rounded-md text-sm font-semibold flex items-center gap-1 transition cursor-pointer"
-          >
-            ← Home
-          </button>
-          <span className="font-bold tracking-wide text-sm sm:text-base">
-            Voice & Live Call Translation
-          </span>
-        </div>
+    <div className="lafz-wrap py-6 sm:py-8 flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => {
+            window.history.pushState({}, '', '/');
+            onBack();
+          }}
+          className="text-xs sm:text-sm font-bold text-[#1d5fb8] hover:underline flex items-center gap-1.5 cursor-pointer"
+        >
+          ← Back to Translator
+        </button>
+
+        <span className="text-xs font-bold text-[#6b7a8f] uppercase tracking-wider">
+          Voice Speech Engine
+        </span>
       </div>
 
-      <div className="p-4 sm:p-6 flex-1 flex flex-col gap-6 bg-white overflow-y-auto">
-        <header>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Real-Time Voice Speech Translation</h1>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Communicate effortlessly across language barriers using your voice. Lafz Translator features advanced speech recognition and continuous voice translation, allowing you to speak freely and hear instant audio translations.
+      <article className="lafz-card p-5 sm:p-7 flex flex-col gap-6">
+        <header className="border-b border-[#e3eaf3] pb-4">
+          <h1
+            className="text-2xl sm:text-3xl font-extrabold text-[#0f2a4a] mb-2"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Real-Time Voice &amp; Speech Translation
+          </h1>
+          <p className="text-sm text-[#6b7a8f] leading-relaxed">
+            Communicate effortlessly across language barriers using your natural voice. Powered by Google Gemini AI speech recognition and text-to-speech synthesis.
           </p>
         </header>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-800">Voice Translation Features</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <h3 className="font-bold text-sm text-[#2e7d32] mb-1">🎙️ Continuous Speech Recognition</h3>
-              <p className="text-xs text-gray-600">Speak naturally without worrying about short pauses. The mic stays active until you finish.</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <h3 className="font-bold text-sm text-[#2e7d32] mb-1">📞 Live Call Translation Mode</h3>
-              <p className="text-xs text-gray-600">Two-way conversation mode designed for bilingual dialogues and live interpretations.</p>
-            </div>
+        {/* Feature Cards Grid */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-5 bg-[#fafcfe] rounded-2xl border border-[#e3eaf3] flex flex-col gap-2">
+            <span className="text-2xl">🎙️</span>
+            <h2 className="font-bold text-sm text-[#0f2a4a]">Continuous Speech Recognition</h2>
+            <p className="text-xs text-[#6b7a8f] leading-relaxed">
+              Speak full sentences without worrying about short pauses. The mic keeps recording until you choose to stop.
+            </p>
+          </div>
+
+          <div className="p-5 bg-[#fafcfe] rounded-2xl border border-[#e3eaf3] flex flex-col gap-2">
+            <span className="text-2xl">🗣️</span>
+            <h2 className="font-bold text-sm text-[#0f2a4a]">Bilingual Speech Synthesis</h2>
+            <p className="text-xs text-[#6b7a8f] leading-relaxed">
+              Listen to high-definition pronunciations in male or female natural voices for English, Urdu, and more.
+            </p>
           </div>
         </section>
 
-        <section className="mt-4 pt-6 border-t border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800 mb-3">Frequently Asked Questions on Voice Translation</h2>
+        {/* FAQ Section */}
+        <section className="pt-2 flex flex-col gap-3">
+          <h2
+            className="text-lg font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Voice Translation Guide
+          </h2>
           <div className="space-y-3">
-            <details className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <summary className="font-semibold text-sm text-gray-800 cursor-pointer">How do I use voice translation?</summary>
-              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Tap the microphone icon on the <button onClick={() => { window.history.pushState({}, '', '/'); onBack(); }} className="text-[#2e7d32] font-bold underline cursor-pointer">home page</button> and speak clearly into your device microphone. Your speech will be converted to text and translated instantly.
+            <div className="p-4 bg-[#fafcfe] rounded-2xl border border-[#e3eaf3]">
+              <h3 className="font-bold text-xs sm:text-sm text-[#0f2a4a] mb-1">
+                How do I grant microphone access?
+              </h3>
+              <p className="text-xs text-[#6b7a8f] leading-relaxed">
+                When prompted by your browser, tap Allow. You can also adjust permissions anytime in your browser site settings.
               </p>
-            </details>
-            <details className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <summary className="font-semibold text-sm text-gray-800 cursor-pointer">Why is microphone permission required?</summary>
-              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Browser security requires microphone access permission to capture your voice input for speech-to-text translation.
+            </div>
+
+            <div className="p-4 bg-[#fafcfe] rounded-2xl border border-[#e3eaf3]">
+              <h3 className="font-bold text-xs sm:text-sm text-[#0f2a4a] mb-1">
+                Does voice translation work in noisy environments?
+              </h3>
+              <p className="text-xs text-[#6b7a8f] leading-relaxed">
+                Yes, our audio pre-processing and Opus compression optimize voice clarity before transcription to maintain high accuracy.
               </p>
-            </details>
+            </div>
           </div>
         </section>
 
-        <div className="mt-auto pt-6 flex justify-center">
+        <div className="pt-4 flex justify-center">
           <button
             type="button"
-            onClick={() => { window.history.pushState({}, '', '/'); onBack(); }}
-            className="bg-[#2e7d32] hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition cursor-pointer"
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              onBack();
+            }}
+            className="lafz-primary-btn text-sm px-6 py-3 cursor-pointer"
           >
-            Try Voice Translation Now ➔
+            Open Voice Translator ➔
           </button>
         </div>
-      </div>
+      </article>
     </div>
   );
 };

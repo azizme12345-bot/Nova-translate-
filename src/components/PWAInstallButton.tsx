@@ -17,7 +17,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onToast }) =
     if (isInstallable) {
       const outcome = await install();
       if (outcome) {
-        onToast('Lafz Translator installed successfully!');
+        onToast('LAFZ Translation installed successfully!');
       }
     } else if (isIOS) {
       setShowIOSModal(true);
@@ -29,10 +29,10 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ onToast }) =
   return (
     <>
       <button
-        className="mini"
+        className="mini whitespace-nowrap shrink-0 rounded-xl text-xs font-semibold cursor-pointer"
         onClick={handleInstallClick}
-        title="Install Lafz Translator App"
-        style={{ color: '#0284c7', borderColor: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'rgba(2, 132, 199, 0.08)' }}
+        title="Install LAFZ Translation App"
+        style={{ color: '#0284c7', border: '1px solid #0284c7', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(2, 132, 199, 0.08)' }}
         type="button"
       >
         <span style={{ fontSize: '14px', fontWeight: 900, color: '#1E3A8A', background: 'linear-gradient(135deg, #1E3A8A, #06B6D4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>N</span>

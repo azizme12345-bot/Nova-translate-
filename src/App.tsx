@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HistoryItem, SavedItem, ActivePage } from './types.ts';
-import { ApiClient, LanguageOption } from './services/apiClient.ts';
+import { LanguageOption } from './services/apiClient.ts';
 import { AppLanguage, getSavedLanguage, setSavedLanguage } from './services/i18n.ts';
+import { Topbar } from './components/Topbar.tsx';
 import { HomeSection } from './components/HomeSection.tsx';
 import { CameraSection } from './components/CameraSection.tsx';
 import { HistorySection } from './components/HistorySection.tsx';
@@ -10,6 +11,9 @@ import { LanguagesSection } from './components/LanguagesSection.tsx';
 import { TextTranslationSection } from './components/TextTranslationSection.tsx';
 import { VoiceTranslationSection } from './components/VoiceTranslationSection.tsx';
 import { AboutSection } from './components/AboutSection.tsx';
+import { PrivacySection } from './components/PrivacySection.tsx';
+import { ContactSection } from './components/ContactSection.tsx';
+import { TermsSection } from './components/TermsSection.tsx';
 import { SitemapSection } from './components/SitemapSection.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Toast } from './components/Toast.tsx';
@@ -62,68 +66,131 @@ const setMeta = (title: string, description: string, path: string) => {
   setTag('meta[name="twitter:url"]', 'content', fullUrl);
 };
 
-const getPageFromPath = (path: string): { view: ActivePage; title: string; desc: string; canonical: string } => {
-  if (path === '/camera' || path === '/camera-translation') {
+const getPageFromRoute = (
+  pathname: string,
+  hash = ''
+): { view: ActivePage; title: string; desc: string; canonical: string } => {
+  const cleanHash = (hash || '').toLowerCase();
+  const normalizedPath =
+    cleanHash === '#image' || cleanHash === '#camera'
+      ? '/camera'
+      : cleanHash === '#history'
+      ? '/history'
+      : cleanHash === '#saved'
+      ? '/saved'
+      : cleanHash === '#voice' || cleanHash === '#voice-translation'
+      ? '/voice'
+      : cleanHash === '#text-translation'
+      ? '/text-translation'
+      : cleanHash === '#languages'
+      ? '/languages'
+      : cleanHash === '#about' || cleanHash === '#content'
+      ? '/about'
+      : cleanHash === '#privacy'
+      ? '/privacy'
+      : cleanHash === '#contact'
+      ? '/contact'
+      : cleanHash === '#terms'
+      ? '/terms'
+      : cleanHash === '#sitemap'
+      ? '/sitemap'
+      : cleanHash === '#home' || cleanHash === '#translate' || cleanHash === '#historySection'
+      ? '/'
+      : pathname;
+
+  if (normalizedPath === '/camera' || normalizedPath === '/camera-translation' || normalizedPath === '/image') {
     return {
       view: 'image',
-      title: 'Camera OCR & Photo Translator – Lafz Translator',
+      title: 'Camera OCR & Photo Translator – LAFZ Translation',
       desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents directly using your mobile camera or uploaded image.',
-      canonical: '/camera'
+      canonical: '/camera',
     };
   }
-  if (path === '/history') {
+  if (normalizedPath === '/history') {
     return {
       view: 'history',
-      title: 'Translation History & Activity Log – Lafz Translator',
+      title: 'Translation History & Activity Log – LAFZ Translation',
       desc: 'View, search, replay, and manage your recent translations with private device storage and one-click clipboard copying.',
-      canonical: '/history'
+      canonical: '/history',
     };
   }
-  if (path === '/voice' || path === '/voice-translation') {
+  if (normalizedPath === '/saved') {
+    return {
+      view: 'saved',
+      title: 'Saved Translations – LAFZ Translation',
+      desc: 'Review and reuse your saved translations stored privately in your browser.',
+      canonical: '/saved',
+    };
+  }
+  if (normalizedPath === '/voice' || normalizedPath === '/voice-translation') {
     return {
       view: 'voice-translation',
-      title: 'Voice Translator & Speech-to-Text – Lafz Translator',
+      title: 'Voice Translator & Speech-to-Text – LAFZ Translation',
       desc: 'Speak naturally and translate your voice in real-time between English and Urdu with continuous microphone input and natural audio playback.',
-      canonical: '/voice'
+      canonical: '/voice',
     };
   }
-  if (path === '/text-translation') {
+  if (normalizedPath === '/text-translation') {
     return {
       view: 'text-translation',
-      title: 'Text Translation – Lafz Translator',
+      title: 'Text Translation – LAFZ Translation',
       desc: 'Instant bidirectional AI text translation supporting English, Urdu, and 100+ languages. Fast sentence, paragraph, and document translator.',
-      canonical: '/text-translation'
+      canonical: '/text-translation',
     };
   }
-  if (path === '/languages') {
+  if (normalizedPath === '/languages') {
     return {
       view: 'languages',
-      title: 'Supported Languages Directory – Lafz Translator',
-      desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in Lafz Translator.',
-      canonical: '/languages'
+      title: 'Supported Languages Directory – LAFZ Translation',
+      desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in LAFZ Translation.',
+      canonical: '/languages',
     };
   }
-  if (path === '/about') {
+  if (normalizedPath === '/about' || normalizedPath === '/about.html') {
     return {
       view: 'about',
-      title: 'About Lafz Translator – Mission & Multilingual AI',
-      desc: 'Discover the technology, mission, and accessibility features behind Lafz Translator, bridging global communication gaps.',
-      canonical: '/about'
+      title: 'About LAFZ Translation – Simple Language Translation',
+      desc: 'Learn about LAFZ Translation: its mission, what keeps the interface simple, who it helps, and how it stays clear on phones and desktops.',
+      canonical: '/about',
     };
   }
-  if (path === '/sitemap') {
+  if (normalizedPath === '/privacy' || normalizedPath === '/privacy.html') {
+    return {
+      view: 'privacy',
+      title: 'Privacy Policy – LAFZ Translation',
+      desc: 'Privacy Policy for LAFZ Translation. Learn what text, voice audio, and images are sent to the server, what stays in your browser storage, and how to clear history.',
+      canonical: '/privacy',
+    };
+  }
+  if (normalizedPath === '/contact' || normalizedPath === '/contact.html') {
+    return {
+      view: 'contact',
+      title: 'Contact Us – LAFZ Translation',
+      desc: 'Contact LAFZ Translation with questions, feedback, feature suggestions, or bug reports.',
+      canonical: '/contact',
+    };
+  }
+  if (normalizedPath === '/terms' || normalizedPath === '/terms.html') {
+    return {
+      view: 'terms',
+      title: 'Terms of Use – LAFZ Translation',
+      desc: 'Terms of Use for LAFZ Translation covering acceptable use, machine translation limitations, service availability, and content ownership.',
+      canonical: '/terms',
+    };
+  }
+  if (normalizedPath === '/sitemap') {
     return {
       view: 'sitemap',
-      title: 'Sitemap & Tools Directory – Lafz Translator',
-      desc: 'Explore all translation tools, features, and indexable pages on Lafz Translator. Complete navigation directory for users and search engines.',
-      canonical: '/sitemap'
+      title: 'Sitemap & Tools Directory – LAFZ Translation',
+      desc: 'Explore all translation tools, features, and indexable pages on LAFZ Translation. Complete navigation directory for users and search engines.',
+      canonical: '/sitemap',
     };
   }
   return {
     view: 'translate',
-    title: 'Lafz Translator – AI Translation Workspace',
-    desc: 'Lafz Translator is an advanced AI translation workspace for English, Urdu, and 100+ languages. Translate text, real-time voice, and documents with high accuracy.',
-    canonical: '/'
+    title: 'LAFZ Translation — Simple Language Translation',
+    desc: 'LAFZ Translation is a fast, clean AI translation workspace for English, Urdu, and 100+ languages. Translate text, real-time voice, and camera photos.',
+    canonical: '/',
   };
 };
 
@@ -131,7 +198,7 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [lang, setLang] = useState<AppLanguage>(() => getSavedLanguage());
   const [activeView, setActiveView] = useState<ActivePage>(() => {
-    const route = getPageFromPath(window.location.pathname);
+    const route = getPageFromRoute(window.location.pathname, window.location.hash);
     setMeta(route.title, route.desc, route.canonical);
     return route.view;
   });
@@ -141,7 +208,7 @@ export default function App() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
 
-  // History & Saved State
+  // History & Saved State (strictly keeping localStorage keys)
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     try {
       const saved = localStorage.getItem('nova_translation_history');
@@ -168,29 +235,38 @@ export default function App() {
     let path = '/';
     if (page === 'image' || page === 'camera') path = '/camera';
     else if (page === 'history') path = '/history';
-    else if (page === 'voice-translation') path = '/voice';
+    else if (page === 'saved') path = '/saved';
+    else if (page === 'voice-translation' || page === 'voice') path = '/voice';
     else if (page === 'text-translation') path = '/text-translation';
     else if (page === 'languages') path = '/languages';
     else if (page === 'about') path = '/about';
+    else if (page === 'privacy') path = '/privacy';
+    else if (page === 'contact') path = '/contact';
+    else if (page === 'terms') path = '/terms';
     else if (page === 'sitemap') path = '/sitemap';
     else if (page === 'translate' || page === 'home') path = '/';
 
-    const routeInfo = getPageFromPath(path);
+    const routeInfo = getPageFromRoute(path);
     setMeta(routeInfo.title, routeInfo.desc, routeInfo.canonical);
 
-    if (pushHistory && window.location.pathname !== path) {
+    if (pushHistory && (window.location.pathname !== path || window.location.hash)) {
       window.history.pushState({}, '', path);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   useEffect(() => {
-    const handlePopState = () => {
-      const route = getPageFromPath(window.location.pathname);
+    const syncRouteFromBrowser = () => {
+      const route = getPageFromRoute(window.location.pathname, window.location.hash);
       setMeta(route.title, route.desc, route.canonical);
       setActiveView(route.view);
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', syncRouteFromBrowser);
+    window.addEventListener('hashchange', syncRouteFromBrowser);
+    return () => {
+      window.removeEventListener('popstate', syncRouteFromBrowser);
+      window.removeEventListener('hashchange', syncRouteFromBrowser);
+    };
   }, []);
 
   // Intercept internal link clicks
@@ -199,13 +275,25 @@ export default function App() {
       const target = (e.target as HTMLElement).closest('a');
       if (target && target.href && target.href.startsWith(window.location.origin)) {
         const url = new URL(target.href);
+        if (url.pathname === '/sitemap.xml' || url.pathname === '/robots.txt') {
+          return;
+        }
         const path = url.pathname;
-        if (path && path !== '#') {
+        const hash = url.hash;
+        if (path || hash) {
           e.preventDefault();
-          window.history.pushState({}, '', path);
-          const route = getPageFromPath(path);
+          const route = getPageFromRoute(path, hash);
+          const nextUrl = hash ? `${path}${hash}` : path;
+          window.history.pushState({}, '', nextUrl);
           setMeta(route.title, route.desc, route.canonical);
           setActiveView(route.view);
+          if (hash === '#historySection') {
+            setTimeout(() => {
+              document.getElementById('historySection')?.scrollIntoView({ behavior: 'smooth' });
+            }, 50);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
         }
       }
     };
@@ -282,9 +370,18 @@ export default function App() {
   };
 
   return (
-    <div className="bg-[#f0f0f0] text-gray-800 min-h-screen flex flex-col font-sans relative">
-      <main className="w-full max-w-4xl mx-auto flex-1 flex flex-col p-2 sm:p-4">
-        {activeView === 'translate' && (
+    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col font-sans relative selection:bg-blue-100 selection:text-blue-900">
+      {/* Universal Sticky Topbar */}
+      <Topbar
+        activeView={activeView}
+        onNavigate={(page) => changeView(page, true)}
+        onToast={showToast}
+        onOpenApiKeyModal={() => setShowApiKeyModal(true)}
+        onOpenCallModal={() => setShowCallModal(true)}
+      />
+
+      <main className="flex-1 w-full max-w-full min-w-0 pb-10">
+        {(activeView === 'translate' || activeView === 'home') && (
           <HomeSection
             languages={DEFAULT_LANGUAGES}
             history={history}
@@ -292,16 +389,7 @@ export default function App() {
             onDeleteHistoryItem={handleDeleteHistoryItem}
             onClearHistory={handleClearHistory}
             onAddSaved={handleAddSaved}
-            onNavigate={(page) => {
-              if (page === 'image' || page === 'camera') changeView('image', true);
-              else if (page === 'languages') changeView('languages', true);
-              else if (page === 'about') changeView('about', true);
-              else if (page === 'sitemap') changeView('sitemap', true);
-              else if (page === 'text-translation') changeView('text-translation', true);
-              else if (page === 'voice-translation' || page === 'voice') changeView('voice-translation', true);
-              else if (page === 'history') changeView('history', true);
-              else changeView('translate', true);
-            }}
+            onNavigate={(page) => changeView(page, true)}
             onToast={showToast}
             loadedItem={loadedItem}
             onClearLoadedItem={() => setLoadedItem(null)}
@@ -312,7 +400,7 @@ export default function App() {
           />
         )}
 
-        {activeView === 'image' && (
+        {(activeView === 'image' || activeView === 'camera') && (
           <CameraSection
             languages={DEFAULT_LANGUAGES}
             onBack={() => changeView('translate', true)}
@@ -328,7 +416,7 @@ export default function App() {
           />
         )}
 
-        {activeView === 'voice-translation' && (
+        {(activeView === 'voice-translation' || activeView === 'voice') && (
           <VoiceTranslationSection
             onBack={() => changeView('translate', true)}
             onNavigate={(p) => changeView(p, true)}
@@ -346,6 +434,27 @@ export default function App() {
 
         {activeView === 'about' && (
           <AboutSection
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
+          />
+        )}
+
+        {activeView === 'privacy' && (
+          <PrivacySection
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
+          />
+        )}
+
+        {activeView === 'contact' && (
+          <ContactSection
+            onBack={() => changeView('translate', true)}
+            onNavigate={(p) => changeView(p, true)}
+          />
+        )}
+
+        {activeView === 'terms' && (
+          <TermsSection
             onBack={() => changeView('translate', true)}
             onNavigate={(p) => changeView(p, true)}
           />
@@ -389,7 +498,12 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={(p) => changeView(p, true)} lang={lang} onToggleLang={toggleLang} />
+      <Footer
+        activeView={activeView}
+        onNavigate={(p) => changeView(p, true)}
+        lang={lang}
+        onToggleLang={toggleLang}
+      />
 
       {/* Modals */}
       {showApiKeyModal && (

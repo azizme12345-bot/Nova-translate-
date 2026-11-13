@@ -6,20 +6,15 @@ interface NovaLogoProps {
 }
 
 /**
- * Official Lafz Translator Logo
- * Green 3D icon with 'A' and '文' rounded tiles & curved arrows
+ * Official LAFZ Translation Logo
  */
-export const NovaLogo: React.FC<NovaLogoProps> = ({ size = 52, className = '' }) => {
+export const NovaLogo: React.FC<NovaLogoProps> = ({ size = 40, className = '' }) => {
   return (
     <img
-      src="/app-logo.png"
-      alt="Lafz Translator Official Logo"
-      width={size}
-      height={size}
-      className={`rounded-xl shadow-sm object-cover shrink-0 select-none transition-transform duration-200 hover:scale-105 ${className}`}
-      style={{ width: `${size}px`, height: `${size}px` }}
-      loading="eager"
+      src="/lafz-logo-icon.png"
+      alt="LAFZ Translation Logo"
+      style={{ height: `${size}px`, width: 'auto' }}
+      className={`rounded-xl object-contain block ${className}`}
     />
   );
 };
-

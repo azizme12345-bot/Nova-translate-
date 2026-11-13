@@ -25,8 +25,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // Configure HMR client port or disable HMR when running in AI Studio dev environment
-      hmr: process.env.DISABLE_HMR === 'true' ? false : { clientPort: 443 },
+      // Disable HMR WebSocket in middleware/proxy environment to prevent client WebSocket errors
+      hmr: false,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

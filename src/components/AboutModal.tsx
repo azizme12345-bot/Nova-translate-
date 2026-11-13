@@ -16,14 +16,14 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <BrandLogo size={46} />
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
-              Lafz Translator
+              LAFZ Translation
             </h3>
             <small style={{ color: 'var(--muted)' }}>v1.0 Production Edition</small>
           </div>
         </div>
         <div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>
           <p style={{ margin: '0 0 10px' }}>
-            Lafz Translator is a high-performance translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
+            LAFZ Translation is a high-performance translation platform supporting text translation, language detection, voice synthesis, speech recognition, and visual camera OCR across 100+ languages.
           </p>
           <p style={{ margin: '0 0 10px' }}>
             <strong>Engine:</strong> Powered by Gemini 1.5 Flash multimodal reasoning on a secure serverless backend.

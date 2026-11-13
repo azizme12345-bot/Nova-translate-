@@ -3,7 +3,7 @@ import { ApiClient, LanguageOption } from '../services/apiClient.ts';
 import { GlobalAudioPlayer, getSavedVoiceGender, setSavedVoiceGender, VoiceGender } from '../services/audioPlayer.ts';
 import { AudioCompressor } from '../services/audioCompressor.ts';
 import { HistoryItem, SavedItem, ActivePage } from '../types.ts';
-import { AppLanguage, t } from '../services/i18n.ts';
+import { AppLanguage } from '../services/i18n.ts';
 
 interface HomeSectionProps {
   activeScreen?: 'home' | 'translate';
@@ -15,7 +15,6 @@ interface HomeSectionProps {
   onAddSaved: (item: SavedItem) => void;
   onNavigate: (page: ActivePage) => void;
   onToast: (msg: string) => void;
-  autoDetectEnabled?: boolean;
   voiceOutputEnabled?: boolean;
   loadedItem: HistoryItem | null;
   onClearLoadedItem: () => void;
@@ -24,6 +23,8 @@ interface HomeSectionProps {
   lang?: AppLanguage;
   onToggleLang?: () => void;
 }
+
+const PLACEHOLDER_OUTPUT = 'Translation will appear here...';
 
 export const HomeSection: React.FC<HomeSectionProps> = ({
   languages,
@@ -37,23 +38,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   voiceOutputEnabled = true,
   loadedItem,
   onClearLoadedItem,
-  onOpenCallModal,
-  onOpenApiKeyModal,
-  lang = 'en',
-  onToggleLang,
 }) => {
   const [fromLang, setFromLang] = useState('English 🇬🇧');
   const [toLang, setToLang] = useState('Urdu 🇵🇰');
   const [inputText, setInputText] = useState('');
-  const [outputText, setOutputText] = useState('Translation will appear here...');
+  const [outputText, setOutputText] = useState(PLACEHOLDER_OUTPUT);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingField, setSpeakingField] = useState<'source' | 'target' | null>(null);
-  const [isSplit, setIsSplit] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [showDrawerHistory, setShowDrawerHistory] = useState(false);
   const [voiceGender, setVoiceGender] = useState<VoiceGender>(() => getSavedVoiceGender());
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
 
   // Refs for speech recognition & recorder
   const recognitionRef = useRef<any>(null);
@@ -61,7 +56,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const isListeningRef = useRef<boolean>(false);
-  const silenceTimerRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<number | null>(null);
 
   // Populate loaded item if coming from History/Saved/Camera
@@ -85,28 +79,52 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     };
   }, []);
 
-  const isSourceUrdu = fromLang.includes('Urdu') || fromLang.includes('Arabic') || fromLang.includes('Punjabi');
-  const isTargetUrdu = toLang.includes('Urdu') || toLang.includes('Arabic') || toLang.includes('Punjabi');
+  const isSourceRTL =
+    fromLang.includes('Urdu') ||
+    fromLang.includes('Arabic') ||
+    fromLang.includes('Punjabi') ||
+    fromLang.includes('Hebrew') ||
+    fromLang.includes('Persian');
+
+  const isTargetRTL =
+    toLang.includes('Urdu') ||
+    toLang.includes('Arabic') ||
+    toLang.includes('Punjabi') ||
+    toLang.includes('Hebrew') ||
+    toLang.includes('Persian');
 
   const handleSwap = () => {
     const temp = fromLang;
     setFromLang(toLang);
     setToLang(temp);
 
-    if (outputText && outputText !== 'Translation will appear here...' && outputText !== 'Translating...') {
+    if (outputText && outputText !== PLACEHOLDER_OUTPUT && outputText !== 'Translating...') {
       const prevInput = inputText;
       const prevOutput = outputText;
       setInputText(prevOutput);
-      setOutputText(prevInput || 'Translation will appear here...');
+      setOutputText(prevInput || PLACEHOLDER_OUTPUT);
     }
     onToast('Languages swapped');
   };
 
   const handleClear = () => {
     setInputText('');
-    setOutputText('Translation will appear here...');
+    setOutputText(PLACEHOLDER_OUTPUT);
     setConfidence(null);
     onToast('Text cleared');
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setInputText(text);
+        executeTranslation(text, fromLang, toLang, false);
+        onToast('Text pasted from clipboard');
+      }
+    } catch {
+      onToast('Unable to read clipboard. Please paste manually.');
+    }
   };
 
   const handleCopyInput = () => {
@@ -116,17 +134,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   };
 
   const handleCopyOutput = () => {
-    if (!outputText || outputText === 'Translation will appear here...' || outputText === 'Translating...') return;
+    if (!outputText || outputText === PLACEHOLDER_OUTPUT || outputText === 'Translating...') return;
     navigator.clipboard.writeText(outputText);
     onToast('Translation copied!');
   };
 
   const handleShareOutput = async () => {
-    if (!outputText || outputText === 'Translation will appear here...' || outputText === 'Translating...') return;
+    if (!outputText || outputText === PLACEHOLDER_OUTPUT || outputText === 'Translating...') return;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Lafz Translator',
+          title: 'LAFZ Translation',
           text: `${inputText}\n\n${outputText}`,
         });
         return;
@@ -137,23 +155,20 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   };
 
   const handleSaveOutput = () => {
-    if (!outputText || outputText === 'Translation will appear here...' || outputText === 'Translating...') return;
+    if (!outputText || outputText === PLACEHOLDER_OUTPUT || outputText === 'Translating...') return;
     onAddSaved({
       id: Date.now().toString(),
       from: fromLang,
       to: toLang,
-      input: inputText.trim() || 'Hello',
+      input: inputText.trim() || 'Translation item',
       output: outputText,
       timestamp: '♡ Saved',
     });
   };
 
-  // --------------------------------------------------------------------------
-  // AUDIO PLAYBACK / TTS LISTENING
-  // --------------------------------------------------------------------------
   const handleSpeak = (text: string, langName: string, field: 'source' | 'target') => {
     const clean = text.trim();
-    if (!clean || clean === 'Translation will appear here...' || clean === 'Translating...') {
+    if (!clean || clean === PLACEHOLDER_OUTPUT || clean === 'Translating...') {
       onToast('No text to speak');
       return;
     }
@@ -180,14 +195,11 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     );
   };
 
-  // --------------------------------------------------------------------------
-  // TRANSLATION EXECUTION
-  // --------------------------------------------------------------------------
   const executeTranslation = useCallback(
     async (textToTranslate: string, srcLang: string, tgtLang: string, autoSpeak = false) => {
       const trimmed = textToTranslate.trim();
       if (!trimmed) {
-        setOutputText('Translation will appear here...');
+        setOutputText(PLACEHOLDER_OUTPUT);
         setConfidence(null);
         return;
       }
@@ -222,7 +234,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     [onAddHistory, onToast, voiceOutputEnabled]
   );
 
-  // Debounced auto-translate on typing
   const handleInputChange = (val: string) => {
     setInputText(val);
 
@@ -243,9 +254,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     executeTranslation(inputText, fromLang, toLang, false);
   };
 
-  // --------------------------------------------------------------------------
-  // MICROPHONE SPEECH RECOGNITION
-  // --------------------------------------------------------------------------
   const getSpeechLangCode = (lang: string) => {
     const l = lang.toLowerCase();
     if (l.includes('ur') || l.includes('urdu')) return 'ur-PK';
@@ -263,11 +271,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
   const stopMicrophone = () => {
     isListeningRef.current = false;
     setIsListening(false);
-
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
 
     if (recognitionRef.current) {
       try {
@@ -298,56 +301,61 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     }
 
     let liveRecognized = false;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition();
-        recognitionRef.current = recognition;
-        recognition.continuous = true;
-        recognition.interimResults = true;
         recognition.lang = getSpeechLangCode(fromLang);
+        recognition.interimResults = true;
+        recognition.continuous = true;
+
+        recognition.onstart = () => {
+          isListeningRef.current = true;
+          setIsListening(true);
+          onToast(`🎙️ Listening in ${fromLang.split(' ')[0]}... Speak clearly!`);
+        };
 
         recognition.onresult = (event: any) => {
-          let transcript = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript + ' ';
+          liveRecognized = true;
+          let currentTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            currentTranscript += event.results[i][0].transcript;
           }
-          const clean = transcript.trim();
-          if (clean) {
-            liveRecognized = true;
-            setInputText(clean);
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = window.setTimeout(() => {
-              executeTranslation(clean, fromLang, toLang, false);
-            }, 150);
+          if (currentTranscript) {
+            setInputText(currentTranscript);
+            if (event.results[event.results.length - 1].isFinal) {
+              executeTranslation(currentTranscript, fromLang, toLang, false);
+            }
           }
         };
 
-        recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error);
+        recognition.onerror = (e: any) => {
+          console.warn('SpeechRecognition error:', e);
+          if (e.error === 'not-allowed') {
+            onToast('Microphone permission denied.');
+            stopMicrophone();
+          }
         };
 
         recognition.onend = () => {
-          if (isListeningRef.current && recognitionRef.current) {
+          if (isListeningRef.current) {
             try {
               recognition.start();
-            } catch {}
+            } catch {
+              setIsListening(false);
+              isListeningRef.current = false;
+            }
           }
         };
 
+        recognitionRef.current = recognition;
         recognition.start();
-      } catch {}
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (recognitionRef.current) {
-        isListeningRef.current = true;
-        setIsListening(true);
-        onToast('🎙️ Listening... Start speaking');
         return;
+      } catch (err) {
+        console.warn('Web Speech API failed, falling back to MediaRecorder:', err);
       }
-      onToast('Microphone is not supported on this device');
-      return;
     }
 
     try {
@@ -357,7 +365,7 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
         typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
           : 'audio/webm';
-      
+
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
@@ -371,10 +379,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       recorder.onstop = async () => {
         setIsListening(false);
         isListeningRef.current = false;
-        if (recognitionRef.current) {
-          try { recognitionRef.current.stop(); } catch {}
-          recognitionRef.current = null;
-        }
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size > 0 && !liveRecognized) {
           onToast('🎙️ Converting speech to text...');
@@ -421,13 +425,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
       isListeningRef.current = true;
       setIsListening(true);
       onToast('🎙️ Start speaking... Tap mic again to stop');
-
-      // Continuous listening without auto-stop
-
-
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
-        onToast('Microphone permission is required. Please enable it in browser settings.');
+        onToast('Microphone permission is required.');
       } else {
         console.warn('Microphone error:', err);
         onToast('Error accessing microphone.');
@@ -437,7 +437,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     }
   };
 
-
   const handleGenderToggle = () => {
     const next: VoiceGender = voiceGender === 'female' ? 'male' : 'female';
     setVoiceGender(next);
@@ -446,150 +445,82 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     onToast(`Voice set to ${next === 'female' ? 'Female' : 'Male'}`);
   };
 
+  const filteredHistory = history.filter((item) => {
+    if (!historySearchTerm) return true;
+    const term = historySearchTerm.toLowerCase();
+    return (
+      item.input.toLowerCase().includes(term) ||
+      item.output.toLowerCase().includes(term) ||
+      item.from.toLowerCase().includes(term) ||
+      item.to.toLowerCase().includes(term)
+    );
+  });
+
   return (
-    <div className="flex flex-col min-h-[calc(100vh-20px)] bg-[#f0f0f0] text-gray-800 -m-2 sm:-m-4 relative">
-      {/* Top Main Green Header: Exactly starts with ENGLISH ↔ URDU as requested */}
-      <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md select-none">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="text-2xl hover:bg-white/10 px-2 py-0.5 rounded-lg transition cursor-pointer"
-            title="Menu & Options"
-          >
-            ≡
-          </button>
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/app-logo.png"
-              alt="Lafz Translator Logo"
-              width={34}
-              height={34}
-              className="w-8 h-8 rounded-lg shadow-xs object-cover border border-white/30 shrink-0"
-              loading="eager"
-            />
-            <div className="flex flex-col">
-              <span className="font-bold tracking-wider text-sm sm:text-base leading-tight">
-                {fromLang.toUpperCase().split(' ')[0]} ↔ {toLang.toUpperCase().split(' ')[0]}
-              </span>
-              <span className="text-[10px] text-emerald-100 font-medium">
-                {isTargetUrdu ? 'ENGLISH ↔ URDU' : 'URDU ↔ ENGLISH'}
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="lafz-wrap py-6 sm:py-8 flex flex-col gap-8 min-w-0">
+      {/* Hero Intro */}
+      <section className="text-center w-full max-w-2xl mx-auto flex flex-col items-center gap-2 min-w-0">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#eaf2fc] text-[#1d5fb8] shadow-xs max-w-full">
+          <span className="w-2 h-2 rounded-full bg-[#14a085] shrink-0"></span>
+          <span>English • Urdu • 100+ Languages</span>
+        </span>
+        <h1
+          className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#0f2a4a] tracking-tight leading-tight w-full max-w-full break-words"
+          style={{ fontFamily: 'Manrope, sans-serif' }}
+        >
+          Simple Language Translation
+        </h1>
+        <p className="text-sm sm:text-base text-[#6b7a8f] font-medium w-full max-w-lg break-words">
+          Type, speak, or scan to translate between English, Urdu, and 100+ languages.
+        </p>
+      </section>
 
-        <div className="flex items-center gap-2">
-          {/* Quick Language Toggle Button */}
-          {onToggleLang && (
-            <button
-              type="button"
-              onClick={onToggleLang}
-              className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition cursor-pointer"
-              title="Switch Language"
-            >
-              {"English"}
-            </button>
-          )}
-
-          {/* Quick Language Swap in Header */}
-          <button
-            type="button"
-            onClick={handleSwap}
-            className="p-1.5 hover:bg-white/15 rounded-lg transition text-base"
-            title="Swap Languages"
-          >
-            ⇅
-          </button>
-
-          {/* Toggle Split/Stacked View */}
-          <div
-            className="cursor-pointer flex flex-col gap-1 p-2 hover:bg-white/10 rounded-lg transition"
-            onClick={() => setIsSplit(!isSplit)}
-            title="Toggle Split View"
-          >
-            <div className="w-5 h-0.5 bg-white"></div>
-            <div className="w-5 h-0.5 bg-white"></div>
-            <div className="w-5 h-0.5 bg-white"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Action Shortcuts with Install App */}
-      <div className="bg-white px-4 py-2 text-xs text-gray-700 border-b border-gray-200 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-1.5 text-emerald-800 font-medium">
-          <span className="text-emerald-600 font-bold"></span>
-          <span></span>
-        </div>
-        <div className="flex items-center gap-3 ml-auto">
-          <button
-            type="button"
-            onClick={() => {
-              const promptEvent = (window as any).deferredPrompt;
-              if (promptEvent) {
-                promptEvent.prompt();
-                promptEvent.userChoice.then((choiceResult: any) => {
-                  if (choiceResult.outcome === 'accepted') {
-                    (window as any).deferredPrompt = null;
-                  }
-                });
-              } else {
-                onToast('Please select "Add to Home Screen" from your browser menu.');
-              }
-            }}
-            className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer transition"
-          >
-            📥 Install App
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate('image')}
-            className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer transition"
-          >
-            📸 Scan Camera
-          </button>
-        </div>
-      </div>
-
-      {/* Real-time Listening Waveform Banner */}
-      {isListening && (
-        <div className="bg-red-500 text-white px-4 py-2 text-xs flex items-center justify-between animate-pulse shadow-inner">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
-            <span className="font-bold">
-              🎙️ Listening ({fromLang.split(' ')[0]})… Speak now!
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={stopMicrophone}
-            className="bg-white text-red-600 font-bold px-3 py-0.5 rounded-full text-xs shadow hover:bg-gray-100"
-          >
-            Stop Mic
-          </button>
-        </div>
-      )}
-
-      {/* Main Translation Cards Form */}
-      <form
-        id="translateForm"
-        onSubmit={handleFormSubmit}
-        className={`flex-1 flex flex-col md:${isSplit ? 'flex-row' : 'flex-col'} p-3 sm:p-4 gap-3 transition-all duration-300`}
-      >
-        {/* Source Text Box */}
-        <div className="bg-white rounded-xl p-4 flex-1 relative border border-gray-200 shadow-sm flex flex-col justify-between min-h-[240px]">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[#2e7d32] font-bold text-xs uppercase tracking-wide">
-                {fromLang}
-              </span>
+      {/* Main Translation Workspace Card */}
+      <div className="lafz-card p-4 sm:p-7 transition-all duration-300">
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-5 min-w-0 w-full">
+          {/* Top Language Selectors & Primary Action */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#e3eaf3] min-w-0 w-full">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto min-w-0">
+              {/* Source Language Select */}
               <select
+                id="sourceLang"
                 value={fromLang}
                 onChange={(e) => {
                   setFromLang(e.target.value);
                   if (inputText.trim()) executeTranslation(inputText, e.target.value, toLang, false);
                 }}
-                className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 focus:outline-none focus:border-emerald-600 mr-10"
+                className="lafz-select flex-1 sm:flex-initial min-w-0 max-w-full text-xs sm:text-sm font-semibold cursor-pointer"
+                aria-label="Source Language"
+              >
+                {languages.map((l) => (
+                  <option key={l.code} value={l.label}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Swap Button */}
+              <button
+                id="swapLang"
+                type="button"
+                onClick={handleSwap}
+                className="shrink-0 border border-[#e3eaf3] bg-[#fafcfe] hover:bg-[#eaf2fc] text-[#1d5fb8] rounded-xl p-2.5 sm:px-3 sm:py-2 text-sm font-bold transition transform active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs"
+                title="Swap Languages"
+                aria-label="Swap Languages"
+              >
+                ⇄ <span className="hidden sm:inline text-xs font-semibold">Swap</span>
+              </button>
+
+              {/* Target Language Select */}
+              <select
+                id="targetLang"
+                value={toLang}
+                onChange={(e) => {
+                  setToLang(e.target.value);
+                  if (inputText.trim()) executeTranslation(inputText, fromLang, e.target.value, false);
+                }}
+                className="lafz-select flex-1 sm:flex-initial min-w-0 max-w-full text-xs sm:text-sm font-semibold cursor-pointer"
+                aria-label="Target Language"
               >
                 {languages.map((l) => (
                   <option key={l.code} value={l.label}>
@@ -599,445 +530,444 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
               </select>
             </div>
 
-            <textarea
-              id="inputText"
-              maxLength={5000}
-              value={inputText}
-              dir={isSourceUrdu ? 'rtl' : 'ltr'}
-              onChange={(e) => handleInputChange(e.target.value)}
-              className={`w-full h-28 pr-12 bg-transparent resize-none border-0 focus:outline-none text-base text-gray-800 placeholder-gray-400 ${
-                isSourceUrdu ? 'font-urdu text-lg leading-relaxed' : ''
-              }`}
-              placeholder="Tap to enter text or speak with mic..."
-            />
-          </div>
-
-          {/* Right Floating Actions for Source (shifted up so Clear Text is 100% unobstructed and visible) */}
-          <div className="absolute right-3 top-2.5 sm:top-3 flex flex-col gap-1.5 z-10">
-            {/* Microphone Button */}
+            {/* Translate Button */}
             <button
-              type="button"
-              onClick={isListening ? stopMicrophone : startMicrophone}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer ${
-                isListening
-                  ? 'bg-red-600 animate-pulse ring-4 ring-red-300'
-                  : 'bg-[#2e7d32] hover:bg-emerald-700'
-              }`}
-              title={isListening ? 'Stop Microphone' : 'Voice Input (Microphone)'}
-            >
-              🎤
-            </button>
-
-            {/* Camera Scanner Button */}
-            <button
-              type="button"
-              onClick={() => onNavigate('image')}
-              className="w-8 h-8 rounded-full bg-[#2e7d32] hover:bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
-              title="Camera Scanner / Image OCR"
-            >
-              📷
-            </button>
-
-            {/* Speak Source Button */}
-            <button
-              type="button"
-              onClick={() => handleSpeak(inputText, fromLang, 'source')}
-              className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer ${
-                speakingField === 'source'
-                  ? 'bg-amber-600 animate-bounce'
-                  : 'bg-[#2e7d32] hover:bg-emerald-700'
-              }`}
-              title="Listen to source audio"
-            >
-              🔊
-            </button>
-
-            {/* Copy Source */}
-            <button
-              type="button"
-              onClick={handleCopyInput}
-              className="w-8 h-8 rounded-full bg-[#2e7d32] hover:bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
-              title="Copy Source Text"
-            >
-              ⎘
-            </button>
-          </div>
-
-          {/* Footer Bar for Source - Clear Text is fully visible and clearly separated */}
-          <div className="flex justify-between items-center text-xs text-gray-400 pt-2 border-t border-gray-100 mt-auto relative z-20">
-            <span>{inputText.length} / 5000</span>
-            <button
-              type="button"
-              onClick={handleClear}
-              className="text-gray-600 hover:text-red-600 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-red-50 transition"
-            >
-              Clear Text
-            </button>
-          </div>
-        </div>
-
-        {/* Center Control Buttons */}
-        <div className="flex justify-center items-center gap-3 my-0.5">
-          <button
-            type="submit"
-            disabled={isTranslating}
-            className="w-12 h-12 bg-[#2e7d32] hover:bg-emerald-700 text-white rounded-full flex items-center justify-center text-lg shadow-md cursor-pointer transition disabled:opacity-50 transform active:scale-95"
-            title="Translate Now"
-          >
-            {isTranslating ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              '➤'
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={handleSwap}
-            className="w-12 h-12 bg-[#2e7d32] hover:bg-emerald-700 text-white rounded-full flex items-center justify-center text-lg shadow-md cursor-pointer transition transform active:scale-95"
-            title="Swap Languages"
-          >
-            ⇅
-          </button>
-        </div>
-
-        {/* Target Text Box */}
-        <div className="bg-white rounded-xl p-4 flex-1 relative border border-gray-200 shadow-sm flex flex-col justify-between min-h-[240px]">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[#2e7d32] font-bold text-xs uppercase tracking-wide">
-                {toLang}
-              </span>
-              <div className="flex items-center gap-2 mr-10">
-                {confidence && (
-                  <span className="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded">
-                    {Math.round(confidence * 100)}% Match
-                  </span>
-                )}
-                <select
-                  value={toLang}
-                  onChange={(e) => {
-                    setToLang(e.target.value);
-                    if (inputText.trim()) executeTranslation(inputText, fromLang, e.target.value, false);
-                  }}
-                  className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 focus:outline-none focus:border-emerald-600"
-                >
-                  {languages.map((l) => (
-                    <option key={l.code} value={l.label}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div
-              id="outputText"
-              dir={isTargetUrdu && outputText !== 'Translation will appear here...' && outputText !== 'Translating...' ? 'rtl' : 'ltr'}
-              className={`w-full h-28 pr-12 overflow-y-auto text-base text-gray-800 select-text ${
-                isTargetUrdu && outputText !== 'Translation will appear here...' && outputText !== 'Translating...'
-                  ? 'font-urdu text-lg leading-relaxed'
-                  : ''
-              }`}
+              id="translateBtn"
+              type="submit"
+              disabled={isTranslating}
+              className="lafz-primary-btn w-full sm:w-auto flex items-center justify-center gap-2 cursor-pointer sm:ml-auto"
             >
               {isTranslating ? (
-                <div className="flex items-center gap-2 text-emerald-700 font-medium animate-pulse">
-                  <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                  Translating smoothly with AI...
-                </div>
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span>Translating...</span>
+                </>
               ) : (
-                outputText
+                <>
+                  <span>Translate</span>
+                  <span className="text-xs opacity-80">↵</span>
+                </>
               )}
-            </div>
-          </div>
-
-          {/* Right Floating Actions for Target (shifted up so Share Translation is 100% unobstructed and visible) */}
-          <div className="absolute right-3 top-2.5 sm:top-3 flex flex-col gap-1.5 z-10">
-            {/* Save to Favorites */}
-            <button
-              type="button"
-              onClick={handleSaveOutput}
-              className="w-8 h-8 rounded-full bg-[#2e7d32] hover:bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
-              title="Save to Favorites"
-            >
-              ♥
-            </button>
-
-            {/* Split / Expand */}
-            <button
-              type="button"
-              onClick={() => setIsSplit(!isSplit)}
-              className="w-8 h-8 rounded-full bg-[#2e7d32] hover:bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
-              title="Toggle Split View"
-            >
-              ⮀
-            </button>
-
-            {/* Listen / Speak Target Output */}
-            <button
-              type="button"
-              onClick={() => handleSpeak(outputText, toLang, 'target')}
-              className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer ${
-                speakingField === 'target'
-                  ? 'bg-amber-600 animate-bounce'
-                  : 'bg-[#2e7d32] hover:bg-emerald-700'
-              }`}
-              title="Listen to translation"
-            >
-              🔊
-            </button>
-
-            {/* Copy Output */}
-            <button
-              type="button"
-              onClick={handleCopyOutput}
-              className="w-8 h-8 rounded-full bg-[#2e7d32] hover:bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
-              title="Copy Translation"
-            >
-              ⎘
             </button>
           </div>
 
-          {/* Footer Bar for Target - Share Translation is fully visible and clearly separated */}
-          <div className="flex justify-between items-center text-xs text-gray-400 pt-2 border-t border-gray-100 mt-auto relative z-20">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-                className="cursor-pointer hover:text-emerald-700 font-medium text-gray-600"
-              >
-                Options & History
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={handleShareOutput}
-              className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer px-2 py-1 rounded hover:bg-emerald-50 transition"
-            >
-              Share Translation
-            </button>
-          </div>
-        </div>
-      </form>
-
-      {/* Short Clean SEO Section */}
-      <div className="px-4 py-4 bg-white rounded-xl shadow-sm border border-gray-200 mt-2 mx-4 text-gray-800 space-y-2">
-        <h2 className="font-extrabold text-base sm:text-lg text-[#2e7d32]">Lafz Translator</h2>
-        <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-          Lafz Translator is a simple, fast English and Urdu translator. Type, speak, or scan with your camera.
-        </p>
-        <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-urdu text-right" dir="rtl">
-          نوا ٹرانسلیٹر سے انگریزی اور اردو کا آسان اور تیز ترجمہ کریں۔ لکھیں، بولیں، یا کیمرے سے اسکین کریں۔
-        </p>
-      </div>
-
-
-      {/* Side Slide-Over Drawer for Menu & Options (replaces clutter on top) */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setDrawerOpen(false)}
-          />
-
-          {/* Drawer Content */}
-          <div className="relative bg-white w-72 max-w-[85vw] h-full shadow-2xl flex flex-col p-5 z-10 animate-in slide-in-from-left duration-200">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/app-logo.png"
-                  alt="Lafz Translator Logo"
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-lg shadow-xs object-cover border border-emerald-600/20 shrink-0"
-                />
-                <span className="font-bold text-[#2e7d32] text-lg">Nova Options</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="text-gray-400 hover:text-gray-700 text-xl font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3">
-              {/* Compact History Feature right at the top of Drawer */}
-              <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-                <div className="flex items-center justify-between p-3 bg-emerald-50/70">
-                  <button
-                    type="button"
-                    onClick={() => setShowDrawerHistory(!showDrawerHistory)}
-                    className="flex items-center gap-2 text-emerald-900 font-bold text-sm flex-1 text-left cursor-pointer"
-                  >
-                    <span>📜</span>
-                    <span>History ({history.length})</span>
-                    <span className="text-xs ml-auto">{showDrawerHistory ? '▲' : '▼'}</span>
-                  </button>
-                  {history.length > 0 && onClearHistory && (
-                    <button
-                      type="button"
-                      onClick={onClearHistory}
-                      className="text-[11px] text-red-600 hover:underline font-semibold ml-2 cursor-pointer"
-                      title="Clear all history"
-                    >
-                      Clear All
-                    </button>
+          {/* Translation Dual-Panel Workspace */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 w-full">
+            {/* Left: Source Input Panel */}
+            <div className="min-w-0 w-full border border-[#e3eaf3] bg-[#fafcfe] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between min-h-[260px] focus-within:border-[#2f7de0] focus-within:shadow-xs transition">
+              <div className="flex flex-col flex-1 min-w-0 w-full">
+                <div className="flex items-center justify-between gap-2 text-xs text-[#6b7a8f] font-semibold mb-2 min-w-0">
+                  <span className="truncate">Source ({fromLang.split(' ')[0]})</span>
+                  {isListening && (
+                    <span className="text-red-600 font-bold flex items-center gap-1.5 animate-pulse shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                      Listening...
+                    </span>
                   )}
                 </div>
 
-                {showDrawerHistory && (
-                  <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-2 border-t border-gray-200 bg-white">
-                    {history.length === 0 ? (
-                      <div className="text-xs text-gray-400 text-center py-3">
-                        No history items yet
-                      </div>
-                    ) : (
-                      history.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-2 rounded-lg border border-gray-100 bg-gray-50 flex flex-col gap-1.5 text-xs shadow-2xs"
-                        >
-                          <div className="text-gray-700 font-medium line-clamp-1">{item.input}</div>
-                          <div className="text-emerald-800 font-bold line-clamp-1">{item.output}</div>
-                          <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 gap-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFromLang(item.from || 'English 🇬🇧');
-                                setToLang(item.to || 'Urdu 🇵🇰');
-                                setInputText(item.input);
-                                setOutputText(item.output);
-                                setDrawerOpen(false);
-                                onToast('Loaded from history');
-                              }}
-                              className="bg-[#2e7d32] text-white px-2 py-0.5 rounded text-[11px] font-bold hover:bg-emerald-700 transition cursor-pointer"
-                            >
-                              🔄 Use
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(`${item.input}\n${item.output}`);
-                                onToast('Copied!');
-                              }}
-                              className="bg-white border border-gray-300 text-gray-700 px-2 py-0.5 rounded text-[11px] font-semibold hover:bg-gray-100 transition cursor-pointer"
-                            >
-                              📋 Copy
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onAddSaved({
-                                  id: item.id,
-                                  from: item.from,
-                                  to: item.to,
-                                  input: item.input,
-                                  output: item.output,
-                                  timestamp: '♡ Saved',
-                                });
-                              }}
-                              className="bg-white border border-gray-300 text-emerald-700 px-1.5 py-0.5 rounded text-[11px] font-semibold hover:bg-emerald-50 transition cursor-pointer"
-                              title="Save"
-                            >
-                              ♡ Save
-                            </button>
-                            {onDeleteHistoryItem && (
-                              <button
-                                type="button"
-                                onClick={() => onDeleteHistoryItem(item.id)}
-                                className="text-red-500 hover:text-red-700 px-1 py-0.5 rounded text-[11px] font-bold cursor-pointer"
-                                title="Delete"
-                              >
-                                🗑️
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                <textarea
+                  id="sourceText"
+                  maxLength={5000}
+                  value={inputText}
+                  dir={isSourceRTL ? 'rtl' : 'ltr'}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  placeholder="Enter text to translate or tap microphone to speak..."
+                  className={`w-full min-w-0 flex-1 bg-transparent resize-none border-0 focus:outline-none text-base text-[#16263b] placeholder-[#8996a5] min-h-[140px] leading-relaxed ${
+                    isSourceRTL ? 'font-urdu text-lg' : ''
+                  }`}
+                  aria-label="Source Text Input"
+                />
               </div>
 
-              {/* Voice Gender Setting */}
-              <div className="p-3 bg-gray-50 rounded-xl flex justify-between items-center text-sm">
-                <div className="flex items-center gap-2">
-                  <span>🗣️</span>
-                  <span className="font-medium text-gray-700">TTS Voice:</span>
+              {/* Source Bottom Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#e3eaf3]/70 mt-3 text-xs min-w-0 w-full">
+                <span id="charCount" className="text-[#8996a5] font-medium select-none shrink-0">
+                  {inputText.length} / 5,000
+                </span>
+
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  <button
+                    id="micBtn"
+                    type="button"
+                    onClick={isListening ? stopMicrophone : startMicrophone}
+                    className={`px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1 transition cursor-pointer shadow-xs ${
+                      isListening
+                        ? 'bg-red-600 text-white animate-pulse'
+                        : 'bg-white border border-[#e3eaf3] text-[#1d5fb8] hover:bg-[#eaf2fc]'
+                    }`}
+                    title={isListening ? 'Stop microphone' : 'Speak into microphone'}
+                  >
+                    <span>🎙️</span>
+                    <span className="hidden sm:inline">{isListening ? 'Stop' : 'Speak'}</span>
+                  </button>
+
+                  <button
+                    id="pasteBtn"
+                    type="button"
+                    onClick={handlePaste}
+                    className="px-2.5 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] text-[#55657b] hover:text-[#1d5fb8] hover:bg-[#eaf2fc] transition cursor-pointer shadow-xs"
+                    title="Paste from clipboard"
+                  >
+                    📋 <span className="hidden sm:inline">Paste</span>
+                  </button>
+
+                  <button
+                    id="sourceListenBtn"
+                    type="button"
+                    onClick={() => handleSpeak(inputText, fromLang, 'source')}
+                    className={`px-2.5 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] transition cursor-pointer shadow-xs ${
+                      speakingField === 'source'
+                        ? 'text-amber-600 bg-amber-50 border-amber-300'
+                        : 'text-[#55657b] hover:text-[#1d5fb8] hover:bg-[#eaf2fc]'
+                    }`}
+                    title="Listen to pronunciation"
+                  >
+                    🔊
+                  </button>
+
+                  {inputText && (
+                    <button
+                      id="clearBtn"
+                      type="button"
+                      onClick={handleClear}
+                      className="px-2.5 py-1.5 rounded-xl font-semibold text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                      title="Clear text"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
+              </div>
+            </div>
+
+            {/* Right: Output Translation Panel */}
+            <div className="min-w-0 w-full border border-[#e3eaf3] bg-white rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between min-h-[260px] shadow-xs">
+              <div className="flex flex-col flex-1 min-w-0 w-full">
+                <div className="flex items-center justify-between gap-2 text-xs mb-2 min-w-0">
+                  <span className="text-[#6b7a8f] font-semibold truncate">
+                    Translation ({toLang.split(' ')[0]})
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {confidence && (
+                      <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                        {Math.round(confidence * 100)}% Match
+                      </span>
+                    )}
+                    <span
+                      id="resultStatus"
+                      className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${
+                        isTranslating
+                          ? 'bg-amber-100 text-amber-800'
+                          : outputText && outputText !== PLACEHOLDER_OUTPUT
+                          ? 'bg-blue-100 text-[#1d5fb8]'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {isTranslating ? 'Translating...' : outputText && outputText !== PLACEHOLDER_OUTPUT ? 'Ready' : 'Waiting'}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  id="output"
+                  dir={isTargetRTL && outputText !== PLACEHOLDER_OUTPUT ? 'rtl' : 'ltr'}
+                  className={`w-full min-w-0 flex-1 overflow-y-auto break-words text-base text-[#16263b] select-text min-h-[140px] leading-relaxed ${
+                    isTargetRTL && outputText !== PLACEHOLDER_OUTPUT ? 'font-urdu text-lg' : ''
+                  }`}
+                  aria-live="polite"
+                >
+                  {isTranslating ? (
+                    <div className="flex items-center gap-2 text-[#1d5fb8] font-medium py-4 animate-pulse">
+                      <span className="w-4 h-4 border-2 border-[#1d5fb8] border-t-transparent rounded-full animate-spin shrink-0"></span>
+                      <span>Translating smoothly with AI...</span>
+                    </div>
+                  ) : outputText === PLACEHOLDER_OUTPUT ? (
+                    <span className="text-[#8996a5] italic select-none">
+                      Translation will appear here...
+                    </span>
+                  ) : (
+                    outputText
+                  )}
+                </div>
+              </div>
+
+              {/* Target Bottom Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#e3eaf3]/70 mt-3 text-xs min-w-0 w-full">
                 <button
                   type="button"
                   onClick={handleGenderToggle}
-                  className="bg-emerald-700 text-white text-xs px-3 py-1 rounded-full font-bold shadow-xs hover:bg-emerald-800 transition"
+                  className="text-xs text-[#6b7a8f] hover:text-[#1d5fb8] font-semibold flex items-center gap-1 cursor-pointer transition shrink-0"
+                  title="Toggle voice gender"
                 >
-                  {voiceGender === 'female' ? 'Female 👩' : 'Male 👨'}
+                  🗣️ <span className="hidden sm:inline">{voiceGender === 'female' ? 'Female' : 'Male'}</span>
                 </button>
-              </div>
 
-              {/* Live Call Translation */}
-              {onOpenCallModal && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDrawerOpen(false);
-                    onOpenCallModal();
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-800 font-semibold text-sm transition text-left"
-                >
-                  <span className="text-lg">📞</span>
-                  <div>
-                    <div>Live Call Translation</div>
-                    <div className="text-[11px] text-gray-500 font-normal">
-                      Two-way continuous dialogue
-                    </div>
-                  </div>
-                </button>
-              )}
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  <button
+                    id="copyBtn"
+                    type="button"
+                    onClick={handleCopyOutput}
+                    className="px-3 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] text-[#1d5fb8] hover:bg-[#eaf2fc] transition cursor-pointer shadow-xs flex items-center gap-1"
+                    title="Copy translation"
+                  >
+                    <span>📋</span>
+                    <span className="hidden sm:inline">Copy</span>
+                  </button>
 
-              {/* Camera Scanner */}
-              <button
-                type="button"
-                onClick={() => {
-                  setDrawerOpen(false);
-                  onNavigate('image');
-                }}
-                className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-800 font-semibold text-sm transition text-left"
-              >
-                <span className="text-lg">📸</span>
-                <div>
-                  <div>Camera Scanner</div>
-                  <div className="text-[11px] text-gray-500 font-normal">
-                    Point camera & translate signs/text
-                  </div>
+                  <button
+                    id="listenBtn"
+                    type="button"
+                    onClick={() => handleSpeak(outputText, toLang, 'target')}
+                    className={`px-3 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] transition cursor-pointer shadow-xs flex items-center gap-1 ${
+                      speakingField === 'target'
+                        ? 'text-amber-600 bg-amber-50 border-amber-300'
+                        : 'text-[#1d5fb8] hover:bg-[#eaf2fc]'
+                    }`}
+                    title="Listen to translation"
+                  >
+                    <span>🔊</span>
+                    <span className="hidden sm:inline">Listen</span>
+                  </button>
+
+                  <button
+                    id="saveBtn"
+                    type="button"
+                    onClick={handleSaveOutput}
+                    className="px-2.5 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] text-[#55657b] hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer shadow-xs"
+                    title="Save to favorites"
+                  >
+                    ⭐
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShareOutput}
+                    className="px-2.5 py-1.5 rounded-xl font-semibold bg-white border border-[#e3eaf3] text-[#55657b] hover:text-[#1d5fb8] hover:bg-[#eaf2fc] transition cursor-pointer shadow-xs"
+                    title="Share translation"
+                  >
+                    ↗
+                  </button>
                 </div>
-              </button>
-
-              {/* Clear History & Text */}
-              <button
-                type="button"
-                onClick={() => {
-                  handleClear();
-                  setDrawerOpen(false);
-                }}
-                className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-800 font-medium text-sm transition text-left mt-auto"
-              >
-                <span className="text-lg">🗑️</span>
-                <span>Clear Current Text</span>
-              </button>
-            </div>
-
-            <div className="text-[11px] text-gray-400 text-center border-t border-gray-100 pt-3">
-              LAFZ AI TRANSLATOR • FAST & INTEL
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </form>
+      </div>
 
-      <p className="text-center text-xs text-gray-500 py-3 px-4 bg-white border-t border-gray-200">
-        Type, speak, or scan to translate between English and Urdu.
-      </p>
+      {/* Feature Jump Cards */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
+        <button
+          type="button"
+          onClick={() => onNavigate('image')}
+          className="min-w-0 w-full p-4 bg-white border border-[#e3eaf3] rounded-2xl hover:border-[#2f7de0] hover:shadow-md transition text-left flex flex-col gap-1.5 cursor-pointer group"
+        >
+          <span className="text-2xl transition group-hover:scale-110">📸</span>
+          <span className="font-bold text-sm text-[#0f2a4a] break-words">Camera OCR</span>
+          <span className="text-xs text-[#6b7a8f] break-words">Scan photos &amp; menus</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('voice-translation')}
+          className="min-w-0 w-full p-4 bg-white border border-[#e3eaf3] rounded-2xl hover:border-[#2f7de0] hover:shadow-md transition text-left flex flex-col gap-1.5 cursor-pointer group"
+        >
+          <span className="text-2xl transition group-hover:scale-110">🎙️</span>
+          <span className="font-bold text-sm text-[#0f2a4a] break-words">Voice Mode</span>
+          <span className="text-xs text-[#6b7a8f] break-words">Speak &amp; converse</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('languages')}
+          className="min-w-0 w-full p-4 bg-white border border-[#e3eaf3] rounded-2xl hover:border-[#2f7de0] hover:shadow-md transition text-left flex flex-col gap-1.5 cursor-pointer group"
+        >
+          <span className="text-2xl transition group-hover:scale-110">🌐</span>
+          <span className="font-bold text-sm text-[#0f2a4a] break-words">100+ Languages</span>
+          <span className="text-xs text-[#6b7a8f] break-words">Explore all dialects</span>
+        </button>
+
+        <button
+          id="historyJump"
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('historySection');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            else onNavigate('history');
+          }}
+          className="min-w-0 w-full p-4 bg-white border border-[#e3eaf3] rounded-2xl hover:border-[#2f7de0] hover:shadow-md transition text-left flex flex-col gap-1.5 cursor-pointer group"
+        >
+          <span className="text-2xl transition group-hover:scale-110">🕒</span>
+          <span className="font-bold text-sm text-[#0f2a4a] break-words">Recent History</span>
+          <span className="text-xs text-[#6b7a8f] break-words">{history.length} saved entries</span>
+        </button>
+      </section>
+
+      {/* Embedded History Section */}
+      <section id="historySection" className="lafz-card p-4 sm:p-7 flex flex-col gap-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#e3eaf3] min-w-0 w-full">
+          <div className="min-w-0">
+            <h2
+              className="text-xl font-bold text-[#0f2a4a]"
+              style={{ fontFamily: 'Manrope, sans-serif' }}
+            >
+              Recent Translations
+            </h2>
+            <p className="text-xs text-[#6b7a8f]">
+              Saved securely on your device for instant offline review.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+            <input
+              id="historySearch"
+              type="text"
+              placeholder="Search history..."
+              value={historySearchTerm}
+              onChange={(e) => setHistorySearchTerm(e.target.value)}
+              className="text-xs border border-[#e3eaf3] rounded-xl px-3 py-1.5 bg-[#fafcfe] text-[#16263b] focus:outline-none focus:border-[#2f7de0] flex-1 min-w-0 sm:w-44"
+            />
+            {history.length > 0 && onClearHistory && (
+              <button
+                id="clearHistory"
+                type="button"
+                onClick={onClearHistory}
+                className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* History List */}
+        <div id="historyList" className="flex flex-col gap-2.5 max-h-96 overflow-y-auto pr-1 min-w-0 w-full">
+          {filteredHistory.length === 0 ? (
+            <div className="text-center py-8 text-[#8996a5] text-sm">
+              {history.length === 0
+                ? 'No translations recorded yet. Enter text or use voice to get started.'
+                : 'No matching history entries found.'}
+            </div>
+          ) : (
+            filteredHistory.map((item) => (
+              <div
+                key={item.id}
+                className="w-full min-w-0 p-3.5 bg-[#fafcfe] border border-[#e3eaf3] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#2f7de0] transition"
+              >
+                <div className="w-full sm:flex-1 flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2 text-[11px] text-[#6b7a8f] font-semibold flex-wrap">
+                    <span>{item.from.split(' ')[0]}</span>
+                    <span>→</span>
+                    <span className="text-[#1d5fb8]">{item.to.split(' ')[0]}</span>
+                    {item.time && <span className="opacity-60">• {item.time}</span>}
+                  </div>
+                  <div className="text-sm font-medium text-[#16263b] truncate w-full">
+                    {item.input}
+                  </div>
+                  <div className="text-xs text-[#55657b] truncate font-medium w-full">
+                    {item.output}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromLang(item.from);
+                      setToLang(item.to);
+                      setInputText(item.input);
+                      setOutputText(item.output);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      onToast('Loaded into translator');
+                    }}
+                    className="text-xs font-bold text-[#1d5fb8] bg-white border border-[#e3eaf3] hover:bg-[#eaf2fc] px-2.5 py-1 rounded-lg transition cursor-pointer"
+                  >
+                    Use
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(item.output);
+                      onToast('Translation copied!');
+                    }}
+                    className="text-xs font-semibold text-[#55657b] hover:text-[#1d5fb8] bg-white border border-[#e3eaf3] px-2.5 py-1 rounded-lg transition cursor-pointer"
+                    title="Copy translation"
+                  >
+                    Copy
+                  </button>
+
+                  {onDeleteHistoryItem && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteHistoryItem(item.id)}
+                      className="text-xs text-gray-400 hover:text-red-600 p-1 rounded transition cursor-pointer"
+                      title="Delete from history"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Informational Guide */}
+      <article
+        id="homeGuide"
+        aria-label="About LAFZ Translation Guide"
+        className="lafz-card p-5 sm:p-7 flex flex-col gap-5"
+      >
+        <section className="flex flex-col gap-2">
+          <h2
+            className="text-xl font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            What LAFZ Translation Is
+          </h2>
+          <p className="text-base text-[#55657b] leading-relaxed">
+            LAFZ Translation is a free, straightforward web interface built to translate everyday words, sentences, and short paragraphs across English, Urdu, and over 100 global languages. All text translations are performed on our server through the connected translation service, so there are no accounts to register and no downloads required to begin. Whether you are reading an article, writing a message, or checking an unfamiliar phrase, everything loads in one clean screen. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2
+            className="text-xl font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            How to Translate Text Step by Step
+          </h2>
+          <p className="text-base text-[#55657b] leading-relaxed">
+            Start by picking your source language in the left dropdown menu and your target language in the right dropdown menu, or tap Swap to reverse both directions at once. Next, type your text or tap Paste to insert copied text into the source box. Click Translate or pause briefly for the translated wording to appear in the output box, where you can copy, save, or clear your text in a single tap.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2
+            className="text-xl font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Voice Input, Spoken Output, and Camera OCR
+          </h2>
+          <p className="text-base text-[#55657b] leading-relaxed">
+            If you prefer speaking over typing, tap Speak and allow microphone access in your browser. When voice input records audio from your microphone, that audio is sent to the server to convert your speech into text for translation. Tap Listen next to the result to hear spoken output powered by your browser and device speech features. To translate printed menus, street signs, receipts, or documents, open Camera OCR to pick an image and send it to the server so its text can be extracted and translated.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2
+            className="text-xl font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Language Choices, History, and Helpful Tips
+          </h2>
+          <p className="text-base text-[#55657b] leading-relaxed">
+            Right-to-left scripts such as Urdu, Arabic, and Punjabi align properly on the page so text remains easy to read. Your recent translations are saved locally in your browser&apos;s localStorage and are not synced between devices, and you can search or clear entries whenever you want. For better results, use clear spelling, standard punctuation, and short complete sentences rather than slang or heavy abbreviations. Because translations are generated automatically by a machine, they may not always be perfect, so please check important wording carefully before sharing it.
+          </p>
+        </section>
+      </article>
     </div>
   );
 };

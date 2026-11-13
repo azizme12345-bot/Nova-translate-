@@ -12,17 +12,17 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
   return (
     <div className="flex flex-col flex-1 bg-[#f0f0f0] rounded-xl overflow-hidden shadow-sm border border-gray-200">
       {/* Header */}
-      <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md">
+      <div className="bg-[#0f2a4a] text-white px-4 py-3 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => { window.history.pushState({}, '', '/'); onBack(); }}
-            className="text-white hover:bg-white/10 px-2 py-1 rounded-md text-sm font-semibold flex items-center gap-1 transition cursor-pointer"
+            className="text-white hover:bg-white/10 px-2.5 py-1 rounded-lg text-sm font-semibold flex items-center gap-1 transition cursor-pointer"
           >
             ← Home
           </button>
           <span className="font-bold tracking-wide text-sm sm:text-base">
-            Supported Languages — Lafz Translator
+            Supported Languages — LAFZ Translation
           </span>
         </div>
       </div>
@@ -31,9 +31,9 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
         <header className="space-y-3">
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Supported Languages &amp; Dialects</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Lafz Translator supports over 100+ global languages with high-fidelity AI translation models. Below are our core supported languages with native scripts, RTL/LTR layout support, and voice synthesis.
+            LAFZ Translation supports over 100+ global languages with high-fidelity AI translation models. Below are our core supported languages with native scripts, RTL/LTR layout support, and voice synthesis.
           </p>
-          <p className="text-sm text-gray-600 leading-relaxed bg-emerald-50/60 p-4 rounded-xl border border-emerald-100">
+          <p className="text-sm text-gray-600 leading-relaxed bg-blue-50/60 p-4 rounded-xl border border-blue-100">
             <strong>How to pick and use languages:</strong> On the translator home page, you can easily select your source language and target language using the interactive dropdown selectors or the quick language swap button. Whether you need English, Urdu, Arabic, Spanish, French, or any other supported language, the application shows text in the correct direction, including right-to-left (RTL) languages such as Urdu and Arabic, for a smooth translation experience.
           </p>
         </header>
@@ -43,7 +43,7 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
             <div key={lang.code} className="p-4 rounded-xl border border-gray-200 bg-gray-50 flex flex-col gap-2 hover:shadow-md transition">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-lg text-gray-800">{lang.label}</span>
-                <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase">
+                <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full uppercase">
                   {lang.code}
                 </span>
               </div>
@@ -51,7 +51,7 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
                 Native Name: <span className="font-medium text-gray-900">{lang.nativeName}</span>
               </div>
               <div className="text-xs text-gray-500">
-                Text &amp; Voice Translation: <span className="text-emerald-700 font-semibold">Fully Supported</span>
+                Text &amp; Voice Translation: <span className="text-blue-700 font-semibold">Fully Supported</span>
               </div>
             </div>
           ))}
@@ -63,7 +63,7 @@ export const LanguagesSection: React.FC<LanguagesSectionProps> = ({ languages, o
             <details className="p-3 bg-gray-50 rounded-lg border border-gray-200">
               <summary className="font-semibold text-sm text-gray-800 cursor-pointer">Can I translate between any two languages?</summary>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Yes! Lafz Translator supports bidirectional translation between English, Urdu, Arabic, Spanish, French, German, Hindi, Japanese, Punjabi, and dozens of other languages.
+                Yes! LAFZ Translation supports bidirectional translation between English, Urdu, Arabic, Spanish, French, German, Hindi, Japanese, Punjabi, and dozens of other languages.
               </p>
             </details>
             <details className="p-3 bg-gray-50 rounded-lg border border-gray-200">

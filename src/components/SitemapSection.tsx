@@ -10,12 +10,12 @@ interface SitemapSectionProps {
 
 export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNavigate, lang = 'en' }) => {
   useEffect(() => {
-    document.title = 'Sitemap & Tools Directory — Lafz Translator';
+    document.title = 'Sitemap & Tools Directory — LAFZ Translation';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         'content',
-        'Explore all tools, features, and web pages available on Lafz Translator. Complete sitemap and directory for users and search engine indexing.'
+        'Explore all tools, features, and web pages available on LAFZ Translation. Complete sitemap and directory for users and search engine indexing.'
       );
     }
   }, []);
@@ -36,16 +36,16 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
       path: '/voice',
       pageKey: 'voice-translation' as ActivePage,
       descEn:
-        'Instant real-time speech recognition. Speak through your microphone in English or Urdu and get immediate spoken translation with natural male and female voice playback.',
-      tag: 'Voice AI',
+        'Instant speech recognition. Speak through your microphone in English or Urdu and get immediate translation with spoken playback.',
+      tag: 'Voice',
     },
     {
       titleEn: 'Camera OCR & Photo Scanner',
       icon: '📷',
       path: '/camera',
-      pageKey: 'camera' as ActivePage,
+      pageKey: 'image' as ActivePage,
       descEn:
-        'Visual optical character recognition (OCR) translator. Scan restaurant menus, street signboards, packaging, and documents using your device camera or uploaded photos.',
+        'Optical character recognition (OCR) translator. Scan restaurant menus, street signboards, packaging, and documents using your device camera or uploaded photos.',
       tag: 'Vision OCR',
     },
     {
@@ -54,8 +54,8 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
       path: '/languages',
       pageKey: 'languages' as ActivePage,
       descEn:
-        'Browse our extensive catalog of 100+ supported international languages, including native scripts, language codes, and right-to-left (RTL) writing directions.',
-      tag: 'Dictionary',
+        'Browse supported international languages, including native scripts, language codes, and right-to-left (RTL) writing directions.',
+      tag: 'Languages',
     },
     {
       titleEn: 'Translation History & Favorites',
@@ -63,79 +63,71 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
       path: '/history',
       pageKey: 'history' as ActivePage,
       descEn:
-        'Easily review your past translations, save frequent phrases to favorites for instant access, and reuse them without typing again.',
+        'Review your past translations stored in your browser, save frequent phrases to favorites, and reuse them without typing again.',
       tag: 'History',
     },
     {
-      titleEn: 'About Lafz Translator & AI Architecture',
+      titleEn: 'About, Privacy, Terms & Contact',
       icon: 'ℹ️',
       path: '/about',
       pageKey: 'about' as ActivePage,
       descEn:
-        'Learn about our high-speed translation platform, Google Gemini multimodal technology, zero-lag client-side cache, and privacy architecture.',
-      tag: 'About',
+        'Read about LAFZ Translation, how privacy and browser storage work, our Terms of Use, and how to send feedback or bug reports.',
+      tag: 'Info',
     },
   ];
 
   return (
-    <div className="flex flex-col flex-1 bg-[#f0f0f0] rounded-xl overflow-hidden shadow-sm border border-gray-200">
-      {/* Header Bar */}
-      <div className="bg-[#2e7d32] text-white px-4 py-3 flex justify-between items-center shadow-md select-none">
-        <div className="flex items-center gap-3">
+    <div className="lafz-wrap py-6 sm:py-8 flex flex-col gap-6 min-w-0">
+      <div className="lafz-content-card flex flex-col gap-6">
+        <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => {
               window.history.pushState({}, '', '/');
               onBack();
             }}
-            className="text-white hover:bg-white/10 px-2 py-1 rounded-md text-sm font-semibold flex items-center gap-1 transition cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-[#1d5fb8] hover:underline flex items-center gap-1.5 cursor-pointer"
           >
             ← {t('home', lang)}
           </button>
-          <div className="flex items-center gap-2">
-            <span className="font-bold tracking-wide text-sm sm:text-base">
-              'Sitemap & Tools Directory'
-            </span>
-          </div>
+          <span className="text-xs bg-[#eaf2fc] text-[#1d5fb8] px-2.5 py-0.5 rounded-full font-bold">
+            Sitemap &amp; Directory
+          </span>
         </div>
-        <span className="text-xs bg-emerald-800/80 px-2.5 py-0.5 rounded-full font-medium">
-          SEO Index
-        </span>
-      </div>
 
-      <div className="p-4 sm:p-6 flex-1 flex flex-col gap-6 bg-white overflow-y-auto">
         {/* Intro Banner */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b border-[#e3eaf3]">
           <img
-            src="/app-logo.png"
-            alt="Lafz Translator Official Logo"
+            src="/lafz-logo-icon.png"
+            alt="LAFZ Translation Official Logo"
             width={64}
             height={64}
-            className="w-16 h-16 rounded-2xl shadow-sm object-cover border border-emerald-600/20 shrink-0"
+            className="w-16 h-16 rounded-2xl shadow-sm object-contain block shrink-0"
             loading="eager"
           />
-          <div>
-            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
-              {'Lafz Translator: Sitemap & Complete Tools Index'}
+          <div className="min-w-0">
+            <h1
+              className="text-2xl font-extrabold text-[#0f2a4a] mb-1"
+              style={{ fontFamily: 'Manrope, sans-serif' }}
+            >
+              LAFZ Translation: Sitemap &amp; Complete Tools Index
             </h1>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {'This comprehensive sitemap and directory outlines every tool, page, and feature available in Lafz Translator for users and Google Search Engine indexing.'}
+            <p className="text-base text-[#6b7a8f] leading-relaxed">
+              This directory outlines every tool, page, and informational resource available in LAFZ Translation.
             </p>
           </div>
         </header>
 
         {/* XML Sitemap Direct Link Box */}
-        <section className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
+        <section className="bg-[#fafcfe] border border-[#e3eaf3] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-emerald-700 font-bold text-sm">📄 XML Sitemap for Search Engines</span>
-              <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                Live
-              </span>
+              <span className="text-[#1d5fb8] font-bold text-sm">XML Sitemap for Search Engines</span>
             </div>
-            <p className="text-xs text-emerald-900/80 mt-1">
-              Direct XML endpoint for Google Search Console, Bing Webmaster, and crawlers:
-              <code className="ml-1 bg-white px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[11px] text-emerald-800">
+            <p className="text-xs text-[#6b7a8f] mt-1 break-all">
+              Direct XML endpoint:{' '}
+              <code className="bg-white px-1.5 py-0.5 rounded border border-[#e3eaf3] font-mono text-[11px] text-[#1d5fb8]">
                 https://nova-translate-orpin.vercel.app/sitemap.xml
               </code>
             </p>
@@ -144,7 +136,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
             href="/sitemap.xml"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 bg-[#2e7d32] hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-xs shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-[#1d5fb8] hover:bg-[#174e98] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs shrink-0 cursor-pointer no-underline"
           >
             Open sitemap.xml ↗
           </a>
@@ -153,11 +145,14 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
         {/* Tools Grid */}
         <section className="space-y-4">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              'Available Tools & What You Can Do'
+            <h2
+              className="text-lg font-bold text-[#0f2a4a]"
+              style={{ fontFamily: 'Manrope, sans-serif' }}
+            >
+              Available Tools &amp; What You Can Do
             </h2>
-            <p className="text-xs text-gray-500">
-              {'Click any tool below to launch and start translating immediately:'}
+            <p className="text-sm text-[#6b7a8f]">
+              Click any tool or page below to open it directly:
             </p>
           </div>
 
@@ -165,39 +160,39 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
             {tools.map((tool, idx) => (
               <div
                 key={idx}
-                className="p-4 bg-gray-50 hover:bg-emerald-50/40 border border-gray-200 hover:border-emerald-300 rounded-xl transition flex flex-col justify-between shadow-2xs group"
+                className="p-4 bg-[#fafcfe] hover:bg-[#f1f7ff] border border-[#e3eaf3] hover:border-[#2f7de0] rounded-2xl transition flex flex-col justify-between group min-w-0"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl p-1.5 bg-white rounded-lg border border-gray-200 shadow-2xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xl p-1.5 bg-white rounded-lg border border-[#e3eaf3] shrink-0">
                         {tool.icon}
                       </span>
-                      <h3 className="font-bold text-sm text-gray-900 group-hover:text-emerald-800 transition">
-                        tool.titleEn
+                      <h3 className="font-bold text-sm text-[#0f2a4a] group-hover:text-[#1d5fb8] transition truncate">
+                        {tool.titleEn}
                       </h3>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#1d5fb8] bg-[#eaf2fc] px-2 py-0.5 rounded-md shrink-0">
                       {tool.tag}
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-600 leading-relaxed mb-1.5">
+                  <p className="text-xs text-[#6b7a8f] leading-relaxed mb-1.5">
                     {tool.descEn}
                   </p>
                 </div>
 
-                <div className="pt-3 mt-3 border-t border-gray-200 flex items-center justify-between text-xs">
-                  <span className="text-gray-400 font-mono text-[11px]">{tool.path}</span>
+                <div className="pt-3 mt-3 border-t border-[#e3eaf3] flex items-center justify-between text-xs">
+                  <span className="text-[#8996a5] font-mono text-[11px]">{tool.path}</span>
                   <button
                     type="button"
                     onClick={() => {
                       window.history.pushState({}, '', tool.path);
                       onNavigate(tool.pageKey);
                     }}
-                    className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800 transition cursor-pointer group-hover:translate-x-0.5 duration-150"
+                    className="inline-flex items-center gap-1 font-bold text-[#1d5fb8] hover:underline transition cursor-pointer"
                   >
-                    <span>'Open Tool'</span>
+                    <span>Open Tool</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -206,95 +201,83 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({ onBack, onNaviga
           </div>
         </section>
 
-        {/* Structured Web Page Index Table for Googlebot */}
+        {/* Structured Web Page Index Table */}
         <section className="space-y-3 pt-2">
-          <h2 className="text-base font-bold text-gray-900">
-            'Complete Page Index & Crawl Architecture'
+          <h2
+            className="text-base font-bold text-[#0f2a4a]"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Complete Page Index
           </h2>
-          <div className="overflow-x-auto border border-gray-200 rounded-xl">
+          <div className="overflow-x-auto border border-[#e3eaf3] rounded-2xl">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                <tr className="bg-[#f1f5fa] text-[#0f2a4a] font-bold border-b border-[#e3eaf3]">
                   <th className="p-3">Page Name</th>
-                  <th className="p-3">Canonical URL</th>
+                  <th className="p-3">Route</th>
                   <th className="p-3">Primary Purpose</th>
-                  <th className="p-3">Index Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-600">
+              <tbody className="divide-y divide-[#e3eaf3] text-[#55657b]">
                 <tr>
-                  <td className="p-3 font-semibold text-gray-900">Home Translator</td>
-                  <td className="p-3 font-mono text-emerald-700">/</td>
-                  <td className="p-3">Core English ↔ Urdu translation engine with text, voice & camera</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Home Translator</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/ (#home)</td>
+                  <td className="p-3">Core translation workspace and step-by-step usage guide</td>
                 </tr>
-                <tr className="bg-gray-50/50">
-                  <td className="p-3 font-semibold text-gray-900">HTML Sitemap Directory</td>
-                  <td className="p-3 font-mono text-emerald-700">/sitemap</td>
-                  <td className="p-3">Full tools directory and navigational index for search crawlers</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                <tr className="bg-[#fafcfe]">
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Camera OCR Translation</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/camera (#image)</td>
+                  <td className="p-3">Image text extraction and photo scan translation</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-gray-900">Camera OCR Translation</td>
-                  <td className="p-3 font-mono text-emerald-700">/camera</td>
-                  <td className="p-3">Image text recognition and live photo scan translation</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Voice Translation</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/voice (#voice)</td>
+                  <td className="p-3">Microphone speech input and spoken output guide</td>
                 </tr>
-                <tr className="bg-gray-50/50">
-                  <td className="p-3 font-semibold text-gray-900">Voice Translation</td>
-                  <td className="p-3 font-mono text-emerald-700">/voice</td>
-                  <td className="p-3">Microphone speech-to-text with spoken voice synthesis</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                <tr className="bg-[#fafcfe]">
+                  <td className="p-3 font-semibold text-[#0f2a4a]">About LAFZ Translation</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/about (#about)</td>
+                  <td className="p-3">Mission, simplicity overview, audience, and responsive design</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-gray-900">Text Translation</td>
-                  <td className="p-3 font-mono text-emerald-700">/text-translation</td>
-                  <td className="p-3">Extended dedicated text translation interface</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Privacy Policy</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/privacy (#privacy)</td>
+                  <td className="p-3">Server processing, browser localStorage, voice, and clearing history</td>
                 </tr>
-                <tr className="bg-gray-50/50">
-                  <td className="p-3 font-semibold text-gray-900">Supported Languages</td>
-                  <td className="p-3 font-mono text-emerald-700">/languages</td>
-                  <td className="p-3">Directory of 100+ global languages with native names</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                <tr className="bg-[#fafcfe]">
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Terms of Use</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/terms (#terms)</td>
+                  <td className="p-3">Acceptable use, disclaimers, service availability, and ownership</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-gray-900">Translation History</td>
-                  <td className="p-3 font-mono text-emerald-700">/history</td>
-                  <td className="p-3">Manage and review previous user translations</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
-                </tr>
-                <tr className="bg-gray-50/50">
-                  <td className="p-3 font-semibold text-gray-900">About Lafz Translator</td>
-                  <td className="p-3 font-mono text-emerald-700">/about</td>
-                  <td className="p-3">Product details, AI engine specs, and privacy policy</td>
-                  <td className="p-3 font-bold text-emerald-600">Index, Follow</td>
+                  <td className="p-3 font-semibold text-[#0f2a4a]">Contact Us</td>
+                  <td className="p-3 font-mono text-[#1d5fb8]">/contact (#contact)</td>
+                  <td className="p-3">Email contact details and bug report guidelines</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </section>
 
-        {/* Back Button */}
-        <div className="pt-4 flex justify-between items-center border-t border-gray-100">
+        <div className="pt-2 flex justify-between items-center border-t border-[#e3eaf3]">
           <button
             type="button"
             onClick={() => {
               window.history.pushState({}, '', '/');
               onBack();
             }}
-            className="bg-[#2e7d32] hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer shadow-xs"
+            className="lafz-primary-btn text-xs px-4 py-2.5 cursor-pointer"
           >
-            ← 'Back to Home'
+            ← Back to Home
           </button>
 
           <a
             href="/sitemap.xml"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
+            className="text-xs text-[#1d5fb8] font-bold hover:underline"
           >
-            'View XML Sitemap (sitemap.xml)'
+            View XML Sitemap
           </a>
         </div>
       </div>

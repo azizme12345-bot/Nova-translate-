@@ -59,12 +59,12 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 bg-[#2e7d32] text-white flex justify-between items-center">
+        <div className="p-4 bg-[#1d5fb8] text-white flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-xl">📜</span>
             <div>
               <h3 className="font-bold text-base leading-tight">Translation History</h3>
-              <p className="text-xs text-emerald-100">Saved translation history ({history.length})</p>
+              <p className="text-xs text-blue-100">Saved translation history ({history.length})</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             placeholder="Search history..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#2e7d32]"
+            className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#1d5fb8]"
           />
         </div>
 
@@ -117,10 +117,10 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
               return (
                 <div
                   key={item.id}
-                  className="bg-white border border-gray-200 hover:border-emerald-500 rounded-xl p-3 shadow-xs transition"
+                  className="bg-white border border-gray-200 hover:border-blue-500 rounded-xl p-3 shadow-xs transition"
                 >
                   <div className="flex justify-between items-center text-[11px] text-gray-500 mb-1.5 pb-1 border-b border-gray-100">
-                    <span className="font-semibold text-emerald-800">
+                    <span className="font-semibold text-blue-800">
                       {item.from} → {item.to}
                     </span>
                     <span>{item.time || 'Recent'}</span>
@@ -131,7 +131,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
 
                   {/* Output Translation */}
                   <div
-                    className={`text-sm font-semibold text-emerald-900 bg-emerald-50/50 p-2 rounded-lg mb-2 ${
+                    className={`text-sm font-semibold text-blue-900 bg-blue-50/50 p-2 rounded-lg mb-2 ${
                       isUrduTarget ? 'text-right font-serif' : 'text-left'
                     }`}
                     dir={isUrduTarget ? 'rtl' : 'ltr'}
@@ -145,7 +145,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSpeak(item.output, item.to)}
-                        className="text-xs text-gray-600 hover:text-emerald-700 p-1 hover:bg-gray-100 rounded transition"
+                        className="text-xs text-gray-600 hover:text-blue-700 p-1 hover:bg-gray-100 rounded transition"
                         title="Speak output"
                       >
                         🔊 Listen
@@ -153,7 +153,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleCopy(item.output)}
-                        className="text-xs text-gray-600 hover:text-emerald-700 p-1 hover:bg-gray-100 rounded transition"
+                        className="text-xs text-gray-600 hover:text-blue-700 p-1 hover:bg-gray-100 rounded transition"
                         title="Copy translation"
                       >
                         📋 Copy
@@ -166,7 +166,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                         onUseItem(item);
                         onClose();
                       }}
-                      className="text-xs bg-[#2e7d32] hover:bg-emerald-800 text-white px-2.5 py-1 rounded-lg font-medium transition cursor-pointer"
+                      className="text-xs bg-[#1d5fb8] hover:bg-blue-800 text-white px-2.5 py-1 rounded-lg font-medium transition cursor-pointer"
                     >
                       Use in Translator ↗
                     </button>
