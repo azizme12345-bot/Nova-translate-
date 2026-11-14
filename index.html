@@ -2532,8 +2532,11 @@
           var ct = res.headers.get('content-type') || '';
           if (ct.indexOf('application/json') !== -1) {
             var json = await res.json();
-            if (!res.ok || (json.success === false && json.data === undefined)) {
-              throw new Error((json.error && json.error.message) || ('Request failed with HTTP status ' + res.status));
+            if (!res.ok || json.ok === false || (json.success === false && json.data === undefined)) {
+              var errText = typeof json.error === 'string'
+                ? json.error
+                : (json.error && json.error.message);
+              throw new Error(errText || ('Request failed with HTTP status ' + res.status));
             }
             return json.data !== undefined ? json.data : json;
           }
@@ -2793,8 +2796,7 @@
                       text: trimmed,
                       sourceLanguage: srcLang,
                       targetLanguage: tgtLang,
-                      tone: 'natural',
-                      model: 'gemini-1.5-flash'
+                      tone: 'natural'
                     })
                   });
                   result = await parseApiResponse(res);
@@ -2839,6 +2841,18 @@
           if (l.indexOf('fr') !== -1 || l.indexOf('french') !== -1) return 'fr-FR';
           if (l.indexOf('de') !== -1 || l.indexOf('german') !== -1) return 'de-DE';
           if (l.indexOf('ja') !== -1 || l.indexOf('japanese') !== -1) return 'ja-JP';
+          if (l.indexOf('zh') !== -1 || l.indexOf('chinese') !== -1) return 'zh-CN';
+          if (l.indexOf('pt') !== -1 || l.indexOf('portuguese') !== -1) return 'pt-PT';
+          if (l.indexOf('tr') !== -1 || l.indexOf('turkish') !== -1) return 'tr-TR';
+          if (l.indexOf('ru') !== -1 || l.indexOf('russian') !== -1) return 'ru-RU';
+          if (l.indexOf('fa') !== -1 || l.indexOf('persian') !== -1) return 'fa-IR';
+          if (l.indexOf('ko') !== -1 || l.indexOf('korean') !== -1) return 'ko-KR';
+          if (l.indexOf('it') !== -1 || l.indexOf('italian') !== -1) return 'it-IT';
+          if (l.indexOf('bn') !== -1 || l.indexOf('bengali') !== -1) return 'bn-BD';
+          if (l.indexOf('id') !== -1 || l.indexOf('indonesian') !== -1) return 'id-ID';
+          if (l.indexOf('nl') !== -1 || l.indexOf('dutch') !== -1) return 'nl-NL';
+          if (l.indexOf('ps') !== -1 || l.indexOf('pashto') !== -1) return 'ps-AF';
+          if (l.indexOf('sd') !== -1 || l.indexOf('sindhi') !== -1) return 'sd-PK';
           return 'en-US';
         }
 
@@ -3017,21 +3031,34 @@
         }
 
         /* Microphone / Speech-to-Text */
-        function stopMicrophone() {
+        var userStoppedMic = false;
+
+        function releaseMediaStream() {
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(function (t) { t.stop(); });
+            mediaStream = null;
+          }
+        }
+
+        function resetMicUi() {
           isListening = false;
           micBtn.classList.remove('recording');
           micBtnLabel.textContent = 'Speak';
           listeningIndicator.classList.add('hidden');
+        }
+
+        function stopMicrophone() {
+          userStoppedMic = true;
+          resetMicUi();
           if (recognition) {
-            try { recognition.stop(); } catch (e) {}
+            var r = recognition;
             recognition = null;
+            try { r.stop(); } catch (e) {}
           }
           if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            try { mediaRecorder.stop(); } catch (e) {}
-          }
-          if (mediaStream) {
-            mediaStream.getTracks().forEach(function (t) { t.stop(); });
-            mediaStream = null;
+            try { mediaRecorder.stop(); } catch (e) { releaseMediaStream(); }
+          } else {
+            releaseMediaStream();
           }
         }
 
@@ -3044,88 +3071,60 @@
           });
         }
 
-        async function startMicrophone() {
-          if (isListening) {
-            stopMicrophone();
-            return;
+        function pickSupportedAudioMimeType() {
+          if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+            return '';
           }
-          try {
-            var streamTest = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamTest.getTracks().forEach(function(t) { t.stop(); });
-          } catch (err) {
-            showToast("Microphone blocked. Allow microphone for this site and try again.");
-            stopMicrophone();
-            return;
-          }
-
-          liveRecognized = false;
-          var srcLang = sourceLangEl.value || 'English 🇬🇧';
-          var tgtLang = targetLangEl.value || 'Urdu 🇵🇰';
-          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-          if (SpeechRecognition) {
+          var candidates = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4',
+            'audio/ogg;codecs=opus',
+            'audio/aac'
+          ];
+          for (var i = 0; i < candidates.length; i++) {
             try {
-              recognition = new SpeechRecognition();
-              recognition.lang = getSpeechLangCode(srcLang);
-              recognition.interimResults = true;
-              recognition.continuous = true;
-
-              recognition.onstart = function () {
-                isListening = true;
-                micBtn.classList.add('recording');
-                micBtnLabel.textContent = 'Stop';
-                listeningIndicator.classList.remove('hidden');
-                showToast('🎙️ Listening in ' + srcLang.split(' ')[0] + '... Speak clearly!');
-              };
-
-              recognition.onresult = function (event) {
-                liveRecognized = true;
-                var transcript = '';
-                for (var i = 0; i < event.results.length; i++) {
-                  transcript += event.results[i][0].transcript;
-                }
-                if (transcript) {
-                  sourceTextEl.value = transcript;
-                  updateCharCount();
-                  if (event.results[event.results.length - 1].isFinal) {
-                    executeTranslation(transcript, sourceLangEl.value, targetLangEl.value);
-                  }
-                }
-              };
-
-              recognition.onerror = function (e) {
-                if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                  showToast("Microphone blocked. Allow microphone for this site and try again.");
-                  stopMicrophone();
-                }
-              };
-
-              recognition.onend = function () {
-                if (isListening && recognition) {
-                  try { recognition.start(); } catch (err) { stopMicrophone(); }
-                }
-              };
-
-              recognition.start();
-              return;
-            } catch (err) {}
+              if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+            } catch (e) {}
           }
+          return '';
+        }
 
+        async function startMediaRecorderFallback(srcLang, tgtLang) {
+          if (userStoppedMic) return;
+          if (typeof MediaRecorder === 'undefined') {
+            resetMicUi();
+            showToast('Speech recognition is not supported in this browser.');
+            return;
+          }
           try {
-            var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            var stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              }
+            });
             mediaStream = stream;
-            var mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
-              ? 'audio/webm;codecs=opus'
-              : 'audio/webm';
-            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+
+            var mimeType = pickSupportedAudioMimeType();
+            mediaRecorder = mimeType
+              ? new MediaRecorder(stream, { mimeType: mimeType })
+              : new MediaRecorder(stream);
+            var activeMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
             audioChunks = [];
+
             mediaRecorder.ondataavailable = function (e) {
               if (e.data && e.data.size > 0) audioChunks.push(e.data);
             };
+
             mediaRecorder.onstop = async function () {
-              stopMicrophone();
-              var blob = new Blob(audioChunks, { type: mimeType });
-              if (blob.size > 0 && !liveRecognized) {
+              releaseMediaStream();
+              resetMicUi();
+
+              var finalMime = (audioChunks[0] && audioChunks[0].type) || activeMimeType || 'audio/webm';
+              var blob = new Blob(audioChunks, { type: finalMime });
+              if (blob.size > 0) {
                 showToast('🎙️ Converting speech to text...');
                 try {
                   var base64Audio = await blobToDataUrl(blob);
@@ -3134,7 +3133,7 @@
                     headers: buildApiHeaders(),
                     body: JSON.stringify({
                       audioBase64: base64Audio,
-                      mimeType: blob.type || mimeType,
+                      mimeType: blob.type || finalMime,
                       languageHint: srcLang,
                       targetLanguage: tgtLang
                     })
@@ -3160,25 +3159,163 @@
                     } else {
                       await executeTranslation(transcribed, srcLang, tgtLang);
                     }
-                    showToast('Translation complete!');
+                    showToast('Voice translation complete!');
                   } else {
-                    showToast('No speech detected. Please try again.');
+                    showToast('No speech detected. Please speak clearly and try again.');
                   }
                 } catch (err) {
                   showToast((err && err.message) || 'Error in voice translation');
                 }
+              } else {
+                showToast('No audio recorded. Please speak for at least 1 second and try again.');
               }
             };
-            mediaRecorder.start(400);
+
+            mediaRecorder.start(500);
             isListening = true;
             micBtn.classList.add('recording');
             micBtnLabel.textContent = 'Stop';
             listeningIndicator.classList.remove('hidden');
-            showToast('🎙️ Start speaking... Tap mic again to stop');
+            showToast('🎙️ Listening... Speak now, then tap Stop');
           } catch (err) {
-            showToast("Microphone blocked. Allow microphone for this site and try again.");
-            stopMicrophone();
+            releaseMediaStream();
+            resetMicUi();
+            showToast('Microphone blocked. Allow microphone for this site and try again.');
           }
+        }
+
+        async function startMicrophone() {
+          if (isListening) {
+            stopMicrophone();
+            return;
+          }
+
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('Microphone not supported in this browser.');
+            return;
+          }
+
+          userStoppedMic = false;
+          liveRecognized = false;
+          var srcLang = sourceLangEl.value || 'English 🇬🇧';
+          var tgtLang = targetLangEl.value || 'Urdu 🇵🇰';
+
+          // Explicitly request microphone permission first
+          try {
+            var streamTest = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamTest.getTracks().forEach(function (t) { t.stop(); });
+          } catch (err) {
+            showToast('Microphone blocked. Allow microphone for this site and try again.');
+            resetMicUi();
+            return;
+          }
+
+          if (userStoppedMic) return;
+
+          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (SpeechRecognition) {
+            // Brief pause so mobile browsers release the test mic stream before starting SpeechRecognition
+            await new Promise(function (resolve) { setTimeout(resolve, 150); });
+            if (userStoppedMic) return;
+
+            try {
+              var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+              var rec = new SpeechRecognition();
+              recognition = rec;
+              rec.lang = getSpeechLangCode(srcLang);
+              rec.interimResults = true;
+              rec.continuous = !isMobile;
+              rec.maxAlternatives = 1;
+
+              var startedAt = Date.now();
+              var fellBackToRecorder = false;
+
+              rec.onstart = function () {
+                startedAt = Date.now();
+                isListening = true;
+                micBtn.classList.add('recording');
+                micBtnLabel.textContent = 'Stop';
+                listeningIndicator.classList.remove('hidden');
+                showToast('🎙️ Listening in ' + srcLang.split(' ')[0] + '... Speak clearly!');
+              };
+
+              rec.onresult = function (event) {
+                var finalPart = '';
+                var interimPart = '';
+                for (var i = 0; i < event.results.length; i++) {
+                  var res = event.results[i];
+                  if (res.isFinal) {
+                    finalPart += res[0].transcript + ' ';
+                  } else {
+                    interimPart += res[0].transcript;
+                  }
+                }
+                var combined = (finalPart + interimPart).trim();
+                if (combined) {
+                  liveRecognized = true;
+                  sourceTextEl.value = combined;
+                  updateCharCount();
+                  var lastRes = event.results[event.results.length - 1];
+                  if (lastRes && lastRes.isFinal) {
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    executeTranslation(combined, sourceLangEl.value, targetLangEl.value);
+                  }
+                }
+              };
+
+              rec.onerror = function (e) {
+                var errCode = e && e.error ? e.error : '';
+                if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+                  recognition = null;
+                  resetMicUi();
+                  showToast('Microphone blocked. Allow microphone for this site and try again.');
+                  return;
+                }
+                if (errCode === 'no-speech') {
+                  if (!liveRecognized) {
+                    recognition = null;
+                    resetMicUi();
+                    showToast('No speech detected. Please speak clearly and try again.');
+                  }
+                  return;
+                }
+                // For audio-capture, network, aborted, language-not-supported: fall back to MediaRecorder + server STT
+                if (!liveRecognized && !userStoppedMic && !fellBackToRecorder) {
+                  fellBackToRecorder = true;
+                  recognition = null;
+                  startMediaRecorderFallback(srcLang, tgtLang);
+                }
+              };
+
+              rec.onend = function () {
+                if (fellBackToRecorder || userStoppedMic || recognition !== rec) {
+                  return;
+                }
+                if (!liveRecognized && (Date.now() - startedAt) < 800) {
+                  // Browser Web Speech closed immediately without capturing — switch to MediaRecorder
+                  fellBackToRecorder = true;
+                  recognition = null;
+                  startMediaRecorderFallback(srcLang, tgtLang);
+                  return;
+                }
+                if (!isMobile && isListening && !userStoppedMic) {
+                  try {
+                    rec.start();
+                    return;
+                  } catch (err) {}
+                }
+                recognition = null;
+                resetMicUi();
+              };
+
+              rec.start();
+              return;
+            } catch (err) {
+              recognition = null;
+            }
+          }
+
+          await startMediaRecorderFallback(srcLang, tgtLang);
         }
 
         /* Camera OCR */

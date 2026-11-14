@@ -42,7 +42,7 @@ function getAIClients(customApiKey?: string): GoogleGenAI[] {
     clients.push(
       new GoogleGenAI({
         apiKey: cleanCustom,
-        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
       })
     );
   }
@@ -50,14 +50,14 @@ function getAIClients(customApiKey?: string): GoogleGenAI[] {
     clients.push(
       new GoogleGenAI({
         apiKey: envKey,
-        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
       })
     );
   }
   if (clients.length === 0) {
     clients.push(
       new GoogleGenAI({
-        httpOptions: { headers: { 'User-Agent': 'nova-translator-pro' } },
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
       })
     );
   }
@@ -112,10 +112,9 @@ async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetL
   return null;
 }
 
-// Fast Gemini Flash models — prioritize gemini-3.1-flash-lite first for highest quota & speed
-const PRIMARY_MODEL = 'gemini-3.1-flash-lite';
-const SECONDARY_MODEL = 'gemini-flash-latest';
-const FALLBACK_MODEL = 'gemini-3.8-flash';
+const PRIMARY_MODEL = 'gemini-4-hydrogen';
+const LITE_MODEL = 'gemini-3.1-flash-lite';
+const TRANSCRIBE_MODEL = 'gemini-3.5-transcribe';
 
 export interface TranslationRequest {
   text: string;
@@ -144,12 +143,11 @@ export class TranslationService {
    */
   static async testApiKey(customApiKey?: string): Promise<{ valid: boolean; model: string; message: string }> {
     const ai = getAIClient(customApiKey);
-    for (const model of [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL]) {
+    for (const model of [PRIMARY_MODEL, LITE_MODEL]) {
       try {
         const response = await ai.models.generateContent({
           model,
           contents: 'Respond with exactly: "OK"',
-          config: { temperature: 0.1 },
         });
         if (response && response.text) {
           return {
@@ -158,7 +156,9 @@ export class TranslationService {
             message: 'Google Gemini API key successfully verified and connected!',
           };
         }
-      } catch {}
+      } catch (err: any) {
+        console.error('[testApiKey]', model, err?.message || err);
+      }
     }
     return {
       valid: false,
@@ -197,7 +197,7 @@ export class TranslationService {
     const isAutoDetect = !sourceLang || sourceLang.toLowerCase().includes('auto') || sourceLang.toLowerCase() === 'detect';
     const clients = getAIClients(activeKey);
 
-    const systemInstruction = `You are Nova Translator Pro — an ultra-fast professional translation assistant.
+    const systemInstruction = `You are LAFZ Translation — an ultra-fast professional translation assistant.
 - Translate text accurately between languages.
 - Maintain context, nuance, and meaning.
 - Provide natural, fluent translations.
@@ -209,8 +209,9 @@ export class TranslationService {
 ${rawText}
 """`;
 
-    const modelsToTry = [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL];
+    const modelsToTry = [PRIMARY_MODEL, LITE_MODEL];
     let response: any = null;
+    let lastError: any = null;
 
     for (const ai of clients) {
       for (const model of modelsToTry) {
@@ -220,7 +221,6 @@ ${rawText}
             contents: prompt,
             config: {
               systemInstruction,
-              temperature: 0,
               responseMimeType: 'application/json',
               responseSchema: {
                 type: Type.OBJECT,
@@ -236,7 +236,10 @@ ${rawText}
             },
           });
           if (response?.text) break;
-        } catch {}
+        } catch (err: any) {
+          lastError = err;
+          console.error('[translate]', model, err?.message || err);
+        }
       }
       if (response?.text) break;
     }
@@ -260,7 +263,11 @@ ${rawText}
         serverTranslationCache.set(cacheKey, fallbackResult);
         return fallbackResult;
       }
-      throw new Error('Translation service temporarily unavailable. Please verify API key.');
+      const errMsg = lastError?.message || '';
+      if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID') || errMsg.includes('PERMISSION_DENIED') || errMsg.includes('UNAUTHENTICATED')) {
+        throw new Error('Translation API key is invalid or not configured. Please check GEMINI_API_KEY in Settings > Secrets.');
+      }
+      throw new Error('Translation service temporarily unavailable. Please try again.');
     }
 
     let parsed: any;
@@ -302,7 +309,6 @@ ${rawText}
       const res = await ai.models.generateContent({
         model: PRIMARY_MODEL,
         contents: prompt,
-        config: { temperature: 0.1 },
       });
       const clean = (res.text || '').replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(clean);
@@ -327,71 +333,91 @@ ${rawText}
     const clients = getAIClients(activeKey);
 
     let cleanBase64 = audioBase64;
-    let detectedMime = mimeType ? mimeType.split(';')[0] : 'audio/webm';
-    if (cleanBase64.includes(';base64,')) {
-      cleanBase64 = cleanBase64.split(';base64,')[1];
+    if (cleanBase64.includes(',')) {
+      cleanBase64 = cleanBase64.split(',').slice(1).join(',');
+    }
+    cleanBase64 = cleanBase64.replace(/\s+/g, '');
+
+    if (!cleanBase64) {
+      throw new Error('Recorded audio data is empty.');
+    }
+
+    let detectedMime = mimeType ? mimeType.split(';')[0].trim().toLowerCase() : 'audio/webm';
+    if (!detectedMime.startsWith('audio/')) {
+      detectedMime = 'audio/webm';
     }
 
     const audioPart = {
       inlineData: {
-        data: cleanBase64.trim(),
-        mimeType: detectedMime || 'audio/webm',
+        data: cleanBase64,
+        mimeType: detectedMime,
       },
     };
 
-    const hint = languageHint ? `Source language hint: ${languageHint}.` : '';
-    const candidateModels = [PRIMARY_MODEL, 'gemini-3.5-transcribe', SECONDARY_MODEL, FALLBACK_MODEL];
+    const cleanHint = languageHint ? languageHint.replace(/[^\p{L}\s]/gu, '').trim() : '';
+    const transcribePrompt = cleanHint
+      ? `Transcribe all spoken words in this audio accurately in ${cleanHint}. Output ONLY the exact transcribed text with no commentary, labels, or quotes. If there is only silence or no intelligible speech, output [NO_SPEECH].`
+      : `Transcribe all spoken words in this audio accurately. Output ONLY the exact transcribed text with no commentary, labels, or quotes. If there is only silence or no intelligible speech, output [NO_SPEECH].`;
 
-    if (targetLanguage) {
-      const prompt = `Transcribe this speech accurately (${hint}) and translate it into ${targetLanguage}. Respond ONLY with JSON: {"text": "exact transcribed speech", "translatedText": "translation in ${targetLanguage}"}`;
-      for (const ai of clients) {
-        for (const model of candidateModels) {
-          try {
-            const res = await ai.models.generateContent({
-              model,
-              contents: [prompt, audioPart],
-              config: {
-                temperature: 0.1,
-                responseMimeType: 'application/json',
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    text: { type: Type.STRING },
-                    translatedText: { type: Type.STRING },
-                  },
-                  required: ['text', 'translatedText'],
-                },
-              },
-            });
-            if (res?.text) {
-              const parsed = JSON.parse(res.text.replace(/```json\n?|\n?```/g, '').trim());
-              return {
-                text: (parsed.text || '').trim(),
-                translatedText: (parsed.translatedText || '').trim(),
-              };
-            }
-          } catch {}
-        }
-      }
-    }
+    const candidateModels = [TRANSCRIBE_MODEL, PRIMARY_MODEL, LITE_MODEL];
+    let transcribedText = '';
+    let succeededOnce = false;
+    let lastError: any = null;
 
-    const prompt = `Transcribe this speech accurately. ${hint} Output only the transcribed text with no extra commentary or quotes.`;
     for (const ai of clients) {
       for (const model of candidateModels) {
         try {
           const res = await ai.models.generateContent({
             model,
-            contents: [prompt, audioPart],
-            config: { temperature: 0.1 },
+            contents: { parts: [audioPart, { text: transcribePrompt }] },
           });
-          if (res?.text) {
-            return { text: (res.text || '').trim() };
+          succeededOnce = true;
+          const raw = (res?.text || '').trim();
+          if (raw && raw !== '[NO_SPEECH]' && !/^\[?no[_\s]?speech\]?$/i.test(raw)) {
+            transcribedText = raw.replace(/^["']|["']$/g, '').trim();
+            break;
           }
-        } catch {}
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.error('[transcribeAudio]', model, err?.message || err);
+        }
+      }
+      if (succeededOnce) break;
+    }
+
+    if (!succeededOnce && lastError) {
+      const msg = lastError?.message || '';
+      if (msg.includes('API key not valid') || msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED') || msg.includes('UNAUTHENTICATED')) {
+        throw new Error('Speech transcription requires a valid GEMINI_API_KEY in Settings > Secrets.');
+      }
+      throw new Error('Speech recognition failed on server. Please try again.');
+    }
+
+    if (!transcribedText) {
+      return { text: '' };
+    }
+
+    if (targetLanguage) {
+      try {
+        const translation = await TranslationService.translate(
+          {
+            text: transcribedText,
+            sourceLanguage: languageHint,
+            targetLanguage,
+          },
+          activeKey
+        );
+        return {
+          text: transcribedText,
+          translatedText: translation.translatedText,
+        };
+      } catch (err: any) {
+        console.error('[transcribeAudio->translate]', err?.message || err);
       }
     }
 
-    return { text: '' };
+    return { text: transcribedText };
   }
 
   static async ocrAndTranslate(
@@ -433,7 +459,7 @@ Respond ONLY with a valid JSON object in this format:
   "detectedSourceLanguage": "name of source language"
 }`;
 
-    const candidateModels = [PRIMARY_MODEL, SECONDARY_MODEL, FALLBACK_MODEL];
+    const candidateModels = [PRIMARY_MODEL, LITE_MODEL];
     let res: any = null;
 
     for (const ai of clients) {
@@ -441,13 +467,12 @@ Respond ONLY with a valid JSON object in this format:
         try {
           res = await ai.models.generateContent({
             model,
-            contents: [prompt, imagePart],
-            config: {
-              temperature: 0.1,
-            },
+            contents: { parts: [imagePart, { text: prompt }] },
           });
           if (res?.text) break;
-        } catch {}
+        } catch (err: any) {
+          console.error('[ocrAndTranslate]', model, err?.message || err);
+        }
       }
       if (res?.text) break;
     }
@@ -500,17 +525,17 @@ Respond ONLY with a valid JSON object in this format:
     const ai = getAIClient(activeKey);
     const targetLang = params.targetLanguage || 'Urdu';
 
-    const systemInstruction = `You are Nova AI Workspace Assistant & Multilingual Translator.
+    const systemInstruction = `You are LAFZ Translation Assistant & Multilingual Translator.
 - You can converse, answer questions, analyze image inputs, and provide translations.
 - Respond in clear, helpful ${targetLang} or bilingual format as appropriate.
 - Keep output concise, polite, and well-structured.`;
 
-    const contents: any[] = [];
+    const parts: any[] = [];
 
     if (params.imageBase64) {
       let cleanBase64 = params.imageBase64;
       if (cleanBase64.includes(';base64,')) cleanBase64 = cleanBase64.split(';base64,')[1];
-      contents.push({
+      parts.push({
         inlineData: {
           data: cleanBase64.trim(),
           mimeType: params.mimeType || 'image/jpeg',
@@ -518,14 +543,13 @@ Respond ONLY with a valid JSON object in this format:
       });
     }
 
-    contents.push(params.message || 'Please assist with this request.');
+    parts.push({ text: params.message || 'Please assist with this request.' });
 
     const res = await ai.models.generateContent({
       model: PRIMARY_MODEL,
-      contents,
+      contents: { parts },
       config: {
         systemInstruction,
-        temperature: 0.3,
       },
     });
 
