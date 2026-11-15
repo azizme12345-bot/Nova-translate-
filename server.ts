@@ -11,18 +11,56 @@ const app = express();
 const port = parseInt(process.env.PORT || '3000', 10);
 const isProd = process.env.NODE_ENV === 'production';
 
-// CORS & Security headers
+function parseHostFromUrl(raw?: string): string {
+  if (!raw) return '';
+  try {
+    return new URL(raw).host.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+// Security headers & Same-Origin protection for /api
 app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Vary', 'Origin');
 
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(204);
-    return;
+  if (req.path.startsWith('/api')) {
+    const reqHost = ((req.headers['x-forwarded-host'] as string) || req.headers.host || '').split(',')[0].trim().toLowerCase();
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    const secFetchSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
+
+    if (secFetchSite === 'cross-site') {
+      res.status(403).json({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-site requests are not allowed.' } });
+      return;
+    }
+
+    if (origin) {
+      const originHost = parseHostFromUrl(origin);
+      if (!reqHost || !originHost || originHost !== reqHost) {
+        res.status(403).json({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-origin requests are not allowed.' } });
+        return;
+      }
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (referer) {
+      const refHost = parseHostFromUrl(referer);
+      if (reqHost && refHost && refHost !== reqHost) {
+        res.status(403).json({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-origin requests are not allowed.' } });
+        return;
+      }
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
   }
+
   next();
 });
 
@@ -53,7 +91,13 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   next(err);
 });
 
-// Apply Rate Limiter to all /api/ endpoints (60 req/min per IP)
+// Apply stricter rate limit (30 req/min per IP) on AI endpoints
+const aiEndpointLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 30 });
+app.use('/api/translate', aiEndpointLimiter);
+app.use('/api/ocr-translate', aiEndpointLimiter);
+app.use('/api/speech-to-text', aiEndpointLimiter);
+
+// General rate limiter for remaining /api endpoints (60 req/min per IP)
 app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 60 }));
 
 // Mount centralized API router

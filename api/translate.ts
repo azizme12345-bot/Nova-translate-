@@ -48,15 +48,87 @@ async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetL
   return null;
 }
 
-export default async function handler(req: any, res: any) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+const translateIpBucket = new Map<string, { count: number; resetTime: number }>();
+
+function checkTranslateAccess(req: any, res: any): boolean {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Vary', 'Origin');
+
+  const reqHost = String(req.headers?.['x-forwarded-host'] || req.headers?.host || '').split(',')[0].trim().toLowerCase();
+  const originHeader = req.headers?.origin;
+  const refererHeader = req.headers?.referer;
+  const secFetchSite = String(req.headers?.['sec-fetch-site'] || '').toLowerCase();
+
+  const parseHost = (val: any) => {
+    try {
+      return val ? new URL(Array.isArray(val) ? val[0] : val).host.toLowerCase() : '';
+    } catch {
+      return '';
+    }
+  };
+
+  if (secFetchSite === 'cross-site') {
+    res.statusCode = 403;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-site requests are not allowed.' } }));
+    return false;
+  }
+
+  if (originHeader) {
+    const originHost = parseHost(originHeader);
+    if (!reqHost || !originHost || originHost !== reqHost) {
+      res.statusCode = 403;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-origin requests are not allowed.' } }));
+      return false;
+    }
+    res.setHeader('Access-Control-Allow-Origin', Array.isArray(originHeader) ? originHeader[0] : originHeader);
+  } else if (refererHeader) {
+    const refHost = parseHost(refererHeader);
+    if (reqHost && refHost && refHost !== reqHost) {
+      res.statusCode = 403;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: { code: 'FORBIDDEN_ORIGIN', message: 'Cross-origin requests are not allowed.' } }));
+      return false;
+    }
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
+    return false;
+  }
+
+  const forwarded = req.headers?.['x-forwarded-for'];
+  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0].trim() || req.socket?.remoteAddress || 'anonymous';
+  const now = Date.now();
+  const max = 30;
+  let entry = translateIpBucket.get(ip);
+  if (!entry || now > entry.resetTime) {
+    entry = { count: 1, resetTime: now + 60 * 1000 };
+    translateIpBucket.set(ip, entry);
+  } else {
+    entry.count += 1;
+  }
+
+  res.setHeader('X-RateLimit-Limit', String(max));
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, max - entry.count)));
+
+  if (entry.count > max) {
+    res.statusCode = 429;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests. Please wait a minute and try again.' } }));
+    return false;
+  }
+
+  return true;
+}
+
+export default async function handler(req: any, res: any) {
+  if (!checkTranslateAccess(req, res)) {
     return;
   }
 

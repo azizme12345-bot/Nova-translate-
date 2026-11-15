@@ -1,12 +1,7 @@
-export default async function handler(req: any, res: any) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+import { enforceSameOriginAndRateLimit } from './_security';
 
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
+export default async function handler(req: any, res: any) {
+  if (!enforceSameOriginAndRateLimit(req, res)) {
     return;
   }
 

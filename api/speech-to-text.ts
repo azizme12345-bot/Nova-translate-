@@ -1,14 +1,8 @@
 import { TranslationService } from '../server/translationService';
+import { enforceSameOriginAndRateLimit } from './_security';
 
 export default async function handler(req: any, res: any) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
+  if (!enforceSameOriginAndRateLimit(req, res, { maxRequestsPerMinute: 30 })) {
     return;
   }
 

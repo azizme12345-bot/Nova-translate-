@@ -10,28 +10,28 @@ const SITE = 'https://nova-translate-orpin.vercel.app';
 const pages = [
   {
     path: '/text-translation',
-    title: 'Text Translation – Lafz Translator',
-    desc: 'Instant bidirectional AI text translation supporting English, Urdu, and 100+ languages. Fast sentence, paragraph, and document translator.',
+    title: 'Text Translation – LAFZ Translation',
+    desc: 'Simple text translation supporting English, Urdu, and 9 languages in the dropdown.',
   },
   {
     path: '/voice',
-    title: 'Voice Translator & Speech-to-Text – Lafz Translator',
-    desc: 'Speak naturally and translate your voice in real-time between English and Urdu with continuous microphone input and natural audio playback.',
+    title: 'Voice Translator & Speech-to-Text – LAFZ Translation',
+    desc: 'Speak and translate your voice between English, Urdu, and other supported languages using your browser.',
   },
   {
     path: '/camera',
-    title: 'Camera OCR & Photo Translator – Lafz Translator',
-    desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents directly using your mobile camera or uploaded image.',
+    title: 'Camera OCR & Photo Translator – LAFZ Translation',
+    desc: 'Scan and translate printed signs, restaurant menus, receipts, and documents using your mobile camera or uploaded image.',
   },
   {
     path: '/history',
-    title: 'Translation History & Activity Log – Lafz Translator',
-    desc: 'View, search, replay, and manage your recent translations with private device storage and one-click clipboard copying.',
+    title: 'Translation History & Activity Log – LAFZ Translation',
+    desc: 'View, search, replay, and manage your recent translations stored locally in your browser.',
   },
   {
     path: '/languages',
-    title: 'Supported Languages Directory – Lafz Translator',
-    desc: 'Explore 100+ supported international languages, dialects, native scripts, and speech synthesis engines available in Lafz Translator.',
+    title: 'Supported Languages Directory – LAFZ Translation',
+    desc: 'Explore the 9 supported languages, native scripts, and browser spoken playback in LAFZ Translation.',
   },
   {
     path: '/about',
@@ -41,12 +41,12 @@ const pages = [
   {
     path: '/privacy',
     title: 'Privacy Policy – LAFZ Translation',
-    desc: 'Privacy Policy for LAFZ Translation. Learn what text, voice audio, and images are sent to the server, what stays in your browser storage, and how to clear history.',
+    desc: 'Privacy Policy for LAFZ Translation. Learn how typed text, images, Chrome speech recognition, and browser storage work.',
   },
   {
     path: '/terms',
     title: 'Terms of Use – LAFZ Translation',
-    desc: 'Terms of Use for LAFZ Translation covering acceptable use, machine translation limitations, service availability, and content ownership.',
+    desc: 'Terms of Use for LAFZ Translation covering acceptable use, machine translation limitations, service availability, and ownership.',
   },
   {
     path: '/contact',
@@ -56,7 +56,7 @@ const pages = [
   {
     path: '/sitemap',
     title: 'Sitemap & Tools Directory – LAFZ Translation',
-    desc: 'Explore all translation tools, features, and indexable pages on LAFZ Translation. Complete navigation directory for users and search engines.',
+    desc: 'Explore all translation tools, features, and indexable pages on LAFZ Translation.',
   },
 ];
 
@@ -84,7 +84,6 @@ function buildPage(baseHtml, page) {
   html = html.replace(/"url": "[^"]*"/, () => `"url": "${SITE}${page.path}"`);
   html = html.replace(/("description": ")[^"]*(")/, (_, a, b) => a + d + b);
   html = html.replace(/<h1>[^<]*<\/h1>/, () => `<h1>${t}</h1>`);
-  html = html.replace(/<p>Lafz Translator is [^<]*<\/p>/, () => `<p>${d}</p>`);
   return html;
 }
 

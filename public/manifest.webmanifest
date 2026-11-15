@@ -1,21 +1,15 @@
 {
   "id": "/",
-  "name": "Lafz Translator",
-  "short_name": "Lafz Translator",
-  "description": "Fast, simple and natural AI translation for text, voice and images across 100+ languages.",
+  "name": "LAFZ Translation",
+  "short_name": "LAFZ Translation",
+  "description": "Simple translation for text, voice, and images across 9 languages.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#2e7d32",
-  "theme_color": "#2e7d32",
+  "background_color": "#123b70",
+  "theme_color": "#123b70",
   "icons": [
-    {
-      "src": "/app-logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
     {
       "src": "/pwa-192x192.png",
       "sizes": "192x192",
@@ -27,6 +21,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/apple-touch-icon.png",
