@@ -2104,7 +2104,7 @@
         var PLACEHOLDER_OUTPUT = 'Translation will appear here...';
         var HISTORY_KEY = 'nova_translation_history';
         var SAVED_KEY = 'nova_saved_items';
-        var CACHE_KEY = 'nova_translation_cache_v2';
+        var CACHE_KEY = 'nova_translation_cache_v3';
         var API_KEY_STORAGE = 'novaGeminiApiKey';
         var VOICE_GENDER_KEY = 'novaVoiceGender';
         var FORCE_OFFLINE_KEY = 'nova_force_offline';
@@ -2483,8 +2483,6 @@
         function translateOffline(text, srcLang, tgtLang) {
           var clean = text.trim();
           var lower = clean.toLowerCase();
-          var cached = getCachedTranslation(clean, srcLang, tgtLang);
-          if (cached) return cached;
 
           var srcCode = String(srcLang || 'English').toLowerCase().slice(0, 2);
           var tgtCode = String(tgtLang || 'Urdu').toLowerCase().slice(0, 2);
@@ -2493,15 +2491,8 @@
 
           if (dict && dict[lower]) {
             translated = dict[lower];
-          } else if (dict) {
-            translated = clean.split(/\s+/).map(function (w) {
-              var cw = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-              return dict[cw] || w;
-            }).join(' ');
-          }
-
-          if (!translated) {
-            translated = '[Offline Mode] ' + clean;
+          } else {
+            translated = 'Translation not available offline. Please try again when online.';
           }
 
           var res = {
@@ -2510,9 +2501,9 @@
             sourceLanguage: srcLang,
             targetLanguage: tgtLang,
             confidence: 0.9,
-            fromCache: true
+            fromCache: false,
+            isOffline: true
           };
-          setCachedTranslation(clean, srcLang, tgtLang, res);
           return res;
         }
 
@@ -2718,7 +2709,7 @@
 
           if (historyListEl) {
             historyListEl.innerHTML = buildHistoryCards(
-              filtered.slice(0, 1),
+              filtered,
               historyItems.length === 0
                 ? 'No translations recorded yet. Enter text or use voice to get started.'
                 : 'No matching history entries found.'
@@ -2734,14 +2725,15 @@
         }
 
         function renderSaved() {
-          var list = savedItems.length > 0 ? savedItems : [
-            { id: 's1', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Hello', output: 'ہیلو', timestamp: '♡ Saved' },
-            { id: 's2', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Welcome', output: 'خوش آمدید', timestamp: '♡ Saved' }
-          ];
+          var list = savedItems;
           if (clearAllSavedBtn) {
             clearAllSavedBtn.classList.toggle('hidden', savedItems.length === 0);
           }
           if (savedListEl) {
+            if (list.length === 0) {
+              savedListEl.innerHTML = '<div style="text-align:center;padding:32px 12px;color:var(--muted-light);font-size:14px;">No saved items yet.</div>';
+              return;
+            }
             savedListEl.innerHTML = list.map(function (item) {
               return (
                 '<div class="history-item">' +
@@ -2767,8 +2759,12 @@
         }
 
         /* Core Text Translation (exact /api/translate contract + cache + offline fallback) */
+        var activeTranslationId = 0;
+
         async function executeTranslation(textToTranslate, srcLang, tgtLang) {
           var trimmed = String(textToTranslate || '').trim();
+          var requestId = ++activeTranslationId;
+
           if (!trimmed) {
             currentOutputText = '';
             renderOutputState();
@@ -2783,29 +2779,29 @@
             try { forceOffline = localStorage.getItem(FORCE_OFFLINE_KEY) === '1'; } catch (e) {}
             var online = !forceOffline && (typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-            var result = getCachedTranslation(trimmed, srcLang, tgtLang);
-            if (!result) {
-              if (!online) {
-                result = translateOffline(trimmed, srcLang, tgtLang);
-              } else {
-                try {
-                  var res = await fetch('/api/translate', {
-                    method: 'POST',
-                    headers: buildApiHeaders(),
-                    body: JSON.stringify({
-                      text: trimmed,
-                      sourceLanguage: srcLang,
-                      targetLanguage: tgtLang,
-                      tone: 'natural'
-                    })
-                  });
-                  result = await parseApiResponse(res);
-                  setCachedTranslation(trimmed, srcLang, tgtLang, result);
-                } catch (networkErr) {
-                  result = translateOffline(trimmed, srcLang, tgtLang);
-                }
+            var result = null;
+            if (!online) {
+              result = translateOffline(trimmed, srcLang, tgtLang);
+            } else {
+              result = getCachedTranslation(trimmed, srcLang, tgtLang);
+              if (!result) {
+                var res = await fetch('/api/translate', {
+                  method: 'POST',
+                  headers: buildApiHeaders(),
+                  body: JSON.stringify({
+                    text: trimmed,
+                    sourceLanguage: srcLang,
+                    targetLanguage: tgtLang,
+                    tone: 'natural'
+                  })
+                });
+                result = await parseApiResponse(res);
+                if (requestId !== activeTranslationId) return;
+                setCachedTranslation(trimmed, srcLang, tgtLang, result);
               }
             }
+
+            if (requestId !== activeTranslationId) return;
 
             currentOutputText = result.translatedText || '';
             isTranslating = false;
@@ -2813,15 +2809,18 @@
             confidenceBadgeEl.classList.remove('hidden');
             renderOutputState();
 
-            addHistoryEntry({
-              id: Date.now().toString(),
-              from: srcLang,
-              to: tgtLang,
-              input: trimmed,
-              output: currentOutputText,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
+            if (!result.isOffline) {
+              addHistoryEntry({
+                id: Date.now().toString(),
+                from: srcLang,
+                to: tgtLang,
+                input: trimmed,
+                output: currentOutputText,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              });
+            }
           } catch (err) {
+            if (requestId !== activeTranslationId) return;
             isTranslating = false;
             currentOutputText = err && err.message ? err.message : 'Translation failed. Please try again.';
             renderOutputState();
@@ -2831,29 +2830,32 @@
 
         /* TTS / Spoken Playback */
         function getSpeechLangCode(langName) {
-          var l = String(langName || '').toLowerCase();
-          if (l.indexOf('ur') !== -1 || l.indexOf('urdu') !== -1) return 'ur-PK';
-          if (l.indexOf('en') !== -1 || l.indexOf('english') !== -1) return 'en-US';
-          if (l.indexOf('ar') !== -1 || l.indexOf('arabic') !== -1) return 'ar-SA';
-          if (l.indexOf('hi') !== -1 || l.indexOf('hindi') !== -1) return 'hi-IN';
-          if (l.indexOf('pa') !== -1 || l.indexOf('punjabi') !== -1) return 'pa-IN';
-          if (l.indexOf('es') !== -1 || l.indexOf('spanish') !== -1) return 'es-ES';
-          if (l.indexOf('fr') !== -1 || l.indexOf('french') !== -1) return 'fr-FR';
-          if (l.indexOf('de') !== -1 || l.indexOf('german') !== -1) return 'de-DE';
-          if (l.indexOf('ja') !== -1 || l.indexOf('japanese') !== -1) return 'ja-JP';
-          if (l.indexOf('zh') !== -1 || l.indexOf('chinese') !== -1) return 'zh-CN';
-          if (l.indexOf('pt') !== -1 || l.indexOf('portuguese') !== -1) return 'pt-PT';
-          if (l.indexOf('tr') !== -1 || l.indexOf('turkish') !== -1) return 'tr-TR';
-          if (l.indexOf('ru') !== -1 || l.indexOf('russian') !== -1) return 'ru-RU';
-          if (l.indexOf('fa') !== -1 || l.indexOf('persian') !== -1) return 'fa-IR';
-          if (l.indexOf('ko') !== -1 || l.indexOf('korean') !== -1) return 'ko-KR';
-          if (l.indexOf('it') !== -1 || l.indexOf('italian') !== -1) return 'it-IT';
-          if (l.indexOf('bn') !== -1 || l.indexOf('bengali') !== -1) return 'bn-BD';
-          if (l.indexOf('id') !== -1 || l.indexOf('indonesian') !== -1) return 'id-ID';
-          if (l.indexOf('nl') !== -1 || l.indexOf('dutch') !== -1) return 'nl-NL';
-          if (l.indexOf('ps') !== -1 || l.indexOf('pashto') !== -1) return 'ps-AF';
-          if (l.indexOf('sd') !== -1 || l.indexOf('sindhi') !== -1) return 'sd-PK';
-          return 'en-US';
+          var raw = String(langName || '').trim();
+          var firstWord = raw.split(/\s+/)[0] || '';
+          var table = {
+            English: 'en-US',
+            Urdu: 'ur-PK',
+            Arabic: 'ar-SA',
+            Punjabi: 'pa-IN',
+            Hindi: 'hi-IN',
+            Japanese: 'ja-JP',
+            Chinese: 'zh-CN',
+            French: 'fr-FR',
+            German: 'de-DE',
+            Spanish: 'es-ES',
+            Portuguese: 'pt-PT',
+            Turkish: 'tr-TR',
+            Russian: 'ru-RU',
+            Persian: 'fa-IR',
+            Korean: 'ko-KR',
+            Italian: 'it-IT',
+            Bengali: 'bn-BD',
+            Indonesian: 'id-ID',
+            Dutch: 'nl-NL',
+            Pashto: 'ps-AF',
+            Sindhi: 'sd-PK'
+          };
+          return table[firstWord] || 'en-US';
         }
 
         function splitTextIntoChunks(text, maxLen) {
@@ -3271,6 +3273,12 @@
                   showToast('Microphone blocked. Allow microphone for this site and try again.');
                   return;
                 }
+                if (!liveRecognized && !userStoppedMic && !fellBackToRecorder) {
+                  fellBackToRecorder = true;
+                  recognition = null;
+                  startMediaRecorderFallback(srcLang, tgtLang);
+                  return;
+                }
                 if (errCode === 'no-speech') {
                   if (!liveRecognized) {
                     recognition = null;
@@ -3291,8 +3299,7 @@
                 if (fellBackToRecorder || userStoppedMic || recognition !== rec) {
                   return;
                 }
-                if (!liveRecognized && (Date.now() - startedAt) < 800) {
-                  // Browser Web Speech closed immediately without capturing — switch to MediaRecorder
+                if (!liveRecognized && !fellBackToRecorder && !userStoppedMic) {
                   fellBackToRecorder = true;
                   recognition = null;
                   startMediaRecorderFallback(srcLang, tgtLang);
@@ -3600,8 +3607,11 @@
         });
         copyBtn.addEventListener('click', function () {
           if (!currentOutputText) return;
-          navigator.clipboard.writeText(currentOutputText);
-          showToast('Translation copied!');
+          navigator.clipboard.writeText(currentOutputText).then(function() {
+            showToast('Copied');
+          }).catch(function() {
+            showToast('Could not copy');
+          });
         });
         saveBtn.addEventListener('click', function () {
           if (!currentOutputText) return;
@@ -3629,8 +3639,11 @@
               return;
             } catch (e) {}
           }
-          navigator.clipboard.writeText(currentOutputText);
-          showToast('Translation copied to share');
+          navigator.clipboard.writeText(currentOutputText).then(function() {
+            showToast('Copied');
+          }).catch(function() {
+            showToast('Could not copy');
+          });
         });
         if (voiceGenderLabel) voiceGenderLabel.textContent = voiceGender === 'male' ? 'Male' : 'Female';
         voiceGenderBtn.addEventListener('click', function () {
@@ -3655,7 +3668,13 @@
             var item = historyItems.find(function (i) { return i.id === id; });
             if (!item) return;
             if (action === 'use') loadEntryIntoTranslator(item);
-            else if (action === 'copy') { navigator.clipboard.writeText(item.output); showToast('Translation copied!'); }
+            else if (action === 'copy') {
+              navigator.clipboard.writeText(item.output).then(function() {
+                showToast('Copied');
+              }).catch(function() {
+                showToast('Could not copy');
+              });
+            }
             else if (action === 'speak') playSpeech(item.output, item.to, 'history');
             else if (action === 'del') deleteHistoryEntry(id);
           });
@@ -3663,18 +3682,20 @@
 
         if (savedListEl) {
           savedListEl.addEventListener('click', function (e) {
-            var allSaved = savedItems.length > 0 ? savedItems : [
-              { id: 's1', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Hello', output: 'ہیلو' },
-              { id: 's2', from: 'English 🇬🇧', to: 'Urdu 🇵🇰', input: 'Welcome', output: 'خوش آمدید' }
-            ];
             var btnSpeak = e.target.closest('[data-saved-speak]');
             var btnCopy = e.target.closest('[data-saved-copy]');
             var btnUse = e.target.closest('[data-saved-use]');
             var id = (btnSpeak || btnCopy || btnUse) && (btnSpeak || btnCopy || btnUse).getAttribute(btnSpeak ? 'data-saved-speak' : btnCopy ? 'data-saved-copy' : 'data-saved-use');
-            var item = allSaved.find(function (i) { return i.id === id; });
+            var item = savedItems.find(function (i) { return i.id === id; });
             if (!item) return;
             if (btnSpeak) playSpeech(item.output, item.to, 'saved');
-            else if (btnCopy) { navigator.clipboard.writeText(item.output); showToast('Copied'); }
+            else if (btnCopy) {
+              navigator.clipboard.writeText(item.output).then(function() {
+                showToast('Copied');
+              }).catch(function() {
+                showToast('Could not copy');
+              });
+            }
             else if (btnUse) loadEntryIntoTranslator(item);
           });
         }
@@ -3721,13 +3742,19 @@
         });
         copyExtractedBtn.addEventListener('click', function () {
           if (!ocrExtractedText) return;
-          navigator.clipboard.writeText(ocrExtractedText);
-          showToast('Copied original text');
+          navigator.clipboard.writeText(ocrExtractedText).then(function() {
+            showToast('Copied');
+          }).catch(function() {
+            showToast('Could not copy');
+          });
         });
         copyImageResultBtn.addEventListener('click', function () {
           if (!ocrTranslatedText) return;
-          navigator.clipboard.writeText(ocrTranslatedText);
-          showToast('Copied translation!');
+          navigator.clipboard.writeText(ocrTranslatedText).then(function() {
+            showToast('Copied');
+          }).catch(function() {
+            showToast('Could not copy');
+          });
         });
         ocrListenBtn.addEventListener('click', function () {
           playSpeech(ocrTranslatedText, ocrTargetEl.value, 'ocr');

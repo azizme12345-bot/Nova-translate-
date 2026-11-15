@@ -69,29 +69,32 @@ function getAIClient(customApiKey?: string): GoogleGenAI {
 }
 
 function getLangCode(langName: string): string {
-  const l = (langName || '').toLowerCase();
-  if (l.includes('ur') || l.includes('urdu') || l.includes('اردو')) return 'ur';
-  if (l.includes('en') || l.includes('english')) return 'en';
-  if (l.includes('ar') || l.includes('arabic')) return 'ar';
-  if (l.includes('pa') || l.includes('punjabi')) return 'pa';
-  if (l.includes('hi') || l.includes('hindi')) return 'hi';
-  if (l.includes('ja') || l.includes('japan')) return 'ja';
-  if (l.includes('zh') || l.includes('chinese')) return 'zh-CN';
-  if (l.includes('fr') || l.includes('french')) return 'fr';
-  if (l.includes('de') || l.includes('german')) return 'de';
-  if (l.includes('es') || l.includes('spanish')) return 'es';
-  if (l.includes('pt') || l.includes('portuguese')) return 'pt';
-  if (l.includes('tr') || l.includes('turkish')) return 'tr';
-  if (l.includes('ru') || l.includes('russian')) return 'ru';
-  if (l.includes('fa') || l.includes('persian')) return 'fa';
-  if (l.includes('ko') || l.includes('korean')) return 'ko';
-  if (l.includes('it') || l.includes('italian')) return 'it';
-  if (l.includes('bn') || l.includes('bengali')) return 'bn';
-  if (l.includes('id') || l.includes('indonesian')) return 'id';
-  if (l.includes('nl') || l.includes('dutch')) return 'nl';
-  if (l.includes('ps') || l.includes('pashto')) return 'ps';
-  if (l.includes('sd') || l.includes('sindhi')) return 'sd';
-  return 'en';
+  const raw = (langName || '').trim();
+  const firstWord = raw.split(/\s+/)[0] || '';
+  const table: Record<string, string> = {
+    English: 'en',
+    Urdu: 'ur',
+    Arabic: 'ar',
+    Punjabi: 'pa',
+    Hindi: 'hi',
+    Japanese: 'ja',
+    Chinese: 'zh-CN',
+    French: 'fr',
+    German: 'de',
+    Spanish: 'es',
+    Portuguese: 'pt',
+    Turkish: 'tr',
+    Russian: 'ru',
+    Persian: 'fa',
+    Korean: 'ko',
+    Italian: 'it',
+    Bengali: 'bn',
+    Indonesian: 'id',
+    Dutch: 'nl',
+    Pashto: 'ps',
+    Sindhi: 'sd',
+  };
+  return table[firstWord] || 'en';
 }
 
 async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetLang: string): Promise<string | null> {
@@ -461,6 +464,7 @@ Respond ONLY with a valid JSON object in this format:
 
     const candidateModels = [PRIMARY_MODEL, LITE_MODEL];
     let res: any = null;
+    let lastError: any = null;
 
     for (const ai of clients) {
       for (const model of candidateModels) {
@@ -471,6 +475,7 @@ Respond ONLY with a valid JSON object in this format:
           });
           if (res?.text) break;
         } catch (err: any) {
+          lastError = err;
           console.error('[ocrAndTranslate]', model, err?.message || err);
         }
       }
@@ -478,13 +483,7 @@ Respond ONLY with a valid JSON object in this format:
     }
 
     if (!res || !res.text) {
-      return {
-        extractedText: 'تصویر سے تحریر پڑھنے میں عارضی تاخیر۔ براہ کرم دوبارہ کوشش کریں۔',
-        translatedText: 'براہ کرم چند لمحوں بعد دوبارہ کوشش کریں یا واضح تصویر منتخب کریں۔',
-        detectedSourceLanguage: sourceLanguage || 'Auto-detected',
-        targetLanguage,
-        timestamp: new Date().toISOString(),
-      };
+      throw new Error(lastError?.message || 'Camera OCR failed to extract text from image. Please try again with a clearer image.');
     }
 
     const clean = (res.text || '').replace(/```json\n?|\n?```/g, '').trim();
@@ -493,21 +492,22 @@ Respond ONLY with a valid JSON object in this format:
       const ext = (parsed.extractedText || '').trim();
       const trn = (parsed.translatedText || parsed.translation || '').trim();
 
+      if (!ext) {
+        throw new Error('No text detected in this image.');
+      }
+
       return {
-        extractedText: ext || 'No text detected in this image.',
-        translatedText: trn || (targetLanguage.includes('Urdu') ? 'تصویر میں کوئی تحریر نہیں ملی۔' : 'No text detected in this image.'),
+        extractedText: ext,
+        translatedText: trn || ext,
         detectedSourceLanguage: parsed.detectedSourceLanguage || sourceLanguage || 'Auto-detected',
         targetLanguage,
         timestamp: new Date().toISOString(),
       };
-    } catch {
-      return {
-        extractedText: clean || 'No text detected in this image.',
-        translatedText: clean || (targetLanguage.includes('Urdu') ? 'تصویر میں کوئی تحریر نہیں ملی۔' : 'No text detected in this image.'),
-        detectedSourceLanguage: sourceLanguage || 'Auto-detected',
-        targetLanguage,
-        timestamp: new Date().toISOString(),
-      };
+    } catch (parseErr: any) {
+      if (parseErr instanceof Error && parseErr.message.includes('No text detected')) {
+        throw parseErr;
+      }
+      throw new Error('No text detected in this image or failed to process OCR response.');
     }
   }
 
