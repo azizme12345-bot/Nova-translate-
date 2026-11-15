@@ -26,7 +26,8 @@ export default defineConfig(() => {
     },
     server: {
       // Disable HMR WebSocket in middleware/proxy environment to prevent client WebSocket errors
-      hmr: false,
+      hmr: false as const,
+      ws: false as const,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

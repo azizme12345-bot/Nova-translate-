@@ -78,9 +78,19 @@ app.get('/sitemap.xml', (req: Request, res: Response) => {
 // Start server with Vite middleware in development or static files in production
 async function bootstrap() {
   if (!isProd) {
+    app.get('/@vite/client', (_req: Request, res: Response) => {
+      res.type('application/javascript');
+      res.send(
+        'export const ErrorOverlay = class {};\n' +
+        'export function createHotContext() { return { data: {}, accept(){}, dispose(){}, prune(){}, decline(){}, invalidate(){}, on(){}, off(){}, send(){} }; }\n' +
+        'export function injectQuery(url) { return url; }\n' +
+        'export function updateStyle() {}\n' +
+        'export function removeStyle() {}\n'
+      );
+    });
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false, ws: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

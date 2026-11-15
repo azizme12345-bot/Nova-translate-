@@ -2946,7 +2946,9 @@
           return chunks;
         }
 
-        function stopAudio() {
+        var chunkSafetyTimer = null;
+
+        function stopAudio(skipCancel) {
           isPlayingAudio = false;
           speakingField = null;
           audioChunksQueue = [];
@@ -2954,16 +2956,37 @@
           sourceListenBtn.classList.remove('speaking');
           listenBtn.classList.remove('speaking');
           if (ocrListenBtn) ocrListenBtn.textContent = '🔊 Listen';
-          if ('speechSynthesis' in window) {
-            try { window.speechSynthesis.cancel(); } catch (e) {}
+          if (chunkSafetyTimer) {
+            clearTimeout(chunkSafetyTimer);
+            chunkSafetyTimer = null;
           }
           if (chromeResumeInterval) {
             clearInterval(chromeResumeInterval);
             chromeResumeInterval = null;
           }
+          if (currentHtmlAudio) {
+            try {
+              currentHtmlAudio.onended = null;
+              currentHtmlAudio.onerror = null;
+              currentHtmlAudio.pause();
+              currentHtmlAudio.src = '';
+            } catch (e) {}
+            currentHtmlAudio = null;
+          }
+          if (!skipCancel && 'speechSynthesis' in window) {
+            try {
+              if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                window.speechSynthesis.cancel();
+              }
+            } catch (e) {}
+          }
         }
 
         function loadVoicesReady(callback) {
+          if (!('speechSynthesis' in window)) {
+            callback([]);
+            return;
+          }
           var synth = window.speechSynthesis;
           var voices = [];
           try {
@@ -2985,7 +3008,91 @@
           try {
             synth.onvoiceschanged = finish;
           } catch (e) {}
-          setTimeout(finish, 600);
+          setTimeout(finish, 350);
+        }
+
+        function findBestVoiceForLanguage(voices, targetLangCode, langWord) {
+          if (!voices || voices.length === 0) return null;
+          var targetLower = targetLangCode.toLowerCase();
+          var baseLang = targetLower.split('-')[0];
+          var wordLower = String(langWord || '').toLowerCase();
+
+          var bestVoice = null;
+          var bestScore = -1;
+
+          voices.forEach(function (v) {
+            var vLang = (v.lang || '').toLowerCase().replace('_', '-');
+            var vBase = vLang.split('-')[0];
+            var vName = (v.name || '').toLowerCase();
+
+            var matchesLang =
+              vLang === targetLower ||
+              vBase === baseLang ||
+              (wordLower && vName.indexOf(wordLower) !== -1);
+
+            if (!matchesLang) return;
+
+            var score = 0;
+            if (vLang === targetLower) score += 30;
+            else if (vBase === baseLang) score += 15;
+            else score += 5;
+
+            if (
+              vName.indexOf('natural') !== -1 ||
+              vName.indexOf('neural') !== -1 ||
+              vName.indexOf('online') !== -1 ||
+              vName.indexOf('wavenet') !== -1
+            ) {
+              score += 50;
+            }
+            if (vName.indexOf('google') !== -1) score += 35;
+            if (
+              vName.indexOf('siri') !== -1 ||
+              vName.indexOf('enhanced') !== -1 ||
+              vName.indexOf('premium') !== -1 ||
+              vName.indexOf('uzma') !== -1 ||
+              vName.indexOf('asad') !== -1 ||
+              vName.indexOf('salma') !== -1 ||
+              vName.indexOf('samantha') !== -1 ||
+              vName.indexOf('microsoft') !== -1
+            ) {
+              score += 20;
+            }
+            if (!v.localService) score += 10;
+            if (vName.indexOf('espeak') !== -1 || vName.indexOf('festival') !== -1) score -= 40;
+
+            if (voiceGender === 'female') {
+              if (
+                vName.indexOf('female') !== -1 ||
+                vName.indexOf('woman') !== -1 ||
+                vName.indexOf('uzma') !== -1 ||
+                vName.indexOf('salma') !== -1 ||
+                vName.indexOf('zira') !== -1 ||
+                vName.indexOf('samantha') !== -1 ||
+                vName.indexOf('jenny') !== -1 ||
+                vName.indexOf('aria') !== -1
+              ) {
+                score += 15;
+              }
+            } else {
+              if (
+                vName.indexOf('male') !== -1 && vName.indexOf('female') === -1 ||
+                vName.indexOf('asad') !== -1 ||
+                vName.indexOf('david') !== -1 ||
+                vName.indexOf('guy') !== -1 ||
+                vName.indexOf('daniel') !== -1
+              ) {
+                score += 15;
+              }
+            }
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestVoice = v;
+            }
+          });
+
+          return bestVoice;
         }
 
         function playSpeech(text, langName, field) {
@@ -3000,14 +3107,23 @@
           }
 
           if (speakingField === field && isPlayingAudio) {
-            stopAudio();
+            stopAudio(false);
             return;
           }
-          stopAudio();
 
+          var wasBusy = false;
           try {
-            window.speechSynthesis.cancel();
+            wasBusy = !!(window.speechSynthesis.speaking || window.speechSynthesis.pending);
           } catch (e) {}
+          stopAudio(!wasBusy);
+
+          var langWord = String(langName || 'English').split(' ')[0];
+          var targetLangCode = getSpeechLangCode(langName);
+
+          var chunks = splitTextIntoChunks(clean, 180);
+          if (chunks.length === 0) {
+            return;
+          }
 
           isPlayingAudio = true;
           speakingField = field;
@@ -3016,95 +3132,102 @@
           if (field === 'target') listenBtn.classList.add('speaking');
           if (field === 'ocr' && ocrListenBtn) ocrListenBtn.textContent = '🔊 Stop';
 
-          showToast('Speaking in ' + String(langName).split(' ')[0] + '…');
-
-          var targetLangCode = getSpeechLangCode(langName);
-          var baseLang = targetLangCode.split('-')[0].toLowerCase();
-
-          var chunks = splitTextIntoChunks(clean, 180);
-          if (chunks.length === 0) {
-            stopAudio();
-            return;
-          }
-
           audioChunksQueue = chunks;
           audioChunkIdx = 0;
 
           loadVoicesReady(function (voices) {
             if (!isPlayingAudio) return;
 
-            var chosenVoice = null;
-            if (voices && voices.length > 0) {
-              chosenVoice =
-                voices.find(function (v) {
-                  return v.lang && v.lang.toLowerCase() === targetLangCode.toLowerCase();
-                }) ||
-                voices.find(function (v) {
-                  return v.lang && v.lang.toLowerCase().split('-')[0] === baseLang;
-                }) ||
-                voices.find(function (v) {
-                  return v.default;
-                }) ||
-                voices[0];
+            var chosenVoice = findBestVoiceForLanguage(voices, targetLangCode, langWord);
+            if (voices && voices.length > 0 && !chosenVoice) {
+              stopAudio(true);
+              showToast('No voice installed on this device for ' + langWord + '.');
+              return;
             }
+
+            showToast('Speaking in ' + langWord + '…');
 
             function speakNextChunk() {
               if (!isPlayingAudio) return;
               if (audioChunkIdx >= audioChunksQueue.length) {
-                stopAudio();
+                stopAudio(true);
                 return;
               }
               var chunk = audioChunksQueue[audioChunkIdx];
               try {
                 var utterance = new SpeechSynthesisUtterance(chunk);
                 if (chosenVoice) utterance.voice = chosenVoice;
-                utterance.lang = targetLangCode;
-                utterance.pitch = voiceGender === 'male' ? 0.82 : 1.08;
-                utterance.rate = voiceGender === 'male' ? 0.96 : 1.0;
+                utterance.lang = (chosenVoice && chosenVoice.lang) ? chosenVoice.lang : targetLangCode;
+                utterance.volume = 1.0;
+                utterance.pitch = voiceGender === 'male' ? 0.90 : 1.03;
+                utterance.rate = voiceGender === 'male' ? 0.95 : 0.96;
 
                 var finished = false;
                 function advance() {
                   if (!finished) {
                     finished = true;
+                    if (chunkSafetyTimer) {
+                      clearTimeout(chunkSafetyTimer);
+                      chunkSafetyTimer = null;
+                    }
                     if (!isPlayingAudio) return;
                     audioChunkIdx++;
                     speakNextChunk();
                   }
                 }
                 utterance.onend = advance;
-                utterance.onerror = function () {
-                  advance();
+                utterance.onerror = function (ev) {
+                  if (finished) return;
+                  finished = true;
+                  if (chunkSafetyTimer) {
+                    clearTimeout(chunkSafetyTimer);
+                    chunkSafetyTimer = null;
+                  }
+                  var errCode = ev && ev.error ? ev.error : '';
+                  if (!isPlayingAudio || errCode === 'canceled' || errCode === 'interrupted') {
+                    return;
+                  }
+                  stopAudio(true);
+                  if (errCode === 'language-unavailable' || errCode === 'voice-unavailable') {
+                    showToast('No voice available on this device for ' + langWord + '.');
+                  } else {
+                    showToast('Speech synthesis error' + (errCode ? ': ' + errCode : '.'));
+                  }
                 };
-                setTimeout(function () {
+                chunkSafetyTimer = setTimeout(function () {
                   if (!finished && isPlayingAudio) advance();
-                }, 12000);
+                }, 15000);
+
+                try {
+                  if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                  }
+                } catch (e) {}
 
                 window.speechSynthesis.speak(utterance);
               } catch (err) {
-                stopAudio();
+                stopAudio(true);
                 showToast((err && err.message) || 'Error during speech synthesis');
               }
             }
 
             chromeResumeInterval = setInterval(function () {
-              if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+              if ('speechSynthesis' in window && window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
               }
             }, 5000);
 
-            speakNextChunk();
+            if (wasBusy) {
+              setTimeout(speakNextChunk, 60);
+            } else {
+              speakNextChunk();
+            }
           });
         }
 
-        /* Microphone / Speech-to-Text */
+        /* Microphone / Browser Web Speech API */
         var userStoppedMic = false;
-
-        function releaseMediaStream() {
-          if (mediaStream) {
-            mediaStream.getTracks().forEach(function (t) { t.stop(); });
-            mediaStream = null;
-          }
-        }
+        var lastMicTranslated = '';
 
         function resetMicUi() {
           isListening = false;
@@ -3121,157 +3244,51 @@
             recognition = null;
             try { r.stop(); } catch (e) {}
           }
-          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            try { mediaRecorder.stop(); } catch (e) { releaseMediaStream(); }
-          } else {
-            releaseMediaStream();
-          }
         }
 
-        function blobToDataUrl(blob) {
-          return new Promise(function (resolve, reject) {
-            var reader = new FileReader();
-            reader.onloadend = function () { resolve(reader.result); };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
+        function startMicrophone(e) {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-        function pickSupportedAudioMimeType() {
-          if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
-            return '';
-          }
-          var candidates = [
-            'audio/webm;codecs=opus',
-            'audio/webm',
-            'audio/mp4',
-            'audio/ogg;codecs=opus',
-            'audio/aac'
-          ];
-          for (var i = 0; i < candidates.length; i++) {
-            try {
-              if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
-            } catch (e) {}
-          }
-          return '';
-        }
-
-        async function startMediaRecorderFallback(srcLang, tgtLang) {
-          if (userStoppedMic) return;
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
-            resetMicUi();
-            showToast('Speech recognition is not supported in this browser.');
-            return;
-          }
-          try {
-            var stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-              }
-            });
-            mediaStream = stream;
-
-            var mimeType = pickSupportedAudioMimeType();
-            mediaRecorder = mimeType
-              ? new MediaRecorder(stream, { mimeType: mimeType })
-              : new MediaRecorder(stream);
-            var activeMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = function (e) {
-              if (e.data && e.data.size > 0) audioChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = async function () {
-              releaseMediaStream();
-              resetMicUi();
-
-              var finalMime = (audioChunks[0] && audioChunks[0].type) || activeMimeType || 'audio/webm';
-              var blob = new Blob(audioChunks, { type: finalMime });
-              if (blob.size > 0) {
-                showToast('🎙️ Converting speech to text...');
-                try {
-                  var base64Audio = await blobToDataUrl(blob);
-                  var res = await fetch('/api/speech-to-text', {
-                    method: 'POST',
-                    headers: buildApiHeaders(),
-                    body: JSON.stringify({
-                      audioBase64: base64Audio,
-                      mimeType: blob.type || finalMime,
-                      languageHint: srcLang,
-                      targetLanguage: tgtLang
-                    })
-                  });
-                  var stt = await parseApiResponse(res);
-                  var transcribed = stt.transcript || stt.text || '';
-                  if (transcribed) {
-                    sourceTextEl.value = transcribed;
-                    updateCharCount();
-                    if (stt.translatedText) {
-                      lastOutputIsError = false;
-                      currentOutputText = stt.translatedText;
-                      confidenceBadgeEl.textContent = '99% Match';
-                      confidenceBadgeEl.classList.remove('hidden');
-                      renderOutputState();
-                      addHistoryEntry({
-                        id: Date.now().toString(),
-                        from: srcLang,
-                        to: tgtLang,
-                        input: transcribed,
-                        output: stt.translatedText,
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      });
-                      showToast('Voice translation complete!');
-                    } else {
-                      await executeTranslation(transcribed, srcLang, tgtLang);
-                      if (!lastOutputIsError) showToast('Voice translation complete!');
-                    }
-                  } else {
-                    showToast('No speech detected. Please speak clearly and try again.');
-                  }
-                } catch (err) {
-                  showToast((err && (err.message || err.name)) || 'Error in voice translation');
-                }
-              } else {
-                showToast('No audio recorded. Please speak for at least 1 second and try again.');
-              }
-            };
-
-            mediaRecorder.start(500);
-            isListening = true;
-            micBtn.classList.add('recording');
-            micBtnLabel.textContent = 'Stop';
-            listeningIndicator.classList.remove('hidden');
-            showToast('🎙️ Listening... Speak now, then tap Stop');
-          } catch (err) {
-            releaseMediaStream();
-            resetMicUi();
-            showToast((err && (err.name || err.message)) || 'Microphone error');
-          }
-        }
-
-        function startMicrophone() {
           if (isListening) {
             stopMicrophone();
             return;
           }
 
+          stopAudio(false);
+
+          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRecognition) {
+            resetMicUi();
+            showToast('Browser Speech Recognition is not supported here. Please open in Chrome or Edge.');
+            return;
+          }
+
+          if (recognition) {
+            var oldRec = recognition;
+            recognition = null;
+            try {
+              oldRec.onend = null;
+              oldRec.onerror = null;
+              oldRec.onresult = null;
+              oldRec.abort();
+            } catch (err) {}
+          }
+
           userStoppedMic = false;
           liveRecognized = false;
+          lastMicTranslated = '';
+          var retriedAfterAbort = false;
           var srcLang = sourceLangEl.value || 'English 🇬🇧';
           var tgtLang = targetLangEl.value || 'Urdu 🇵🇰';
 
-          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          if (SpeechRecognition) {
+          function launchRecognition() {
+            if (userStoppedMic) return;
             try {
-              var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
               var rec = new SpeechRecognition();
               recognition = rec;
               rec.lang = getSpeechLangCode(srcLang);
               rec.interimResults = true;
-              rec.continuous = !isMobile;
+              rec.continuous = false;
               rec.maxAlternatives = 1;
 
               rec.onstart = function () {
@@ -3301,45 +3318,66 @@
                   var lastRes = event.results[event.results.length - 1];
                   if (lastRes && lastRes.isFinal) {
                     if (debounceTimer) clearTimeout(debounceTimer);
+                    lastMicTranslated = combined;
                     executeTranslation(combined, sourceLangEl.value, targetLangEl.value);
                   }
                 }
               };
 
-              rec.onerror = function (e) {
-                var errCode = (e && e.error) ? e.error : 'unknown-error';
+              rec.onerror = function (ev) {
+                if (recognition !== rec) return;
+                var errCode = (ev && ev.error) ? ev.error : 'unknown-error';
                 recognition = null;
+
+                if (userStoppedMic) {
+                  resetMicUi();
+                  return;
+                }
+
+                if (errCode === 'aborted' && !liveRecognized && !retriedAfterAbort) {
+                  retriedAfterAbort = true;
+                  setTimeout(launchRecognition, 180);
+                  return;
+                }
+
                 resetMicUi();
-                if (!userStoppedMic) {
+                if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+                  showToast('Microphone permission denied. Please allow microphone access.');
+                } else if (errCode === 'no-speech') {
+                  if (!liveRecognized) {
+                    showToast('No speech detected. Please speak clearly and try again.');
+                  }
+                } else if (errCode === 'audio-capture') {
+                  showToast('No microphone detected on this device.');
+                } else if (errCode === 'network') {
+                  showToast('Browser speech recognition needs an active internet connection.');
+                } else if (errCode === 'aborted') {
+                  showToast('Microphone is unavailable inside this preview. Open the app in a Chrome tab to speak.');
+                } else {
                   showToast('Speech error: ' + errCode);
                 }
               };
 
               rec.onend = function () {
-                if (userStoppedMic || recognition !== rec) {
-                  return;
-                }
-                if (!isMobile && isListening && !userStoppedMic && liveRecognized) {
-                  try {
-                    rec.start();
-                    return;
-                  } catch (err) {}
-                }
+                if (recognition !== rec) return;
                 recognition = null;
                 resetMicUi();
+                var spoken = (sourceTextEl.value || '').trim();
+                if (liveRecognized && spoken && spoken !== lastMicTranslated) {
+                  lastMicTranslated = spoken;
+                  executeTranslation(spoken, sourceLangEl.value, targetLangEl.value);
+                }
               };
 
               rec.start();
-              return;
             } catch (err) {
               recognition = null;
               resetMicUi();
-              showToast((err && (err.name || err.message)) || 'Speech recognition error');
-              return;
+              showToast((err && (err.message || err.name)) || 'Unable to start browser microphone');
             }
           }
 
-          startMediaRecorderFallback(srcLang, tgtLang);
+          launchRecognition();
         }
 
         /* Camera OCR */
