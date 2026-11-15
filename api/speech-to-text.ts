@@ -29,7 +29,7 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const { audioBase64, mimeType, languageHint } = body || {};
+    const { audioBase64, mimeType, languageHint, targetLanguage } = body || {};
 
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       res.statusCode = 400;
@@ -49,6 +49,7 @@ export default async function handler(req: any, res: any) {
       audioBase64,
       mimeType: mimeType || 'audio/webm',
       languageHint,
+      targetLanguage,
     });
 
     res.statusCode = 200;

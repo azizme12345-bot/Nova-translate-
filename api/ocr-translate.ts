@@ -32,7 +32,7 @@ export default async function handler(req: any, res: any) {
       try { body = JSON.parse(body); } catch {}
     }
 
-    const { imageBase64, mimeType, targetLanguage } = body || {};
+    const { imageBase64, mimeType, sourceLanguage, targetLanguage } = body || {};
     if (!imageBase64) {
       res.statusCode = 400;
       res.setHeader('Content-Type', 'application/json');
@@ -43,6 +43,7 @@ export default async function handler(req: any, res: any) {
     const result = await TranslationService.ocrAndTranslate({
       imageBase64,
       mimeType,
+      sourceLanguage,
       targetLanguage: targetLanguage || 'English',
     });
 

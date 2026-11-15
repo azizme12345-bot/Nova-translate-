@@ -3,17 +3,29 @@ import { TranslationService, SUPPORTED_LANGUAGES } from './translationService.ts
 
 export const apiRouter = Router();
 
-function getApiKeyFromReq(req: Request): string | undefined {
-  const headerKey = req.headers['x-gemini-api-key'] || req.headers['x-api-key'];
-  if (headerKey && typeof headerKey === 'string' && headerKey.trim()) {
-    return headerKey.trim();
-  }
-  const bodyKey = req.body?.apiKey;
-  if (bodyKey && typeof bodyKey === 'string' && bodyKey.trim()) {
-    return bodyKey.trim();
-  }
-  return undefined;
-}
+const ROUTE_LANG_TABLE: Record<string, string> = {
+  English: 'en',
+  Urdu: 'ur',
+  Arabic: 'ar',
+  Punjabi: 'pa',
+  Hindi: 'hi',
+  Japanese: 'ja',
+  Chinese: 'zh-CN',
+  French: 'fr',
+  German: 'de',
+  Spanish: 'es',
+  Portuguese: 'pt',
+  Turkish: 'tr',
+  Russian: 'ru',
+  Persian: 'fa',
+  Korean: 'ko',
+  Italian: 'it',
+  Bengali: 'bn',
+  Indonesian: 'id',
+  Dutch: 'nl',
+  Pashto: 'ps',
+  Sindhi: 'sd',
+};
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = 25000): Promise<T> {
   return Promise.race([
@@ -24,22 +36,20 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 25000): Promise<T> {
   ]);
 }
 
-apiRouter.get('/health', (req: Request, res: Response) => {
-  const customKey = getApiKeyFromReq(req);
+apiRouter.get('/health', (_req: Request, res: Response) => {
   const serverKeyConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
   res.json({
     ok: true,
     data: {
       status: 'ok',
       service: 'Nova Translator Pro Secure Backend',
-      geminiConfigured: !!customKey || serverKeyConfigured,
-      hasCustomApiKey: !!customKey,
+      geminiConfigured: serverKeyConfigured,
       timestamp: new Date().toISOString(),
     },
   });
 });
 
-apiRouter.get('/languages', (req: Request, res: Response) => {
+apiRouter.get('/languages', (_req: Request, res: Response) => {
   res.json({
     ok: true,
     data: {
@@ -48,18 +58,9 @@ apiRouter.get('/languages', (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post('/test-key', async (req: Request, res: Response) => {
+apiRouter.post('/test-key', async (_req: Request, res: Response) => {
   try {
-    const key = getApiKeyFromReq(req);
-    if (!key) {
-      res.status(400).json({
-        ok: false,
-        error: 'API key is required for testing.',
-      });
-      return;
-    }
-
-    const testResult = await withTimeout(TranslationService.testApiKey(key), 12000);
+    const testResult = await withTimeout(TranslationService.testApiKey(), 12000);
     res.json({
       ok: testResult.valid,
       data: testResult,
@@ -76,7 +77,6 @@ apiRouter.post('/test-key', async (req: Request, res: Response) => {
 apiRouter.post('/translate', async (req: Request, res: Response) => {
   try {
     const { text, sourceLanguage, targetLanguage, tone } = req.body || {};
-    const customApiKey = getApiKeyFromReq(req);
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       res.status(400).json({
@@ -95,21 +95,18 @@ apiRouter.post('/translate', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.translate(
-        {
-          text,
-          sourceLanguage,
-          targetLanguage: targetLanguage || 'English',
-          tone,
-        },
-        customApiKey
-      ),
+      TranslationService.translate({
+        text,
+        sourceLanguage,
+        targetLanguage: targetLanguage || 'English',
+        tone,
+      }),
       25000
     );
 
     res.json({ ok: true, data: result });
   } catch (err: any) {
-    const statusCode = err.message?.includes('API key') ? 401 : 500;
+    const statusCode = err.message?.includes('GEMINI_API_KEY') ? 503 : 500;
     res.status(statusCode).json({
       ok: false,
       error: err.message || 'Translation service encountered an error.',
@@ -120,13 +117,12 @@ apiRouter.post('/translate', async (req: Request, res: Response) => {
 apiRouter.post('/detect', async (req: Request, res: Response) => {
   try {
     const { text } = req.body || {};
-    const customApiKey = getApiKeyFromReq(req);
     if (!text || typeof text !== 'string' || !text.trim()) {
       res.status(400).json({ ok: false, error: 'Text required' });
       return;
     }
 
-    const result = await withTimeout(TranslationService.detect(text, customApiKey), 10000);
+    const result = await withTimeout(TranslationService.detect(text), 10000);
     res.json({ ok: true, data: result });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message || 'Detection failed' });
@@ -136,7 +132,6 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
 apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
   try {
     const { audioBase64, mimeType, languageHint, targetLanguage } = req.body || {};
-    const customApiKey = getApiKeyFromReq(req);
 
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       res.status(400).json({ ok: false, error: 'audioBase64 required' });
@@ -144,15 +139,12 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.transcribeAudio(
-        {
-          audioBase64,
-          mimeType: mimeType || 'audio/webm',
-          languageHint,
-          targetLanguage,
-        },
-        customApiKey
-      ),
+      TranslationService.transcribeAudio({
+        audioBase64,
+        mimeType: mimeType || 'audio/webm',
+        languageHint,
+        targetLanguage,
+      }),
       25000
     );
 
@@ -165,7 +157,6 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
 apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
   try {
     const { imageBase64, mimeType, sourceLanguage, targetLanguage } = req.body || {};
-    const customApiKey = getApiKeyFromReq(req);
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       res.status(400).json({ ok: false, error: 'imageBase64 required for OCR image translation.' });
@@ -173,15 +164,12 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
     }
 
     const result = await withTimeout(
-      TranslationService.ocrAndTranslate(
-        {
-          imageBase64,
-          mimeType: mimeType || 'image/jpeg',
-          sourceLanguage,
-          targetLanguage: targetLanguage || 'Urdu',
-        },
-        customApiKey
-      ),
+      TranslationService.ocrAndTranslate({
+        imageBase64,
+        mimeType: mimeType || 'image/jpeg',
+        sourceLanguage,
+        targetLanguage: targetLanguage || 'Urdu',
+      }),
       25000
     );
 
@@ -194,19 +182,15 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
     const { message, history, imageBase64, mimeType, targetLanguage } = req.body || {};
-    const customApiKey = getApiKeyFromReq(req);
 
     const result = await withTimeout(
-      TranslationService.chat(
-        {
-          message: message || '',
-          history,
-          imageBase64,
-          mimeType,
-          targetLanguage,
-        },
-        customApiKey
-      ),
+      TranslationService.chat({
+        message: message || '',
+        history,
+        imageBase64,
+        mimeType,
+        targetLanguage,
+      }),
       25000
     );
 
@@ -216,7 +200,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
   }
 });
 
-apiRouter.post('/voice-synthesize', async (req: Request, res: Response) => {
+apiRouter.post('/voice-synthesize', async (_req: Request, res: Response) => {
   res.json({
     ok: true,
     data: {
@@ -228,24 +212,16 @@ apiRouter.post('/voice-synthesize', async (req: Request, res: Response) => {
 apiRouter.get('/tts', async (req: Request, res: Response) => {
   try {
     const text = ((req.query.text as string) || '').slice(0, 500).trim();
-    const lang = ((req.query.lang as string) || 'en').toLowerCase();
+    const lang = ((req.query.lang as string) || 'English').trim();
 
     if (!text) {
       res.status(400).send('Text query param is required');
       return;
     }
 
-    let langCode = 'en';
-    if (lang.includes('ur') || lang.includes('urdu')) langCode = 'ur';
-    else if (lang.includes('ar') || lang.includes('arabic')) langCode = 'ar';
-    else if (lang.includes('hi') || lang.includes('hindi')) langCode = 'hi';
-    else if (lang.includes('ja') || lang.includes('japan')) langCode = 'ja';
-    else if (lang.includes('pa') || lang.includes('punjabi')) langCode = 'pa';
-    else if (lang.includes('es') || lang.includes('spanish')) langCode = 'es';
-    else if (lang.includes('fr') || lang.includes('french')) langCode = 'fr';
-    else if (lang.includes('de') || lang.includes('german')) langCode = 'de';
-
-    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${langCode}&client=tw-ob`;
+    const firstWord = lang.split(/\s+/)[0] || '';
+    const langCode = ROUTE_LANG_TABLE[firstWord] || 'en';
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
 
     const upstreamRes = await fetch(googleTtsUrl, {
       headers: {

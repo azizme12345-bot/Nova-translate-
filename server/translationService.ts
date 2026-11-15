@@ -33,73 +33,71 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'sd', name: 'Sindhi', label: 'Sindhi 🇵🇰', nativeName: 'سنڌي', direction: 'rtl' },
 ];
 
-function getAIClients(customApiKey?: string): GoogleGenAI[] {
-  const clients: GoogleGenAI[] = [];
-  const cleanCustom = customApiKey?.trim() || '';
-  const envKey = (process.env.GEMINI_API_KEY || process.env.API_KEY || '').trim();
+const LANG_CODE_TABLE: Record<string, string> = {
+  English: 'en',
+  Urdu: 'ur',
+  Arabic: 'ar',
+  Punjabi: 'pa',
+  Hindi: 'hi',
+  Japanese: 'ja',
+  Chinese: 'zh-CN',
+  French: 'fr',
+  German: 'de',
+  Spanish: 'es',
+  Portuguese: 'pt',
+  Turkish: 'tr',
+  Russian: 'ru',
+  Persian: 'fa',
+  Korean: 'ko',
+  Italian: 'it',
+  Bengali: 'bn',
+  Indonesian: 'id',
+  Dutch: 'nl',
+  Pashto: 'ps',
+  Sindhi: 'sd',
+};
 
-  if (cleanCustom) {
-    clients.push(
-      new GoogleGenAI({
-        apiKey: cleanCustom,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      })
-    );
+function getEnvGeminiKey(): string {
+  const key = (process.env.GEMINI_API_KEY || '').trim();
+  if (!key || key === 'MY_GEMINI_API_KEY') {
+    return '';
   }
-  if (envKey && envKey !== cleanCustom) {
-    clients.push(
-      new GoogleGenAI({
-        apiKey: envKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      })
-    );
-  }
-  if (clients.length === 0) {
-    clients.push(
-      new GoogleGenAI({
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      })
-    );
-  }
-  return clients;
+  return key;
 }
 
-function getAIClient(customApiKey?: string): GoogleGenAI {
-  return getAIClients(customApiKey)[0];
+function getAIClient(): GoogleGenAI {
+  const apiKey = getEnvGeminiKey();
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured on the server.');
+  }
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+  });
+}
+
+function isAuthError(err: any): boolean {
+  const msg = String(err?.message || '');
+  return (
+    err?.status === 401 ||
+    err?.status === 403 ||
+    msg.indexOf('API key not valid') !== -1 ||
+    msg.indexOf('API_KEY_INVALID') !== -1 ||
+    msg.indexOf('UNAUTHENTICATED') !== -1 ||
+    msg.indexOf('PERMISSION_DENIED') !== -1
+  );
 }
 
 function getLangCode(langName: string): string {
   const raw = (langName || '').trim();
   const firstWord = raw.split(/\s+/)[0] || '';
-  const table: Record<string, string> = {
-    English: 'en',
-    Urdu: 'ur',
-    Arabic: 'ar',
-    Punjabi: 'pa',
-    Hindi: 'hi',
-    Japanese: 'ja',
-    Chinese: 'zh-CN',
-    French: 'fr',
-    German: 'de',
-    Spanish: 'es',
-    Portuguese: 'pt',
-    Turkish: 'tr',
-    Russian: 'ru',
-    Persian: 'fa',
-    Korean: 'ko',
-    Italian: 'it',
-    Bengali: 'bn',
-    Indonesian: 'id',
-    Dutch: 'nl',
-    Pashto: 'ps',
-    Sindhi: 'sd',
-  };
-  return table[firstWord] || 'en';
+  return LANG_CODE_TABLE[firstWord] || 'en';
 }
 
 async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetLang: string): Promise<string | null> {
   try {
-    const isAuto = !sourceLang || sourceLang.toLowerCase().includes('auto') || sourceLang.toLowerCase() === 'detect';
+    const firstSrcWord = (sourceLang || '').trim().split(/\s+/)[0];
+    const isAuto = !sourceLang || firstSrcWord === 'Auto' || firstSrcWord === 'Detect' || sourceLang.toLowerCase() === 'auto';
     const sl = isAuto ? 'auto' : getLangCode(sourceLang);
     const tl = getLangCode(targetLang);
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
@@ -109,22 +107,23 @@ async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetL
     if (!res.ok) return null;
     const data: any = await res.json();
     if (Array.isArray(data) && Array.isArray(data[0])) {
-      return data[0].map((part: any) => (Array.isArray(part) ? part[0] : '')).join('').trim();
+      const joined = data[0].map((part: any) => (Array.isArray(part) ? part[0] : '')).join('').trim();
+      return joined || null;
     }
   } catch {}
   return null;
 }
 
-const PRIMARY_MODEL = 'gemini-4-hydrogen';
-const LITE_MODEL = 'gemini-3.1-flash-lite';
-const TRANSCRIBE_MODEL = 'gemini-3.5-transcribe';
+const PRIMARY_MODEL = 'gemini-2.5-flash';
+const LITE_MODEL = 'gemini-2.5-flash-lite';
+const TEXT_MODELS = [PRIMARY_MODEL, LITE_MODEL, 'gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
+const AUDIO_MODELS = [PRIMARY_MODEL, LITE_MODEL, 'gemini-3.5-transcribe', 'gemini-4-hydrogen'];
 
 export interface TranslationRequest {
   text: string;
   sourceLanguage?: string;
   targetLanguage: string;
   tone?: 'natural' | 'formal' | 'casual';
-  apiKey?: string;
 }
 
 export interface TranslationResponse {
@@ -141,39 +140,48 @@ export interface TranslationResponse {
 }
 
 export class TranslationService {
-  /**
-   * Test a custom Gemini API key live
-   */
-  static async testApiKey(customApiKey?: string): Promise<{ valid: boolean; model: string; message: string }> {
-    const ai = getAIClient(customApiKey);
-    for (const model of [PRIMARY_MODEL, LITE_MODEL]) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: 'Respond with exactly: "OK"',
-        });
-        if (response && response.text) {
-          return {
-            valid: true,
+  static async testApiKey(): Promise<{ valid: boolean; model: string; message: string }> {
+    try {
+      const ai = getAIClient();
+      for (const model of TEXT_MODELS) {
+        try {
+          const response = await ai.models.generateContent({
             model,
-            message: 'Google Gemini API key successfully verified and connected!',
-          };
+            contents: 'Respond with exactly: "OK"',
+          });
+          if (response && response.text) {
+            return {
+              valid: true,
+              model,
+              message: 'GEMINI_API_KEY successfully verified and connected!',
+            };
+          }
+        } catch (err: any) {
+          console.error('[testApiKey]', model, err?.message || err);
+          if (isAuthError(err)) {
+            return {
+              valid: false,
+              model,
+              message: err?.message || 'Invalid GEMINI_API_KEY.',
+            };
+          }
         }
-      } catch (err: any) {
-        console.error('[testApiKey]', model, err?.message || err);
       }
+      return {
+        valid: false,
+        model: PRIMARY_MODEL,
+        message: 'Gemini API request failed.',
+      };
+    } catch (err: any) {
+      return {
+        valid: false,
+        model: PRIMARY_MODEL,
+        message: err?.message || 'GEMINI_API_KEY is not configured on the server.',
+      };
     }
-    return {
-      valid: false,
-      model: PRIMARY_MODEL,
-      message: 'Invalid or quota-exhausted Google Gemini API key.',
-    };
   }
 
-  /**
-   * Translates text with multi-model and multi-key fallback
-   */
-  static async translate(req: TranslationRequest, customApiKey?: string): Promise<TranslationResponse> {
+  static async translate(req: TranslationRequest): Promise<TranslationResponse> {
     const rawText = (req.text || '').trim();
     if (!rawText) {
       throw new Error('Text to translate is required and cannot be empty.');
@@ -185,7 +193,6 @@ export class TranslationService {
     const targetLang = (req.targetLanguage || 'English').trim();
     const sourceLang = (req.sourceLanguage || 'Auto Detect').trim();
     const tone = req.tone || 'natural';
-    const activeKey = customApiKey || req.apiKey;
 
     const cacheKey = `trans_v6_${sourceLang}_${targetLang}_${tone}_${rawText.toLowerCase()}`;
     const cached = serverTranslationCache.get(cacheKey);
@@ -197,8 +204,8 @@ export class TranslationService {
       };
     }
 
-    const isAutoDetect = !sourceLang || sourceLang.toLowerCase().includes('auto') || sourceLang.toLowerCase() === 'detect';
-    const clients = getAIClients(activeKey);
+    const firstSrcWord = sourceLang.split(/\s+/)[0];
+    const isAutoDetect = !sourceLang || firstSrcWord === 'Auto' || firstSrcWord === 'Detect' || sourceLang.toLowerCase() === 'auto';
 
     const systemInstruction = `You are LAFZ Translation — an ultra-fast professional translation assistant.
 - Translate text accurately between languages.
@@ -212,12 +219,12 @@ export class TranslationService {
 ${rawText}
 """`;
 
-    const modelsToTry = [PRIMARY_MODEL, LITE_MODEL];
     let response: any = null;
     let lastError: any = null;
 
-    for (const ai of clients) {
-      for (const model of modelsToTry) {
+    try {
+      const ai = getAIClient();
+      for (const model of TEXT_MODELS) {
         try {
           response = await ai.models.generateContent({
             model,
@@ -242,9 +249,11 @@ ${rawText}
         } catch (err: any) {
           lastError = err;
           console.error('[translate]', model, err?.message || err);
+          if (isAuthError(err)) break;
         }
       }
-      if (response?.text) break;
+    } catch (err: any) {
+      lastError = err;
     }
 
     if (!response || !response.text) {
@@ -266,11 +275,7 @@ ${rawText}
         serverTranslationCache.set(cacheKey, fallbackResult);
         return fallbackResult;
       }
-      const errMsg = lastError?.message || '';
-      if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID') || errMsg.includes('PERMISSION_DENIED') || errMsg.includes('UNAUTHENTICATED')) {
-        throw new Error('Translation API key is invalid or not configured. Please check GEMINI_API_KEY in Settings > Secrets.');
-      }
-      throw new Error('Translation service temporarily unavailable. Please try again.');
+      throw new Error(lastError?.message || 'Translation failed on server.');
     }
 
     let parsed: any;
@@ -281,7 +286,11 @@ ${rawText}
       parsed = JSON.parse(clean);
     }
 
-    const finalTranslatedText = (parsed.translatedText || '').trim() || rawText;
+    const finalTranslatedText = (parsed.translatedText || '').trim();
+    if (!finalTranslatedText) {
+      throw new Error('Translation returned empty result from Gemini.');
+    }
+
     const isTargetRTL = parsed.isRTL ?? /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalTranslatedText);
 
     const result: TranslationResponse = {
@@ -290,7 +299,9 @@ ${rawText}
       originalText: rawText,
       translatedText: finalTranslatedText,
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.99,
-      alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives.filter((a: any) => typeof a === 'string' && a.trim() && a !== finalTranslatedText) : [],
+      alternatives: Array.isArray(parsed.alternatives)
+        ? parsed.alternatives.filter((a: any) => typeof a === 'string' && a.trim() && a !== finalTranslatedText)
+        : [],
       details: (parsed.details || '').trim(),
       direction: isTargetRTL ? 'rtl' : 'ltr',
       timestamp: new Date().toISOString(),
@@ -301,39 +312,64 @@ ${rawText}
     return result;
   }
 
-  static async detect(text: string, customApiKey?: string): Promise<{ detectedLanguage: string; languageCode: string; direction: 'ltr' | 'rtl' }> {
+  static async detect(text: string): Promise<{ detectedLanguage: string; languageCode: string; direction: 'ltr' | 'rtl' }> {
     const rawText = (text || '').trim();
     if (!rawText) throw new Error('Text required');
 
-    const ai = getAIClient(customApiKey);
-    const prompt = `Identify the natural language of: "${rawText.slice(0, 150)}". Return JSON with {"languageName": "English", "languageCode": "en", "direction": "ltr"}.`;
+    const ai = getAIClient();
+    const prompt = `Identify the natural language of: "${rawText.slice(0, 150)}". Return JSON matching {"languageName": "English", "languageCode": "en", "direction": "ltr"}.`;
 
-    try {
-      const res = await ai.models.generateContent({
-        model: PRIMARY_MODEL,
-        contents: prompt,
-      });
-      const clean = (res.text || '').replace(/```json\n?|\n?```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      return {
-        detectedLanguage: parsed.languageName || 'English',
-        languageCode: parsed.languageCode || 'en',
-        direction: parsed.direction === 'rtl' ? 'rtl' : 'ltr',
-      };
-    } catch {
-      return { detectedLanguage: 'English', languageCode: 'en', direction: 'ltr' };
+    let lastError: any = null;
+    for (const model of TEXT_MODELS) {
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                languageName: { type: Type.STRING },
+                languageCode: { type: Type.STRING },
+                direction: { type: Type.STRING },
+              },
+              required: ['languageName', 'languageCode', 'direction'],
+            },
+          },
+        });
+        if (res?.text) {
+          const clean = res.text.replace(/```json\n?|\n?```/g, '').trim();
+          const parsed = JSON.parse(clean);
+          if (!parsed.languageName) {
+            throw new Error('Failed to detect language from Gemini response.');
+          }
+          return {
+            detectedLanguage: parsed.languageName,
+            languageCode: parsed.languageCode || getLangCode(parsed.languageName),
+            direction: parsed.direction === 'rtl' ? 'rtl' : 'ltr',
+          };
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.error('[detect]', model, err?.message || err);
+        if (isAuthError(err)) break;
+      }
     }
+
+    throw new Error(lastError?.message || 'Language detection failed on server.');
   }
 
-  static async transcribeAudio(
-    params: { audioBase64: string; mimeType?: string; languageHint?: string; targetLanguage?: string; apiKey?: string },
-    customApiKey?: string
-  ): Promise<{ text: string; translatedText?: string }> {
+  static async transcribeAudio(params: {
+    audioBase64: string;
+    mimeType?: string;
+    languageHint?: string;
+    targetLanguage?: string;
+  }): Promise<{ text: string; translatedText?: string }> {
     const { audioBase64, mimeType = 'audio/webm', languageHint, targetLanguage } = params;
     if (!audioBase64) throw new Error('Audio data required');
 
-    const activeKey = customApiKey || params.apiKey;
-    const clients = getAIClients(activeKey);
+    const ai = getAIClient();
 
     let cleanBase64 = audioBase64;
     if (cleanBase64.includes(',')) {
@@ -362,39 +398,31 @@ ${rawText}
       ? `Transcribe all spoken words in this audio accurately in ${cleanHint}. Output ONLY the exact transcribed text with no commentary, labels, or quotes. If there is only silence or no intelligible speech, output [NO_SPEECH].`
       : `Transcribe all spoken words in this audio accurately. Output ONLY the exact transcribed text with no commentary, labels, or quotes. If there is only silence or no intelligible speech, output [NO_SPEECH].`;
 
-    const candidateModels = [TRANSCRIBE_MODEL, PRIMARY_MODEL, LITE_MODEL];
     let transcribedText = '';
     let succeededOnce = false;
     let lastError: any = null;
 
-    for (const ai of clients) {
-      for (const model of candidateModels) {
-        try {
-          const res = await ai.models.generateContent({
-            model,
-            contents: { parts: [audioPart, { text: transcribePrompt }] },
-          });
-          succeededOnce = true;
-          const raw = (res?.text || '').trim();
-          if (raw && raw !== '[NO_SPEECH]' && !/^\[?no[_\s]?speech\]?$/i.test(raw)) {
-            transcribedText = raw.replace(/^["']|["']$/g, '').trim();
-            break;
-          }
-          break;
-        } catch (err: any) {
-          lastError = err;
-          console.error('[transcribeAudio]', model, err?.message || err);
+    for (const model of AUDIO_MODELS) {
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents: { parts: [audioPart, { text: transcribePrompt }] },
+        });
+        succeededOnce = true;
+        const raw = (res?.text || '').trim();
+        if (raw && raw !== '[NO_SPEECH]' && !/^\[?no[_\s]?speech\]?$/i.test(raw)) {
+          transcribedText = raw.replace(/^["']|["']$/g, '').trim();
         }
+        break;
+      } catch (err: any) {
+        lastError = err;
+        console.error('[transcribeAudio]', model, err?.message || err);
+        if (isAuthError(err)) break;
       }
-      if (succeededOnce) break;
     }
 
     if (!succeededOnce && lastError) {
-      const msg = lastError?.message || '';
-      if (msg.includes('API key not valid') || msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED') || msg.includes('UNAUTHENTICATED')) {
-        throw new Error('Speech transcription requires a valid GEMINI_API_KEY in Settings > Secrets.');
-      }
-      throw new Error('Speech recognition failed on server. Please try again.');
+      throw new Error(lastError?.message || 'Speech transcription failed on server.');
     }
 
     if (!transcribedText) {
@@ -402,34 +430,28 @@ ${rawText}
     }
 
     if (targetLanguage) {
-      try {
-        const translation = await TranslationService.translate(
-          {
-            text: transcribedText,
-            sourceLanguage: languageHint,
-            targetLanguage,
-          },
-          activeKey
-        );
-        return {
-          text: transcribedText,
-          translatedText: translation.translatedText,
-        };
-      } catch (err: any) {
-        console.error('[transcribeAudio->translate]', err?.message || err);
-      }
+      const translation = await TranslationService.translate({
+        text: transcribedText,
+        sourceLanguage: languageHint,
+        targetLanguage,
+      });
+      return {
+        text: transcribedText,
+        translatedText: translation.translatedText,
+      };
     }
 
     return { text: transcribedText };
   }
 
-  static async ocrAndTranslate(
-    params: { imageBase64: string; mimeType?: string; sourceLanguage?: string; targetLanguage?: string; apiKey?: string },
-    customApiKey?: string
-  ): Promise<{ extractedText: string; translatedText: string; detectedSourceLanguage: string; targetLanguage: string; timestamp: string }> {
+  static async ocrAndTranslate(params: {
+    imageBase64: string;
+    mimeType?: string;
+    sourceLanguage?: string;
+    targetLanguage?: string;
+  }): Promise<{ extractedText: string; translatedText: string; detectedSourceLanguage: string; targetLanguage: string; timestamp: string }> {
     const { imageBase64, mimeType = 'image/jpeg', targetLanguage = 'Urdu', sourceLanguage } = params;
-    const activeKey = customApiKey || params.apiKey;
-    const clients = getAIClients(activeKey);
+    const ai = getAIClient();
 
     let cleanBase64 = imageBase64 || '';
     if (cleanBase64.includes(';base64,')) {
@@ -441,8 +463,7 @@ ${rawText}
       throw new Error('Image data is missing or empty.');
     }
 
-    // Sanitize MIME type to valid image types
-    let detectedMime = (mimeType ? mimeType.split(';')[0].trim().toLowerCase() : 'image/jpeg');
+    let detectedMime = mimeType ? mimeType.split(';')[0].trim().toLowerCase() : 'image/jpeg';
     if (!detectedMime.startsWith('image/')) {
       detectedMime = 'image/jpeg';
     }
@@ -455,74 +476,70 @@ ${rawText}
     };
 
     const prompt = `Analyze this image carefully. Extract all readable text accurately. Detect the source language, and translate the extracted text into ${targetLanguage}.
-Respond ONLY with a valid JSON object in this format:
-{
-  "extractedText": "exact extracted text from image",
-  "translatedText": "translation in ${targetLanguage}",
-  "detectedSourceLanguage": "name of source language"
-}`;
+Respond ONLY with a valid JSON object matching the schema.`;
 
-    const candidateModels = [PRIMARY_MODEL, LITE_MODEL];
     let res: any = null;
     let lastError: any = null;
 
-    for (const ai of clients) {
-      for (const model of candidateModels) {
-        try {
-          res = await ai.models.generateContent({
-            model,
-            contents: { parts: [imagePart, { text: prompt }] },
-          });
-          if (res?.text) break;
-        } catch (err: any) {
-          lastError = err;
-          console.error('[ocrAndTranslate]', model, err?.message || err);
-        }
+    for (const model of TEXT_MODELS) {
+      try {
+        res = await ai.models.generateContent({
+          model,
+          contents: { parts: [imagePart, { text: prompt }] },
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                extractedText: { type: Type.STRING },
+                translatedText: { type: Type.STRING },
+                detectedSourceLanguage: { type: Type.STRING },
+              },
+              required: ['extractedText', 'translatedText', 'detectedSourceLanguage'],
+            },
+          },
+        });
+        if (res?.text) break;
+      } catch (err: any) {
+        lastError = err;
+        console.error('[ocrAndTranslate]', model, err?.message || err);
+        if (isAuthError(err)) break;
       }
-      if (res?.text) break;
     }
 
     if (!res || !res.text) {
-      throw new Error(lastError?.message || 'Camera OCR failed to extract text from image. Please try again with a clearer image.');
+      throw new Error(lastError?.message || 'Camera OCR failed on server.');
     }
 
     const clean = (res.text || '').replace(/```json\n?|\n?```/g, '').trim();
-    try {
-      const parsed = JSON.parse(clean);
-      const ext = (parsed.extractedText || '').trim();
-      const trn = (parsed.translatedText || parsed.translation || '').trim();
+    const parsed = JSON.parse(clean);
+    const ext = (parsed.extractedText || '').trim();
+    const trn = (parsed.translatedText || parsed.translation || '').trim();
 
-      if (!ext) {
-        throw new Error('No text detected in this image.');
-      }
-
-      return {
-        extractedText: ext,
-        translatedText: trn || ext,
-        detectedSourceLanguage: parsed.detectedSourceLanguage || sourceLanguage || 'Auto-detected',
-        targetLanguage,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (parseErr: any) {
-      if (parseErr instanceof Error && parseErr.message.includes('No text detected')) {
-        throw parseErr;
-      }
-      throw new Error('No text detected in this image or failed to process OCR response.');
+    if (!ext) {
+      throw new Error('No text detected in this image.');
     }
+    if (!trn) {
+      throw new Error('Translation failed for extracted image text.');
+    }
+
+    return {
+      extractedText: ext,
+      translatedText: trn,
+      detectedSourceLanguage: parsed.detectedSourceLanguage || sourceLanguage || 'Auto-detected',
+      targetLanguage,
+      timestamp: new Date().toISOString(),
+    };
   }
 
-  static async chat(
-    params: {
-      message: string;
-      history?: Array<{ role: 'user' | 'assistant'; text: string }>;
-      imageBase64?: string;
-      mimeType?: string;
-      targetLanguage?: string;
-    },
-    customApiKey?: string
-  ): Promise<{ reply: string; timestamp: string }> {
-    const activeKey = customApiKey;
-    const ai = getAIClient(activeKey);
+  static async chat(params: {
+    message: string;
+    history?: Array<{ role: 'user' | 'assistant'; text: string }>;
+    imageBase64?: string;
+    mimeType?: string;
+    targetLanguage?: string;
+  }): Promise<{ reply: string; timestamp: string }> {
+    const ai = getAIClient();
     const targetLang = params.targetLanguage || 'Urdu';
 
     const systemInstruction = `You are LAFZ Translation Assistant & Multilingual Translator.
@@ -553,13 +570,18 @@ Respond ONLY with a valid JSON object in this format:
       },
     });
 
+    const reply = (res.text || '').trim();
+    if (!reply) {
+      throw new Error('Empty response from Gemini.');
+    }
+
     return {
-      reply: (res.text || '').trim(),
+      reply,
       timestamp: new Date().toISOString(),
     };
   }
 
-  static async synthesizeVoice(params: { text: string; language?: string; voiceName?: string; apiKey?: string }, customApiKey?: string): Promise<{ audioContent: string; fallbackToBrowserTTS: boolean }> {
+  static async synthesizeVoice(_params: { text: string; language?: string; voiceName?: string }): Promise<{ audioContent: string; fallbackToBrowserTTS: boolean }> {
     return { audioContent: '', fallbackToBrowserTTS: true };
   }
 

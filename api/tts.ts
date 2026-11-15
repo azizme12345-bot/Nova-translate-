@@ -21,29 +21,31 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    const lower = lang.toLowerCase();
-    let langCode = 'en';
-    if (lower.includes('ur') || lower.includes('urdu')) langCode = 'ur';
-    else if (lower.includes('ar') || lower.includes('arabic')) langCode = 'ar';
-    else if (lower.includes('hi') || lower.includes('hindi')) langCode = 'hi';
-    else if (lower.includes('pa') || lower.includes('punjabi')) langCode = 'pa';
-    else if (lower.includes('fr') || lower.includes('french')) langCode = 'fr';
-    else if (lower.includes('de') || lower.includes('german')) langCode = 'de';
-    else if (lower.includes('es') || lower.includes('spanish')) langCode = 'es';
-    else if (lower.includes('tr') || lower.includes('turkish')) langCode = 'tr';
-    else if (lower.includes('zh') || lower.includes('chinese')) langCode = 'zh-CN';
-    else if (lower.includes('ja') || lower.includes('japanese')) langCode = 'ja';
-    else if (lower.includes('ko') || lower.includes('korean')) langCode = 'ko';
-    else if (lower.includes('ru') || lower.includes('russian')) langCode = 'ru';
-    else if (lower.includes('fa') || lower.includes('persian')) langCode = 'fa';
-    else if (lower.includes('it') || lower.includes('italian')) langCode = 'it';
-    else if (lower.includes('pt') || lower.includes('portuguese')) langCode = 'pt';
-    else if (lower.includes('bn') || lower.includes('bengali')) langCode = 'bn';
-    else if (lower.includes('id') || lower.includes('indonesian')) langCode = 'id';
-    else if (lower.includes('nl') || lower.includes('dutch')) langCode = 'nl';
-    else if (lower.includes('ps') || lower.includes('pashto')) langCode = 'ps';
-    else if (lower.includes('sd') || lower.includes('sindhi')) langCode = 'sd';
-    else langCode = lang.slice(0, 2);
+    const firstWord = lang.trim().split(/\s+/)[0] || '';
+    const langTable: Record<string, string> = {
+      English: 'en',
+      Urdu: 'ur',
+      Arabic: 'ar',
+      Punjabi: 'pa',
+      Hindi: 'hi',
+      Japanese: 'ja',
+      Chinese: 'zh-CN',
+      French: 'fr',
+      German: 'de',
+      Spanish: 'es',
+      Portuguese: 'pt',
+      Turkish: 'tr',
+      Russian: 'ru',
+      Persian: 'fa',
+      Korean: 'ko',
+      Italian: 'it',
+      Bengali: 'bn',
+      Indonesian: 'id',
+      Dutch: 'nl',
+      Pashto: 'ps',
+      Sindhi: 'sd',
+    };
+    const langCode = langTable[firstWord] || 'en';
 
     const queryText = text.slice(0, 180);
     const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(queryText)}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
