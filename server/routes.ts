@@ -125,7 +125,9 @@ apiRouter.post('/detect', async (req: Request, res: Response) => {
     const result = await withTimeout(TranslationService.detect(text), 10000);
     res.json({ ok: true, data: result });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message || 'Detection failed' });
+    const msg = err?.message || 'Detection failed';
+    const statusCode = msg.includes('GEMINI_API_KEY') ? 503 : 500;
+    res.status(statusCode).json({ ok: false, error: msg });
   }
 });
 
@@ -187,7 +189,9 @@ apiRouter.post('/ocr-translate', async (req: Request, res: Response) => {
 
     res.json({ ok: true, data: result });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message || 'OCR Image translation failed.' });
+    const msg = err?.message || 'OCR Image translation failed.';
+    const statusCode = msg.includes('GEMINI_API_KEY') ? 503 : 500;
+    res.status(statusCode).json({ ok: false, error: msg });
   }
 });
 

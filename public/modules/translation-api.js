@@ -183,3 +183,35 @@ export async function checkApiHealth(options = {}) {
     { timeoutMs: 8000, ...options }
   );
 }
+
+export async function transcribeAudio(
+  { audioBase64, mimeType = 'audio/webm', languageHint, targetLanguage },
+  options = {}
+) {
+  const cleanAudio = String(audioBase64 || '').trim();
+  if (!cleanAudio) {
+    throw new Error('Recorded audio data is empty.');
+  }
+
+  const baseMime =
+    String(mimeType || 'audio/webm')
+      .split(';')[0]
+      .trim()
+      .toLowerCase() || 'audio/webm';
+
+  return fetchWithTimeout(
+    '/api/speech-to-text',
+    {
+      method: 'POST',
+      headers: buildApiHeaders(),
+      body: JSON.stringify({
+        audioBase64: cleanAudio,
+        mimeType: baseMime,
+        languageHint: languageHint ? String(languageHint).trim() : undefined,
+        targetLanguage: targetLanguage ? String(targetLanguage).trim() : undefined,
+      }),
+    },
+    { timeoutMs: 35000, ...options }
+  );
+}
+

@@ -58,8 +58,9 @@ const LANG_CODE_TABLE: Record<string, string> = {
 };
 
 function getEnvGeminiKey(): string {
-  const key = (process.env.GEMINI_API_KEY || '').trim();
-  if (!key || key === 'MY_GEMINI_API_KEY') {
+  const raw = (process.env.GEMINI_API_KEY || '').trim();
+  const key = raw.replace(/^["']|["']$/g, '').trim();
+  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'your_gemini_api_key_here') {
     return '';
   }
   return key;
@@ -83,10 +84,14 @@ function isAuthError(err: any): boolean {
     err?.status === 403 ||
     msg.indexOf('API key not valid') !== -1 ||
     msg.indexOf('API_KEY_INVALID') !== -1 ||
+    msg.indexOf('ACCESS_TOKEN_TYPE_UNSUPPORTED') !== -1 ||
     msg.indexOf('UNAUTHENTICATED') !== -1 ||
     msg.indexOf('PERMISSION_DENIED') !== -1
   );
 }
+
+const INVALID_KEY_USER_MESSAGE =
+  'Valid GEMINI_API_KEY is required on the server. Please check your API key in Settings > Secrets.';
 
 function getLangCode(langName: string): string {
   const raw = (langName || '').trim();
@@ -159,14 +164,15 @@ export class TranslationService {
             };
           }
         } catch (err: any) {
-          console.error('[testApiKey]', model, err?.message || err);
           if (isAuthError(err)) {
+            console.warn('[testApiKey]', model, 'Rejected API key (401/403). Check GEMINI_API_KEY.');
             return {
               valid: false,
               model,
-              message: err?.message || 'Invalid GEMINI_API_KEY.',
+              message: INVALID_KEY_USER_MESSAGE,
             };
           }
+          console.error('[testApiKey]', model, err?.message || err);
         }
       }
       return {
@@ -250,9 +256,13 @@ ${rawText}
           });
           if (response?.text) break;
         } catch (err: any) {
+          if (isAuthError(err)) {
+            lastError = new Error(INVALID_KEY_USER_MESSAGE);
+            console.warn('[translate]', model, 'Rejected API key (401/403).');
+            break;
+          }
           lastError = err;
           console.error('[translate]', model, err?.message || err);
-          if (isAuthError(err)) break;
         }
       }
     } catch (err: any) {
@@ -362,9 +372,13 @@ ${rawText}
           };
         }
       } catch (err: any) {
+        if (isAuthError(err)) {
+          lastError = new Error(INVALID_KEY_USER_MESSAGE);
+          console.warn('[detect]', model, 'Rejected API key (401/403).');
+          break;
+        }
         lastError = err;
         console.error('[detect]', model, err?.message || err);
-        if (isAuthError(err)) break;
       }
     }
 
@@ -426,9 +440,13 @@ ${rawText}
         }
         break;
       } catch (err: any) {
+        if (isAuthError(err)) {
+          lastError = new Error(INVALID_KEY_USER_MESSAGE);
+          console.warn('[transcribeAudio]', model, 'Rejected API key (401/403).');
+          break;
+        }
         lastError = err;
         console.error('[transcribeAudio]', model, err?.message || err);
-        if (isAuthError(err)) break;
       }
     }
 
@@ -514,9 +532,13 @@ Respond ONLY with a valid JSON object matching the schema.`;
         });
         if (res?.text) break;
       } catch (err: any) {
+        if (isAuthError(err)) {
+          lastError = new Error(INVALID_KEY_USER_MESSAGE);
+          console.warn('[ocrAndTranslate]', model, 'Rejected API key (401/403).');
+          break;
+        }
         lastError = err;
         console.error('[ocrAndTranslate]', model, err?.message || err);
-        if (isAuthError(err)) break;
       }
     }
 
@@ -640,7 +662,11 @@ Respond ONLY with a valid JSON object matching the schema.`;
         mimeType: 'audio/wav',
       };
     } catch (err: any) {
-      console.error('[synthesizeVoice]', err?.message || err);
+      if (isAuthError(err)) {
+        console.warn('[synthesizeVoice] Rejected API key (401/403); falling back.');
+      } else {
+        console.error('[synthesizeVoice]', err?.message || err);
+      }
       return null;
     }
   }

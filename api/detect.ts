@@ -32,8 +32,10 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ success: true, data: result }));
   } catch (err: any) {
-    res.statusCode = 500;
+    const msg = err?.message || 'Detection failed.';
+    const isApiKeyError = msg.includes('GEMINI_API_KEY');
+    res.statusCode = isApiKeyError ? 503 : 500;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: { code: 'DETECTION_FAILED', message: err.message || 'Detection failed.' } }));
+    res.end(JSON.stringify({ error: { code: isApiKeyError ? 'API_KEY_REQUIRED' : 'DETECTION_FAILED', message: msg } }));
   }
 }
