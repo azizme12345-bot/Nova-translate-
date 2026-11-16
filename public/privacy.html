@@ -4,14 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#123b70" />
-    <title>Privacy Policy — LAFZ Translation</title>
-    <meta name="description" content="Privacy Policy for LAFZ Translation. Learn how typed text, images, Chrome speech recognition, and browser storage are handled." />
+    <title>Privacy Policy — LAFZ Translation &amp; Data Safety</title>
+    <meta name="description" content="Read how LAFZ Translation handles typed text, Camera OCR photos, Chrome speech recognition, and local browser storage on your device." />
     <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
     <link rel="canonical" href="https://nova-translate-orpin.vercel.app/privacy" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Privacy Policy — LAFZ Translation" />
-    <meta property="og:description" content="Privacy Policy for LAFZ Translation. Learn how typed text, images, Chrome speech recognition, and browser storage are handled." />
+    <meta property="og:site_name" content="LAFZ Translation" />
+    <meta property="og:title" content="Privacy Policy — LAFZ Translation &amp; Data Safety" />
+    <meta property="og:description" content="Read how LAFZ Translation handles typed text, Camera OCR photos, Chrome speech recognition, and local browser storage on your device." />
     <meta property="og:url" content="https://nova-translate-orpin.vercel.app/privacy" />
+    <meta property="og:image" content="/lafz-logo-icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Privacy Policy — LAFZ Translation &amp; Data Safety" />
+    <meta name="twitter:description" content="Read how LAFZ Translation handles typed text, Camera OCR photos, Chrome speech recognition, and local browser storage on your device." />
+    <meta name="twitter:url" content="https://nova-translate-orpin.vercel.app/privacy" />
+    <meta name="twitter:image" content="/lafz-logo-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -67,6 +75,14 @@
         color: #0f2a4a;
         margin: 36px 0 12px;
       }
+      h3 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.35;
+        color: #0f2a4a;
+        margin: 22px 0 8px;
+      }
       p {
         font-size: 17px;
         color: #55657b;
@@ -86,8 +102,9 @@
         font-size: 13px;
         color: #6b7a8f;
       }
-      footer a { color: #1d5fb8; text-decoration: none; margin: 0 10px; font-weight: 600; }
-      footer a:hover { text-decoration: underline; }
+      footer a { color: #1d5fb8; text-decoration: none; margin: 0 10px; font-weight: 600; display: inline-block; padding: 2px 0; }
+      footer a:hover, footer a.active { text-decoration: underline; }
+      footer a.active { color: #0f2a4a; }
     </style>
   </head>
   <body>
@@ -97,42 +114,92 @@
     </header>
     <main>
       <h1>Privacy Policy</h1>
-      <p><strong>Last updated: 15 November 2026</strong></p>
+      <p><strong>Last updated: 16 November 2026</strong></p>
       <p>
-        This policy explains simply how LAFZ Translation handles your text, voice, and images. No sign-in or account is required.
+        This Privacy Policy explains clearly and honestly how LAFZ Translation collects, processes, and stores information when you visit our website—including the <a href="/">Home</a> page, <a href="/urdu-to-english">Urdu to English</a> translator, <a href="/urdu-to-arabic">Urdu to Arabic</a> translator, and informational pages. We wrote this policy directly around the technical behavior implemented in this application and identify items that depend on external hosting configuration and require operator confirmation.
       </p>
 
-      <h2>Text and Image Translation</h2>
+      <h2>Information Collection and Personal Information</h2>
       <p>
-        Typed text you translate is sent through our server to Google Gemini to translate it. Photos uploaded in Camera OCR are also sent through our server to Google Gemini to read and translate the text.
+        LAFZ Translation does not require registration, user accounts, passwords, names, or email profiles to use any translation tool. Our application does not maintain a user database or collect personal profile information through sign-up forms.
+      </p>
+      <p>
+        The only personal contact details processed outside your own device are those you choose to share voluntarily if you send an email to [CONTACT EMAIL]. Information included in direct support messages is used solely to read and reply to your inquiry.
       </p>
 
-      <h2>Voice Input and Listen</h2>
+      <h2>Website Usage Data and Rate Limiting</h2>
       <p>
-        Microphone input uses your browser's speech recognition. When you use Chrome, speech recognition is handled by Google's speech service. The Listen buttons use your browser and device's built-in speech synthesis.
+        When your browser calls our server translation or Camera OCR endpoints, the backend reads your request IP address (from connection headers) temporarily in volatile server memory solely to enforce abuse and rate-limit protection—currently up to 30 requests per minute on AI translation and OCR routes and 60 requests per minute on general API routes. Expired rate-limit records are automatically cleared from memory every five minutes and are not written to a permanent user database by our application code.
+      </p>
+      <p>
+        Requires operator confirmation: Standard web hosting and edge network providers (such as Vercel, if used in production) may automatically record routine HTTP request logs—such as IP addresses, browser user-agent strings, request timestamps, and status codes—for operational reliability and security. Specific server-log retention policies on the deployed host should be confirmed directly by [OWNER NAME].
       </p>
 
-      <h2>Browser Storage</h2>
+      <h2>Cookies, Browser Storage, and Offline Cache</h2>
       <p>
-        Your recent translation history, saved items, and preferences stay only in your browser's localStorage on your device. You can delete them anytime with the Clear button or your browser settings.
+        Our application code does not set browser HTTP cookies or run third-party advertising trackers or behavioral analytics scripts. Instead, LAFZ Translation uses two client-side browser storage mechanisms directly on your device:
       </p>
 
-      <h2>Sensitive Information</h2>
+      <h3>Browser localStorage</h3>
       <p>
-        Please do not enter passwords, bank details, or private ID documents.
+        To make everyday translation faster and easier, the application stores recent translation history (up to 100 entries), your Saved favorite phrases, a 7-day translation cache (up to 250 recent phrase pairs), and your preferred Male or Female voice pitch toggle inside your browser's localStorage. These items stay locally inside your browser, are not synced across other devices, and can be deleted anytime using the Clear buttons or your browser settings.
       </p>
 
-      <h2>Contact</h2>
+      <h3>Progressive Web App (PWA) Service Worker Cache</h3>
       <p>
-        LAFZ Translation is operated by [OWNER NAME]. For privacy questions, contact [CONTACT EMAIL] or read our <a href="/terms">Terms of Use</a>.
+        Our Service Worker caches core static shell files (such as the HTML shell, web manifest, and application icons) in your browser's Cache Storage so the interface loads reliably. Requests sent to translation API routes are explicitly excluded from Service Worker caching.
+      </p>
+
+      <h2>Translation Text, Voice Input, and Camera OCR Handling</h2>
+
+      <h3>Typed Text Translation</h3>
+      <p>
+        Text you submit for translation (up to 5,000 characters) and your chosen language pair are transmitted over HTTPS to our backend endpoint and forwarded to the Google Gemini API to generate a translation. If the primary model is unavailable, the backend falls back to Google Translate's public endpoint for text delivery. Our server also keeps an in-memory cache of recent translations in process RAM (up to 2,000 entries for up to 48 hours) to speed up repeated requests.
+      </p>
+
+      <h3>Camera and Photo OCR Processing</h3>
+      <p>
+        When you upload an image or capture a photo in Camera OCR, your browser resizes the image client-side via Canvas before sending it over HTTPS to our backend and onward to the Google Gemini API so printed text can be extracted and translated. Our application does not store uploaded photos in a permanent database; the extracted text and translated text are saved only into your browser's local history.
+      </p>
+
+      <h3>Microphone Voice Input and Listen Playback</h3>
+      <p>
+        Microphone input relies strictly on your browser's built-in SpeechRecognition interface and does not upload audio recordings to our backend. When using Google Chrome, speech recognition is handled by Google's speech recognition service. Spoken Listen buttons use strictly your browser and operating system's built-in speech synthesis engine without downloading server audio.
+      </p>
+
+      <h2>Third-Party Services</h2>
+      <p>
+        Depending on which features you use, requests interact with Google Gemini (for text translation and Camera OCR), Google Translate fallback when needed, Google Fonts (for loading Inter and Manrope typography), your browser vendor's speech recognition or synthesis engine, and the website hosting infrastructure. Each third-party service processes requests under its own privacy terms.
+      </p>
+
+      <h2>Data Security and Sensitive Information</h2>
+      <p>
+        All API keys required for Gemini remain secured on the server and are never placed in frontend HTML or JavaScript. Our server applies standard protective HTTP headers (such as nosniff and same-origin frame restrictions) alongside same-origin checks on API endpoints. Because translation inputs are sent across networks to automated AI services, please do not enter passwords, bank card numbers, national IDs, or confidential medical records.
+      </p>
+
+      <h2>Data Retention</h2>
+      <p>
+        In-memory translation caches and rate-limit counters reset automatically when server memory expires or restarts. Browser localStorage items stay on your device until you clear them. Retention periods for direct support emails or hosting-level access logs are not controlled inside the code and require confirmation by [OWNER NAME].
+      </p>
+
+      <h2>Your Privacy Rights</h2>
+      <p>
+        You control your local browser data and device permissions at all times: you may clear history, saved phrases, and cached translations directly in the interface or browser storage settings, and you may block or revoke microphone, camera, and clipboard permissions in your browser at any time. To inquire about any direct email correspondence you sent us, contact [CONTACT EMAIL].
+      </p>
+
+      <h2>Policy Updates and Contact Information</h2>
+      <p>
+        We may revise this Privacy Policy whenever site features or infrastructure change, updating the date at the top of this page. LAFZ Translation is operated by [OWNER NAME]. For privacy questions, write to [CONTACT EMAIL], visit <a href="/contact">Contact Us</a>, read <a href="/about">About Us</a>, or review our <a href="/terms">Terms of Service</a>.
       </p>
     </main>
     <footer>
       <a href="/">Home</a>
-      <a href="/#about">About</a>
-      <a href="/privacy">Privacy</a>
+      <a href="/urdu-to-english">Urdu to English</a>
+      <a href="/urdu-to-arabic">Urdu to Arabic</a>
+      <a href="/about">About</a>
+      <a href="/privacy" class="active">Privacy</a>
       <a href="/terms">Terms</a>
-      <a href="/#contact">Contact</a>
+      <a href="/contact">Contact</a>
     </footer>
   </body>
 </html>

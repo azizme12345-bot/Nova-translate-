@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>LAFZ Translation — Simple Language Translation</title>
-    <meta name="description" content="LAFZ Translation helps you translate text and images with a simple, clear and easy-to-use experience." />
-    <meta name="keywords" content="LAFZ Translation, English to Urdu translator, voice translator, camera OCR translator, multilingual translation" />
+    <meta name="description" content="Translate text, voice, and camera images instantly across English, Urdu, Arabic, and 32+ languages with LAFZ Translation." />
+    <meta name="keywords" content="LAFZ Translation, Urdu to English translator, Urdu to Arabic translator, English to Urdu translator, voice translator, camera OCR translator" />
     <meta name="theme-color" content="#123b70" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,14 +20,14 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="LAFZ Translation" />
     <meta property="og:title" content="LAFZ Translation — Simple Language Translation" />
-    <meta property="og:description" content="Text, voice, and camera translation across English, Urdu, and 33 more languages." />
+    <meta property="og:description" content="Translate text, voice, and camera images instantly across English, Urdu, Arabic, and 32+ languages with LAFZ Translation." />
     <meta property="og:url" content="https://nova-translate-orpin.vercel.app/" />
     <meta property="og:image" content="/lafz-logo-icon.png" />
 
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="LAFZ Translation — Simple Language Translation" />
-    <meta name="twitter:description" content="Text, voice, and camera translation across English, Urdu, and 33 more languages." />
+    <meta name="twitter:description" content="Translate text, voice, and camera images instantly across English, Urdu, Arabic, and 32+ languages with LAFZ Translation." />
     <meta name="twitter:url" content="https://nova-translate-orpin.vercel.app/" />
     <meta name="twitter:image" content="/lafz-logo-icon.png" />
 
@@ -51,7 +51,7 @@
       "url": "https://nova-translate-orpin.vercel.app/",
       "applicationCategory": "ProductivityApplication",
       "operatingSystem": "All",
-      "description": "Text, voice, and camera translation across English, Urdu, and 33 more languages.",
+      "description": "Translate text, voice, and camera images instantly across English, Urdu, Arabic, and 32+ languages with LAFZ Translation.",
       "browserRequirements": "Requires JavaScript. Requires HTML5.",
       "inLanguage": ["en", "ur"],
       "offers": {
@@ -1045,6 +1045,15 @@
         margin-top: 12px;
       }
 
+      .prose-h3 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--navy);
+        margin: 22px 0 8px;
+      }
+
       .prose-p {
         font-size: 17px;
         line-height: 1.7;
@@ -1379,7 +1388,7 @@
     <!-- Top Header -->
     <header class="lafz-header">
       <div class="lafz-wrap lafz-nav">
-        <a href="/" class="brand-link" data-nav="translate" title="LAFZ Translation Home">
+        <a href="/" class="brand-link" title="LAFZ Translation Home">
           <img src="/lafz-logo-icon.png" alt="LAFZ Translation Logo" class="brand-logo" />
           <div class="brand-text">
             <span class="brand-title">LAFZ<span>.</span></span>
@@ -1393,8 +1402,8 @@
           <button type="button" data-nav="image">📸 Camera OCR</button>
           <button type="button" data-nav="history">🕒 History</button>
           <button type="button" data-nav="languages">🌐 Languages</button>
-          <a href="#about" data-scroll="about">ℹ️ About</a>
-          <a href="#contact" data-scroll="contact">✉️ Contact</a>
+          <a href="/about">ℹ️ About</a>
+          <a href="/contact">✉️ Contact</a>
           <a href="/terms">📄 Terms</a>
         </nav>
 
@@ -1432,10 +1441,16 @@
           <button type="button" class="mobile-menu-btn" data-nav="languages">
             <span>🌐</span><span class="label">Languages</span>
           </button>
-          <a href="#about" class="mobile-menu-btn" data-scroll="about">
+          <a href="/urdu-to-english" class="mobile-menu-btn">
+            <span>🇵🇰</span><span class="label">Urdu to English</span>
+          </a>
+          <a href="/urdu-to-arabic" class="mobile-menu-btn">
+            <span>🇸🇦</span><span class="label">Urdu to Arabic</span>
+          </a>
+          <a href="/about" class="mobile-menu-btn">
             <span>ℹ️</span><span class="label">About</span>
           </a>
-          <a href="#contact" class="mobile-menu-btn" data-scroll="contact">
+          <a href="/contact" class="mobile-menu-btn">
             <span>✉️</span><span class="label">Contact</span>
           </a>
           <a href="/terms" class="mobile-menu-btn">
@@ -1563,51 +1578,46 @@
 
         <!-- Home Informational Guide (UNBOXED CLEAN READING COLUMN) -->
         <article id="homeGuide" aria-label="About LAFZ Translation Guide" class="lafz-home-guide">
-          <h2 class="prose-h2">What LAFZ Translation Is</h2>
+          <h2 class="prose-h2">What LAFZ Translation Offers</h2>
           <p class="prose-p">
-            LAFZ Translation is a free, straightforward web interface built to translate everyday words, sentences, and short paragraphs across 35 languages including English and Urdu. All text translations are performed on our server through Google Gemini, so there are no accounts to register and no downloads required to begin. Whether you are reading an article, writing a message, or checking an unfamiliar phrase, everything loads in one clean screen. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
+            LAFZ Translation is a free, straightforward web workspace built to help people read, write, and understand everyday words, sentences, and short paragraphs across 35 supported languages. Instead of forcing visitors through sign-up screens, crowded sidebars, or distracting pop-ups, everything you need opens immediately on one clean page. Whether you are checking an unfamiliar message from a colleague, translating study material, preparing travel phrases, or reviewing printed documents, the interface stays calm, fast, and easy to follow on both mobile phones and desktop screens.
+          </p>
+          <p class="prose-p">
+            Designed around practical everyday use, the platform supports major global and regional languages including English, Urdu, Arabic, Punjabi, Hindi, Chinese, Korean, Japanese, Spanish, French, German, Portuguese, Russian, Turkish, Persian, Bengali, Indonesian, Italian, Dutch, Pashto, and Sindhi. LAFZ Translation is an independent web interface and is not affiliated with Google or any external translation brand.
+          </p>
+
+          <h2 class="prose-h2">Key Translation Features in One Workspace</h2>
+
+          <h3 class="prose-h3">Text Translation With Automatic Script Direction</h3>
+          <p class="prose-p">
+            Type or paste up to 5,000 characters into the source editor and receive natural, readable wording through our server-side translation service powered by Google Gemini. Whenever the source or target language uses a right-to-left script such as Urdu, Arabic, Persian, Pashto, Sindhi, or Hebrew, the text panel automatically adjusts alignment and line spacing so every line stays comfortable to read. A single tap on Swap reverses both selected languages along with the current text.
+          </p>
+
+          <h3 class="prose-h3">Voice Input and Device Speech Playback</h3>
+          <p class="prose-p">
+            When typing is inconvenient, tap Speak inside the source panel and allow microphone access in your browser. Voice input uses your browser's built-in speech recognition service (handled in Chrome by Google's speech service) to turn spoken words into text cleanly inside the editor. After translation appears, tap the speaker icon on either panel to hear spoken pronunciation through your device's built-in speech synthesis voices, and toggle between Male and Female voice settings to adjust pitch and speed.
+          </p>
+
+          <h3 class="prose-h3">Camera and Photo OCR Translation</h3>
+          <p class="prose-p">
+            Switch to Camera OCR from the navigation bar whenever you need to translate printed text from the real world. You can take a fresh photo with your phone camera or upload an existing JPG, PNG, or WebP image of street signs, restaurant menus, product labels, receipts, or printed pages. Selected images are resized in your browser and sent securely through our server to Google Gemini, which extracts the readable text and delivers the translation in seconds.
+          </p>
+
+          <h3 class="prose-h3">Local Translation History and Saved Favorites</h3>
+          <p class="prose-p">
+            Recent translations are stored locally inside your browser's localStorage so you can search past entries, listen to pronunciations again, reload text into the editor, or copy results anytime without waiting. You can also bookmark helpful phrases to your Saved list and clear individual entries or all stored history whenever you choose. Because history remains strictly on your device and is not synced across servers, your local notes stay under your own control.
           </p>
 
           <h2 class="prose-h2">How to Translate Text Step by Step</h2>
           <p class="prose-p">
-            Start by picking your source language in the left dropdown menu and your target language in the right dropdown menu, or tap Swap to reverse both directions at once. Next, type your text or tap Paste to insert copied text into the source box. Click Translate or pause briefly for the translated wording to appear in the output box, where you can copy, save, or clear your text in a single tap.
+            First, select your source language in the left selector and your target language in the right selector. Second, enter your words by typing, tapping Paste to insert copied text, or using Speak for voice dictation. Third, click Translate or pause briefly for automatic translation to populate the right panel. Once the translation is ready, use Copy to place it on your clipboard, tap Share on supported devices, save phrases for later reference, or click Listen to hear how the wording sounds aloud.
           </p>
 
-          <h2 class="prose-h2">Voice Input, Spoken Output, and Camera OCR</h2>
+          <h2 class="prose-h2">Why Users Choose This Platform &amp; Language Pages</h2>
           <p class="prose-p">
-            If you prefer speaking over typing, tap Speak and allow microphone access in your browser. Speech recognition runs in your browser (and in Chrome uses Google's speech service). Tap Listen next to the result to hear spoken output powered by your browser and device speech synthesis. To translate printed menus, street signs, receipts, or documents, open Camera OCR to pick an image and send it through the server to Google Gemini so its text can be extracted and translated.
-          </p>
-
-          <h2 class="prose-h2">Language Choices, History, and Helpful Tips</h2>
-          <p class="prose-p">
-            Right-to-left scripts such as Urdu, Arabic, and Punjabi align properly on the page so text remains easy to read. Your recent translations are saved locally in your browser's localStorage and are not synced between devices, and you can search or clear entries whenever you want. For better results, use clear spelling, standard punctuation, and short complete sentences rather than slang or heavy abbreviations. Because translations are generated automatically by a machine, they may not always be perfect, so please check important wording carefully before sharing it.
+            People use LAFZ Translation because it combines speed, clarity, and mobile usability without requiring accounts or subscriptions. For best results, write clear sentences with standard punctuation and verify critical legal, medical, or financial wording carefully, since automated machine translation can miss regional nuance. You can also explore dedicated translator pages tailored for <a href="/urdu-to-english" class="prose-link">Urdu to English Translation</a> and <a href="/urdu-to-arabic" class="prose-link">Urdu to Arabic Translation</a>, or read our <a href="/about" class="prose-link">About Us</a>, <a href="/privacy" class="prose-link">Privacy Policy</a>, <a href="/terms" class="prose-link">Terms of Service</a>, and <a href="/contact" class="prose-link">Contact Us</a> pages for complete details.
           </p>
         </article>
-
-        <!-- About Section on Home Page -->
-        <section id="about" aria-label="About LAFZ Translation" class="lafz-home-guide">
-          <h2 class="prose-h2">About LAFZ Translation</h2>
-          <p class="prose-p">
-            Clear, direct language translation for English, Urdu, and everyday global communication without clutter or sign-up walls.
-          </p>
-          <p class="prose-p">
-            LAFZ Translation exists to make everyday translation straightforward for people who need quick, readable results. Every core feature lives in one clean workspace where anyone can translate words, sentences, spoken phrases, or printed text from images right away. LAFZ Translation is an independent interface and is not affiliated with Google or any other translation provider.
-          </p>
-          <p class="prose-p">
-            Students, travellers, language learners, and professionals use LAFZ Translation across mobile phones and desktops with proper right-to-left support for scripts such as Urdu, Arabic, Punjabi, Persian, Pashto, and Sindhi.
-          </p>
-        </section>
-
-        <!-- Contact Section on Home Page -->
-        <section id="contact" aria-label="Contact LAFZ Translation" class="lafz-home-guide">
-          <h2 class="prose-h2">Contact LAFZ Translation</h2>
-          <p class="prose-p">
-            LAFZ Translation is operated by [OWNER NAME]. If you have a question about how LAFZ Translation works, spot an error on the site, or want to share helpful feedback, you can reach us directly at [CONTACT EMAIL].
-          </p>
-          <p class="prose-p">
-            When reporting a technical issue or inaccurate translation, please include your device, browser name, selected languages, and what happened on screen. Never include passwords or private personal details. Before writing, you can also review our <a href="/privacy" class="prose-link">Privacy Policy</a> and <a href="/terms" class="prose-link">Terms of Use</a>.
-          </p>
-        </section>
       </section>
 
       <!-- ===========================================================
@@ -1704,7 +1714,7 @@
           </div>
           <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
             <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
-              <h1 class="prose-h1" style="margin-bottom:8px;">Voice &amp; Speech Translation</h1>
+              <h2 class="prose-h1" style="margin-bottom:8px;">Voice &amp; Speech Translation</h2>
               <p style="font-size:14px;color:var(--muted);margin:0;">
                 Speak in your browser to fill the text box and hear spoken output using your device's speech synthesis.
               </p>
@@ -1750,7 +1760,7 @@
           </div>
           <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
             <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
-              <h1 class="prose-h1" style="margin-bottom:8px;">Text Translation</h1>
+              <h2 class="prose-h1" style="margin-bottom:8px;">Text Translation</h2>
               <p style="font-size:14px;color:var(--muted);margin:0;">Readable text translation across the 35 languages in the dropdown for daily notes and conversation.</p>
             </div>
             <div class="tool-grid-3">
@@ -1788,7 +1798,7 @@
           </div>
           <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
             <div style="border-bottom:1px solid var(--line);padding-bottom:16px;">
-              <h1 class="prose-h1" style="margin-bottom:6px;">Your Translation History</h1>
+              <h2 class="prose-h1" style="margin-bottom:6px;">Your Translation History</h2>
               <p style="font-size:14px;color:var(--muted);margin:0;">LAFZ Translation stores your recent activity locally in your browser for quick access, offline replay, and privacy protection.</p>
             </div>
             <div class="tool-grid-3">
@@ -1825,7 +1835,7 @@
           </div>
           <article class="lafz-card" style="display:flex;flex-direction:column;gap:18px;">
             <div>
-              <h1 class="prose-h1" style="margin-bottom:6px;">Saved</h1>
+              <h2 class="prose-h1" style="margin-bottom:6px;">Saved</h2>
               <p style="font-size:14px;color:var(--muted);margin:0;">Keep translations you want to use again.</p>
             </div>
             <div id="savedList" style="display:flex;flex-direction:column;gap:10px;"></div>
@@ -1844,7 +1854,7 @@
           </div>
           <article class="lafz-card" style="display:flex;flex-direction:column;gap:20px;">
             <div>
-              <h1 class="prose-h1" style="margin-bottom:8px;">Supported Languages &amp; Dialects</h1>
+              <h2 class="prose-h1" style="margin-bottom:8px;">Supported Languages &amp; Dialects</h2>
               <p style="font-size:14px;color:var(--muted);margin:0 0 12px;">
                 LAFZ Translation supports 35 languages in the dropdown with native scripts, RTL/LTR layout support, and browser speech synthesis.
               </p>
@@ -1868,11 +1878,13 @@
         </div>
 
         <nav aria-label="Footer Navigation" class="footer-nav" id="footerNav">
-          <a href="/" data-nav="translate" class="active">Home</a>
-          <a href="#about" data-scroll="about">About</a>
+          <a href="/" class="active">Home</a>
+          <a href="/urdu-to-english">Urdu to English</a>
+          <a href="/urdu-to-arabic">Urdu to Arabic</a>
+          <a href="/about">About</a>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
-          <a href="#contact" data-scroll="contact">Contact</a>
+          <a href="/contact">Contact</a>
         </nav>
 
         <div>&copy; <span id="year"></span> LAFZ Translation. All rights reserved.</div>

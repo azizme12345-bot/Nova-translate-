@@ -4,6 +4,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { apiRouter } from './server/routes.ts';
 import { createRateLimiter } from './server/rateLimiter.ts';
+import { buildPairPageHtml } from './scripts/page-builder.mjs';
 
 dotenv.config();
 
@@ -110,7 +111,7 @@ app.get('/robots.txt', (_req: Request, res: Response) => {
   if (fs.existsSync(robotsPath)) {
     res.sendFile(robotsPath);
   } else {
-    res.send('User-agent: *\nAllow: /$\nAllow: /privacy\nAllow: /terms\nDisallow: /api/\nSitemap: https://nova-translate-orpin.vercel.app/sitemap.xml\n');
+    res.send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://nova-translate-orpin.vercel.app/sitemap.xml\n');
   }
 });
 
@@ -124,44 +125,49 @@ app.get('/sitemap.xml', (_req: Request, res: Response) => {
   }
 });
 
-// Redirect removed subpages and .html variants
-const homeRedirectRoutes = [
-  '/about', '/about.html',
-  '/contact', '/contact.html',
-  '/camera', '/camera-translation', '/image',
-  '/history', '/saved',
-  '/voice', '/voice-translation',
-  '/languages', '/text-translation', '/sitemap',
-];
-app.get(homeRedirectRoutes, (_req: Request, res: Response) => {
-  res.redirect(301, '/');
-});
+// Serve dedicated static pages independently
+const staticPageRoutes: Record<string, string> = {
+  '/terms': 'terms.html',
+  '/privacy': 'privacy.html',
+  '/about': 'about.html',
+  '/contact': 'contact.html',
+};
 
-app.get('/privacy.html', (_req: Request, res: Response) => {
-  res.redirect(301, '/privacy');
-});
+for (const [routePath, fileName] of Object.entries(staticPageRoutes)) {
+  app.get(routePath, (_req: Request, res: Response) => {
+    const filePath = path.resolve(isProd ? 'dist' : 'public', fileName);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('Page not found');
+    }
+  });
+}
 
-app.get('/terms.html', (_req: Request, res: Response) => {
-  res.redirect(301, '/terms');
-});
+// Serve dedicated language-pair pages independently
+const pairRouteFiles: Record<string, string> = {
+  '/urdu-to-english': 'urdu-to-english.html',
+  '/urdu-to-arabic': 'urdu-to-arabic.html',
+};
 
-app.get('/privacy', (_req: Request, res: Response) => {
-  const filePath = path.resolve(isProd ? 'dist' : 'public', 'privacy.html');
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send('Privacy page not found');
-  }
-});
-
-app.get('/terms', (_req: Request, res: Response) => {
-  const filePath = path.resolve(isProd ? 'dist' : 'public', 'terms.html');
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send('Terms page not found');
-  }
-});
+for (const [routePath, fileName] of Object.entries(pairRouteFiles)) {
+  app.get(routePath, (_req: Request, res: Response) => {
+    if (isProd) {
+      const distFile = path.resolve('dist', fileName);
+      if (fs.existsSync(distFile)) {
+        res.sendFile(distFile);
+        return;
+      }
+    }
+    const baseHtmlPath = path.resolve('index.html');
+    if (fs.existsSync(baseHtmlPath)) {
+      const baseHtml = fs.readFileSync(baseHtmlPath, 'utf8');
+      res.type('text/html').send(buildPairPageHtml(baseHtml, routePath));
+    } else {
+      res.status(404).send('Page not found');
+    }
+  });
+}
 
 // Start server with Vite middleware in development or static files in production
 async function bootstrap() {

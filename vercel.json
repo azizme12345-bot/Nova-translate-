@@ -7,30 +7,16 @@
       "maxDuration": 30
     }
   },
-  "redirects": [
-    { "source": "/about", "destination": "/", "permanent": true },
-    { "source": "/about.html", "destination": "/", "permanent": true },
-    { "source": "/contact", "destination": "/", "permanent": true },
-    { "source": "/contact.html", "destination": "/", "permanent": true },
-    { "source": "/camera", "destination": "/", "permanent": true },
-    { "source": "/camera-translation", "destination": "/", "permanent": true },
-    { "source": "/image", "destination": "/", "permanent": true },
-    { "source": "/history", "destination": "/", "permanent": true },
-    { "source": "/saved", "destination": "/", "permanent": true },
-    { "source": "/voice", "destination": "/", "permanent": true },
-    { "source": "/voice-translation", "destination": "/", "permanent": true },
-    { "source": "/languages", "destination": "/", "permanent": true },
-    { "source": "/text-translation", "destination": "/", "permanent": true },
-    { "source": "/sitemap", "destination": "/", "permanent": true },
-    { "source": "/privacy.html", "destination": "/privacy", "permanent": true },
-    { "source": "/terms.html", "destination": "/terms", "permanent": true }
-  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
     { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
-    { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/urdu-to-english", "destination": "/urdu-to-english.html" },
+    { "source": "/urdu-to-arabic", "destination": "/urdu-to-arabic.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

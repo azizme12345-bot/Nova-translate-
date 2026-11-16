@@ -126,13 +126,15 @@
   }
 
   function initLanguages() {
+    var defaultSrc = document.body.getAttribute('data-default-source') || 'English 🇬🇧';
+    var defaultTgt = document.body.getAttribute('data-default-target') || 'Urdu 🇵🇰';
     var selects = [sourceLangEl, targetLangEl, ocrSourceEl, ocrTargetEl];
     selects.forEach(function (sel, idx) {
       if (!sel) return;
       sel.innerHTML = LANGUAGES.map(function (l) {
         return '<option value="' + escapeHtml(l.label) + '">' + escapeHtml(l.label) + '</option>';
       }).join('');
-      sel.value = idx % 2 === 0 ? 'English 🇬🇧' : 'Urdu 🇵🇰';
+      sel.value = idx % 2 === 0 ? defaultSrc : defaultTgt;
     });
 
     if (languagesCatalogGrid) {
@@ -461,27 +463,13 @@
       e.preventDefault();
       var viewName = navBtn.getAttribute('data-nav');
       switchHomeView(viewName, '');
-      if (window.location.hash) {
-        try { window.history.replaceState(null, '', '/'); } catch (err) {}
-      }
-      return;
-    }
-
-    var scrollLink = e.target.closest('[data-scroll]');
-    if (scrollLink) {
-      e.preventDefault();
-      var sectionId = scrollLink.getAttribute('data-scroll');
-      switchHomeView('translate', sectionId);
-      try { window.history.replaceState(null, '', '/#' + sectionId); } catch (err) {}
       return;
     }
   });
 
   window.addEventListener('hashchange', function () {
     var h = String(window.location.hash || '').toLowerCase();
-    if (h === '#about') switchHomeView('translate', 'about');
-    else if (h === '#contact') switchHomeView('translate', 'contact');
-    else if (h === '#historysection') switchHomeView('translate', 'historySection');
+    if (h === '#historysection') switchHomeView('translate', 'historySection');
   });
 
   /* Translator Form Events */
@@ -783,10 +771,8 @@
   renderHistory();
   renderSaved();
 
-  /* Initial hash scroll support for #about / #contact / #historySection */
+  /* Initial hash scroll support */
   var initHash = String(window.location.hash || '').toLowerCase();
-  if (initHash === '#about') switchHomeView('translate', 'about');
-  else if (initHash === '#contact') switchHomeView('translate', 'contact');
-  else if (initHash === '#historysection') switchHomeView('translate', 'historySection');
+  if (initHash === '#historysection') switchHomeView('translate', 'historySection');
   else switchHomeView('translate', '');
 })(window, document);
