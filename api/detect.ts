@@ -1,5 +1,5 @@
-import { TranslationService } from '../server/translationService';
-import { enforceSameOriginAndRateLimit } from '../server/apiSecurity';
+import { TranslationService } from '../server/translationService.ts';
+import { enforceSameOriginAndRateLimit } from '../server/apiSecurity.ts';
 
 export default async function handler(req: any, res: any) {
   if (!(await enforceSameOriginAndRateLimit(req, res))) {

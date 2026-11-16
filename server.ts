@@ -104,18 +104,62 @@ app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 60 }));
 app.use('/api', apiRouter);
 
 // Explicit routes for robots.txt and sitemap.xml
-app.get('/robots.txt', (req: Request, res: Response) => {
+app.get('/robots.txt', (_req: Request, res: Response) => {
   res.type('text/plain');
-  res.send('User-agent: *\nAllow: /\nSitemap: https://nova-translate-orpin.vercel.app/sitemap.xml\n');
+  const robotsPath = path.resolve(isProd ? 'dist' : 'public', 'robots.txt');
+  if (fs.existsSync(robotsPath)) {
+    res.sendFile(robotsPath);
+  } else {
+    res.send('User-agent: *\nAllow: /$\nAllow: /privacy\nAllow: /terms\nDisallow: /api/\nSitemap: https://nova-translate-orpin.vercel.app/sitemap.xml\n');
+  }
 });
 
-app.get('/sitemap.xml', (req: Request, res: Response) => {
+app.get('/sitemap.xml', (_req: Request, res: Response) => {
   res.type('application/xml');
   const sitemapPath = path.resolve(isProd ? 'dist' : 'public', 'sitemap.xml');
   if (fs.existsSync(sitemapPath)) {
     res.sendFile(sitemapPath);
   } else {
     res.status(404).send('Sitemap not found');
+  }
+});
+
+// Redirect removed subpages and .html variants
+const homeRedirectRoutes = [
+  '/about', '/about.html',
+  '/contact', '/contact.html',
+  '/camera', '/camera-translation', '/image',
+  '/history', '/saved',
+  '/voice', '/voice-translation',
+  '/languages', '/text-translation', '/sitemap',
+];
+app.get(homeRedirectRoutes, (_req: Request, res: Response) => {
+  res.redirect(301, '/');
+});
+
+app.get('/privacy.html', (_req: Request, res: Response) => {
+  res.redirect(301, '/privacy');
+});
+
+app.get('/terms.html', (_req: Request, res: Response) => {
+  res.redirect(301, '/terms');
+});
+
+app.get('/privacy', (_req: Request, res: Response) => {
+  const filePath = path.resolve(isProd ? 'dist' : 'public', 'privacy.html');
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Privacy page not found');
+  }
+});
+
+app.get('/terms', (_req: Request, res: Response) => {
+  const filePath = path.resolve(isProd ? 'dist' : 'public', 'terms.html');
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Terms page not found');
   }
 });
 

@@ -103,6 +103,7 @@ async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetL
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const data: any = await res.json();
@@ -213,6 +214,7 @@ export class TranslationService {
 - Maintain context, nuance, and meaning.
 - Provide natural, fluent translations.
 - Tone: ${tone}.
+- confidence must be a decimal between 0.0 and 1.0.
 - Return valid JSON matching the schema.`;
 
     const prompt = `Translate this text from ${isAutoDetect ? 'detected source language' : sourceLang} to ${targetLang}:
@@ -295,12 +297,18 @@ ${rawText}
 
     const isTargetRTL = parsed.isRTL ?? /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalTranslatedText);
 
+    let normalizedConfidence: number | null = null;
+    if (typeof parsed.confidence === 'number' && Number.isFinite(parsed.confidence)) {
+      const ratio = parsed.confidence > 1 ? parsed.confidence / 100 : parsed.confidence;
+      normalizedConfidence = Math.max(0, Math.min(1, ratio));
+    }
+
     const result: TranslationResponse = {
       sourceLanguage: parsed.sourceLanguage || (isAutoDetect ? 'Auto-detected' : sourceLang),
       targetLanguage: parsed.targetLanguage || targetLang,
       originalText: rawText,
       translatedText: finalTranslatedText,
-      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : null,
+      confidence: normalizedConfidence,
       provider: 'gemini',
       alternatives: Array.isArray(parsed.alternatives)
         ? parsed.alternatives.filter((a: any) => typeof a === 'string' && a.trim() && a !== finalTranslatedText)
@@ -478,7 +486,9 @@ ${rawText}
       },
     };
 
-    const prompt = `Analyze this image carefully. Extract all readable text accurately. Detect the source language, and translate the extracted text into ${targetLanguage}.
+    const cleanSourceHint = sourceLanguage ? sourceLanguage.replace(/[^\p{L}\s]/gu, '').trim() : '';
+    const prompt = `Analyze this image carefully. Extract all readable text accurately${cleanSourceHint ? ` (likely in ${cleanSourceHint})` : ''}. Detect the source language, and translate the extracted text into ${targetLanguage}.
+If there is no readable text in the image, return an empty string for extractedText.
 Respond ONLY with a valid JSON object matching the schema.`;
 
     let res: any = null;
@@ -584,8 +594,55 @@ Respond ONLY with a valid JSON object matching the schema.`;
     };
   }
 
-  static async synthesizeVoice(_params: { text: string; language?: string; voiceName?: string }): Promise<{ audioContent: string; fallbackToBrowserTTS: boolean }> {
-    return { audioContent: '', fallbackToBrowserTTS: true };
+  static async synthesizeVoice(params: {
+    text: string;
+    language?: string;
+    gender?: 'male' | 'female';
+  }): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    const cleanText = (params.text || '').trim().slice(0, 1000);
+    if (!cleanText || !getEnvGeminiKey()) {
+      return null;
+    }
+
+    try {
+      const ai = getAIClient();
+      const voiceName = params.gender === 'male' ? 'Charon' : 'Kore';
+      const langHint = params.language ? params.language.replace(/[^\p{L}\s]/gu, '').trim() : '';
+      const promptText = langHint
+        ? `Speak the following ${langHint} text naturally and clearly:\n${cleanText}`
+        : cleanText;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash-lite-tts',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: promptText }],
+          },
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (!base64Audio) {
+        return null;
+      }
+
+      return {
+        buffer: Buffer.from(base64Audio, 'base64'),
+        mimeType: 'audio/wav',
+      };
+    } catch (err: any) {
+      console.error('[synthesizeVoice]', err?.message || err);
+      return null;
+    }
   }
 
   static getSupportedLanguages(): LanguageOption[] {

@@ -150,7 +150,19 @@ apiRouter.post('/speech-to-text', async (req: Request, res: Response) => {
 
     res.json({ ok: true, data: result });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message || 'Transcription failed' });
+    const msg = err?.message || 'Transcription failed';
+    const isApiKeyError =
+      msg.includes('GEMINI_API_KEY') ||
+      msg.includes('API_KEY_INVALID') ||
+      msg.includes('API key not valid') ||
+      msg.includes('UNAUTHENTICATED') ||
+      msg.includes('PERMISSION_DENIED');
+    res.status(isApiKeyError ? 503 : 500).json({
+      ok: false,
+      error: isApiKeyError
+        ? 'Valid GEMINI_API_KEY is required on the server for voice transcription.'
+        : msg,
+    });
   }
 });
 
@@ -213,20 +225,34 @@ apiRouter.get('/tts', async (req: Request, res: Response) => {
   try {
     const text = ((req.query.text as string) || '').slice(0, 500).trim();
     const lang = ((req.query.lang as string) || 'English').trim();
+    const gender = req.query.gender === 'male' ? 'male' : 'female';
 
     if (!text) {
       res.status(400).send('Text query param is required');
       return;
     }
 
+    const geminiAudio = await TranslationService.synthesizeVoice({
+      text,
+      language: lang,
+      gender,
+    });
+    if (geminiAudio && geminiAudio.buffer.length > 0) {
+      res.setHeader('Content-Type', geminiAudio.mimeType);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(geminiAudio.buffer);
+      return;
+    }
+
     const firstWord = lang.split(/\s+/)[0] || '';
     const langCode = ROUTE_LANG_TABLE[firstWord] || 'en';
-    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.slice(0, 200))}&tl=${encodeURIComponent(langCode)}&client=tw-ob`;
 
     const upstreamRes = await fetch(googleTtsUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!upstreamRes.ok) {
