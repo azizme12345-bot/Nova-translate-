@@ -1,7 +1,7 @@
 import { enforceSameOriginAndRateLimit } from '../server/apiSecurity';
 
-export default function handler(req: any, res: any) {
-  if (!enforceSameOriginAndRateLimit(req, res)) {
+export default async function handler(req: any, res: any) {
+  if (!(await enforceSameOriginAndRateLimit(req, res))) {
     return;
   }
   res.statusCode = 200;

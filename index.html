@@ -2287,15 +2287,12 @@
         var debounceTimer = null;
         var toastTimer = null;
 
-        /* Voice/Mic state */
-        var micListening = false;
-        var micRecognition = null;
+        /* Microphone state */
+        var activeRecognition = null;
 
-        /* Audio playback state */
-        var isSpeaking = false;
-        var speakingField = null;
-        var currentUtterance = null;
-        var speechResumeTimer = null;
+        /* Listen state */
+        var activeAudioUtterance = null;
+        var activeAudioKey = null;
         var voiceGender = getSavedVoiceGender();
 
         /* OCR state */
@@ -2871,11 +2868,11 @@
           }
         }
 
-        /* TTS / Spoken Playback */
-        function getSpeechLangCode(langName) {
+        /* Language to BCP-47 Locale */
+        function languageToSpeechLocale(langName) {
           var raw = String(langName || '').trim();
           var firstWord = raw.split(/\s+/)[0] || '';
-          var table = {
+          var locales = {
             English: 'en-US',
             Urdu: 'ur-PK',
             Arabic: 'ar-SA',
@@ -2898,114 +2895,110 @@
             Pashto: 'ps-AF',
             Sindhi: 'sd-PK'
           };
-          return table[firstWord] || 'en-US';
+          return locales[firstWord] || 'en-US';
         }
 
-        function resetListenUi() {
-          isSpeaking = false;
-          speakingField = null;
-          sourceListenBtn.classList.remove('speaking');
-          listenBtn.classList.remove('speaking');
-          if (ocrListenBtn) ocrListenBtn.textContent = '🔊 Listen';
-        }
-
-        function clearSpeechTimers() {
-          if (speechResumeTimer) {
-            clearInterval(speechResumeTimer);
-            speechResumeTimer = null;
+        /* Listen (Browser window.speechSynthesis only) */
+        function updateListenButtonsUi(activeKey) {
+          sourceListenBtn.classList.toggle('speaking', activeKey === 'source');
+          listenBtn.classList.toggle('speaking', activeKey === 'target');
+          if (ocrListenBtn) {
+            ocrListenBtn.textContent = activeKey === 'ocr' ? '🔊 Stop' : '🔊 Listen';
           }
         }
 
-        function stopSpeech() {
-          var wasActive = false;
-          clearSpeechTimers();
-          if (currentUtterance) {
-            currentUtterance.onstart = null;
-            currentUtterance.onend = null;
-            currentUtterance.onerror = null;
-            currentUtterance = null;
+        function haltBrowserSpeech() {
+          var hadActive = false;
+          if (activeAudioUtterance) {
+            activeAudioUtterance.onend = null;
+            activeAudioUtterance.onerror = null;
+            activeAudioUtterance = null;
           }
-          resetListenUi();
+          if (activeAudioKey !== null) {
+            hadActive = true;
+            activeAudioKey = null;
+          }
+          updateListenButtonsUi(null);
           if ('speechSynthesis' in window) {
             try {
-              wasActive = !!(window.speechSynthesis.speaking || window.speechSynthesis.pending);
-              if (wasActive) {
+              if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                hadActive = true;
                 window.speechSynthesis.cancel();
               }
             } catch (e) {}
           }
-          return wasActive;
+          return hadActive;
         }
 
-        function waitForVoices(callback) {
+        function loadBrowserVoices(onReady) {
           var synth = window.speechSynthesis;
-          var voices = [];
+          var existing = [];
           try {
-            voices = synth.getVoices() || [];
+            existing = synth.getVoices() || [];
           } catch (e) {}
-          if (voices.length > 0) {
-            callback(voices);
+          if (existing.length > 0) {
+            onReady(existing);
             return;
           }
 
-          var settled = false;
-          var timer = null;
+          var done = false;
+          var waitTimer = null;
 
-          function finish() {
-            if (settled) return;
-            settled = true;
-            if (timer) {
-              clearTimeout(timer);
-              timer = null;
+          function resolveVoices() {
+            if (done) return;
+            done = true;
+            if (waitTimer) {
+              clearTimeout(waitTimer);
+              waitTimer = null;
             }
             try {
               if (typeof synth.removeEventListener === 'function') {
-                synth.removeEventListener('voiceschanged', finish);
+                synth.removeEventListener('voiceschanged', resolveVoices);
               }
             } catch (e) {}
-            var list = [];
+            var loaded = [];
             try {
-              list = synth.getVoices() || [];
+              loaded = synth.getVoices() || [];
             } catch (e) {}
-            callback(list);
+            onReady(loaded);
           }
 
           try {
             if (typeof synth.addEventListener === 'function') {
-              synth.addEventListener('voiceschanged', finish);
+              synth.addEventListener('voiceschanged', resolveVoices);
             } else {
-              synth.onvoiceschanged = finish;
+              synth.onvoiceschanged = resolveVoices;
             }
           } catch (e) {}
 
-          timer = setTimeout(finish, 300);
+          waitTimer = setTimeout(resolveVoices, 1000);
         }
 
-        function pickBestVoice(voices, targetLangCode, langWord) {
+        function findMatchingVoice(voices, locale, langWord) {
           if (!voices || voices.length === 0) return null;
-          var targetLower = String(targetLangCode || 'en-US').toLowerCase();
-          var baseLang = targetLower.split('-')[0];
-          var wordLower = String(langWord || '').toLowerCase();
+          var wantedFull = String(locale || 'en-US').toLowerCase();
+          var wantedBase = wantedFull.split('-')[0];
+          var wantedWord = String(langWord || '').toLowerCase();
 
-          var bestVoice = null;
-          var bestScore = -999;
+          var chosen = null;
+          var topScore = -999;
 
           for (var i = 0; i < voices.length; i++) {
-            var v = voices[i];
-            var vLang = String(v.lang || '').toLowerCase().replace(/_/g, '-');
-            var vBase = vLang.split('-')[0];
-            var vName = String(v.name || '').toLowerCase();
+            var voice = voices[i];
+            var vLocale = String(voice.lang || '').toLowerCase().replace(/_/g, '-');
+            var vBase = vLocale.split('-')[0];
+            var vName = String(voice.name || '').toLowerCase();
 
-            var matches =
-              vLang === targetLower ||
-              vBase === baseLang ||
-              (wordLower && vName.indexOf(wordLower) !== -1);
+            var isMatch =
+              vLocale === wantedFull ||
+              vBase === wantedBase ||
+              (wantedWord && vName.indexOf(wantedWord) !== -1);
 
-            if (!matches) continue;
+            if (!isMatch) continue;
 
             var score = 0;
-            if (vLang === targetLower) score += 40;
-            else if (vBase === baseLang) score += 20;
+            if (vLocale === wantedFull) score += 40;
+            else if (vBase === wantedBase) score += 20;
             else score += 5;
 
             if (
@@ -3029,7 +3022,7 @@
             ) {
               score += 20;
             }
-            if (!v.localService) score += 10;
+            if (!voice.localService) score += 10;
             if (vName.indexOf('espeak') !== -1 || vName.indexOf('festival') !== -1) score -= 40;
 
             if (voiceGender === 'female') {
@@ -3057,17 +3050,17 @@
               }
             }
 
-            if (score > bestScore) {
-              bestScore = score;
-              bestVoice = v;
+            if (score > topScore) {
+              topScore = score;
+              chosen = voice;
             }
           }
 
-          return bestVoice;
+          return chosen;
         }
 
-        function speakText(text, langName, field) {
-          var clean = String(text || '').trim();
+        function playBrowserSpeech(rawText, langName, key) {
+          var clean = String(rawText || '').trim();
           if (!clean || clean === PLACEHOLDER_OUTPUT) {
             showToast('No text to speak');
             return;
@@ -3077,73 +3070,54 @@
             return;
           }
 
-          if (isSpeaking && speakingField === field) {
-            stopSpeech();
+          if (activeAudioKey === key) {
+            haltBrowserSpeech();
             return;
           }
 
-          var cancelledPrevious = stopSpeech();
+          var cancelledPrevious = haltBrowserSpeech();
           var langWord = String(langName || 'English').split(/\s+/)[0];
-          var targetLangCode = getSpeechLangCode(langName);
+          var locale = languageToSpeechLocale(langName);
 
-          isSpeaking = true;
-          speakingField = field;
-          if (field === 'source') sourceListenBtn.classList.add('speaking');
-          if (field === 'target') listenBtn.classList.add('speaking');
-          if (field === 'ocr' && ocrListenBtn) ocrListenBtn.textContent = '🔊 Stop';
+          activeAudioKey = key;
+          updateListenButtonsUi(key);
 
-          waitForVoices(function (voices) {
-            if (!isSpeaking || speakingField !== field) return;
+          loadBrowserVoices(function (voices) {
+            if (activeAudioKey !== key) return;
 
-            var matchedVoice = null;
-            if (voices && voices.length > 0) {
-              matchedVoice = pickBestVoice(voices, targetLangCode, langWord);
-              if (!matchedVoice) {
-                stopSpeech();
-                showToast('Is device par ' + langWord + ' ki awaaz nahi hai.');
-                return;
-              }
+            var selectedVoice = findMatchingVoice(voices, locale, langWord);
+            if (!selectedVoice) {
+              haltBrowserSpeech();
+              showToast('Is device par ' + langWord + ' ki awaaz nahi hai.');
+              return;
             }
 
-            function startUtterance() {
-              if (!isSpeaking || speakingField !== field) return;
+            function dispatchUtterance() {
+              if (activeAudioKey !== key) return;
               try {
                 var utterance = new SpeechSynthesisUtterance(clean);
-                currentUtterance = utterance;
-                if (matchedVoice) {
-                  utterance.voice = matchedVoice;
-                  utterance.lang = matchedVoice.lang || targetLangCode;
-                } else {
-                  utterance.lang = targetLangCode;
-                }
+                activeAudioUtterance = utterance;
+                utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang || locale;
                 utterance.volume = 1;
                 utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
                 utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
 
                 utterance.onend = function () {
-                  if (currentUtterance !== utterance) return;
-                  clearSpeechTimers();
-                  currentUtterance = null;
-                  resetListenUi();
+                  if (activeAudioUtterance !== utterance) return;
+                  activeAudioUtterance = null;
+                  activeAudioKey = null;
+                  updateListenButtonsUi(null);
                 };
 
                 utterance.onerror = function (ev) {
-                  if (currentUtterance !== utterance) return;
+                  if (activeAudioUtterance !== utterance) return;
                   var errName = (ev && ev.error) ? ev.error : 'unknown-error';
-                  clearSpeechTimers();
-                  currentUtterance = null;
-                  resetListenUi();
+                  activeAudioUtterance = null;
+                  activeAudioKey = null;
+                  updateListenButtonsUi(null);
                   showToast('Speech error: ' + errName);
                 };
-
-                speechResumeTimer = setInterval(function () {
-                  if (!isSpeaking) return;
-                  try {
-                    if (window.speechSynthesis.paused) {
-                      window.speechSynthesis.resume();
-                    }
-                  } catch (e) {}
-                }, 5000);
 
                 try {
                   if (window.speechSynthesis.paused) {
@@ -3154,145 +3128,121 @@
                 showToast('Speaking in ' + langWord + '…');
                 window.speechSynthesis.speak(utterance);
               } catch (err) {
-                stopSpeech();
+                haltBrowserSpeech();
                 showToast('Speech error: ' + ((err && (err.message || err.name)) || 'failed'));
               }
             }
 
             if (cancelledPrevious) {
-              setTimeout(startUtterance, 60);
+              setTimeout(dispatchUtterance, 60);
             } else {
-              startUtterance();
+              dispatchUtterance();
             }
           });
         }
 
         /* Microphone (Browser SpeechRecognition only) */
-        var userStoppedMic = false;
-
-        function resetMicUi() {
-          micListening = false;
-          micBtn.classList.remove('recording');
-          micBtnLabel.textContent = 'Speak';
-          listeningIndicator.classList.add('hidden');
+        function setMicListeningUi(listening) {
+          micBtn.classList.toggle('recording', listening);
+          micBtnLabel.textContent = listening ? 'Stop' : 'Speak';
+          listeningIndicator.classList.toggle('hidden', !listening);
         }
 
-        function stopMic() {
-          userStoppedMic = true;
-          var activeRec = micRecognition;
-          micRecognition = null;
-          resetMicUi();
-          if (activeRec) {
-            try {
-              activeRec.stop();
-            } catch (e) {}
-          }
-        }
-
-        function toggleMicrophone(e) {
+        function handleMicButtonClick(e) {
           if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-          if (micListening) {
-            stopMic();
+          if (activeRecognition) {
+            var recToStop = activeRecognition;
+            setMicListeningUi(false);
+            try {
+              recToStop.stop();
+            } catch (err) {
+              activeRecognition = null;
+              showToast('Mic error: ' + ((err && (err.name || err.message)) || 'stop-failed'));
+            }
             return;
           }
 
-          stopSpeech();
+          haltBrowserSpeech();
 
-          var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          if (!SpeechRecognition) {
-            resetMicUi();
+          var BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!BrowserSpeechRecognition) {
+            setMicListeningUi(false);
             showToast('Is browser mein voice input support nahi hai. Chrome use karein.');
             return;
           }
 
-          userStoppedMic = false;
           var srcLang = sourceLangEl.value || 'English 🇬🇧';
           var langWord = srcLang.split(/\s+/)[0];
-          var sessionLatest = '';
-          var sessionTranslatedText = '';
-          var sessionHadError = false;
+          var recognizedText = '';
+          var sessionErrored = false;
+          var didTranslate = false;
+
+          function translateHeardTextOnce() {
+            if (didTranslate || sessionErrored) return;
+            var finalText = String(recognizedText || '').trim();
+            if (!finalText) return;
+            didTranslate = true;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            executeTranslation(finalText, sourceLangEl.value, targetLangEl.value);
+          }
 
           try {
-            var rec = new SpeechRecognition();
-            micRecognition = rec;
-            micListening = true;
-            micBtn.classList.add('recording');
-            micBtnLabel.textContent = 'Stop';
-            listeningIndicator.classList.remove('hidden');
+            var recognition = new BrowserSpeechRecognition();
+            activeRecognition = recognition;
+            setMicListeningUi(true);
 
-            rec.lang = getSpeechLangCode(srcLang);
-            rec.interimResults = true;
-            rec.continuous = false;
-            rec.maxAlternatives = 1;
+            recognition.lang = languageToSpeechLocale(srcLang);
+            recognition.interimResults = true;
+            recognition.continuous = false;
+            recognition.maxAlternatives = 1;
 
-            rec.onstart = function () {
-              if (micRecognition !== rec) return;
+            recognition.onstart = function () {
+              if (activeRecognition !== recognition) return;
               showToast('Listening in ' + langWord + '…');
             };
 
-            rec.onresult = function (event) {
-              if (micRecognition !== rec) return;
-              var finalPart = '';
-              var interimPart = '';
+            recognition.onresult = function (event) {
+              if (activeRecognition !== recognition) return;
+              var combined = '';
               for (var i = 0; i < event.results.length; i++) {
-                var res = event.results[i];
-                var transcript = res && res[0] ? res[0].transcript : '';
-                if (res.isFinal) {
-                  finalPart += transcript + ' ';
-                } else {
-                  interimPart += transcript;
+                var result = event.results[i];
+                var piece = result && result[0] ? result[0].transcript : '';
+                if (piece) {
+                  combined += piece + (result.isFinal ? ' ' : '');
                 }
               }
-              var combined = (finalPart + interimPart).trim();
+              combined = combined.trim();
               if (combined) {
-                sessionLatest = combined;
+                recognizedText = combined;
                 sourceTextEl.value = combined;
                 updateCharCount();
-                var lastRes = event.results[event.results.length - 1];
-                if (lastRes && lastRes.isFinal) {
-                  var finalSoFar = finalPart.trim() || combined;
-                  if (finalSoFar && finalSoFar !== sessionTranslatedText) {
-                    sessionTranslatedText = finalSoFar;
-                    if (debounceTimer) clearTimeout(debounceTimer);
-                    executeTranslation(finalSoFar, sourceLangEl.value, targetLangEl.value);
-                  }
-                }
               }
             };
 
-            rec.onerror = function (ev) {
+            recognition.onerror = function (ev) {
               var errName = (ev && ev.error) ? ev.error : 'unknown-error';
-              sessionHadError = true;
-              if (micRecognition === rec) {
-                micRecognition = null;
+              sessionErrored = true;
+              if (activeRecognition === recognition) {
+                activeRecognition = null;
               }
-              resetMicUi();
-              if (!userStoppedMic) {
-                showToast('Mic error: ' + errName);
-              }
+              setMicListeningUi(false);
+              showToast('Mic error: ' + errName);
             };
 
-            rec.onend = function () {
-              if (micRecognition === rec) {
-                micRecognition = null;
+            recognition.onend = function () {
+              if (activeRecognition === recognition) {
+                activeRecognition = null;
               }
-              resetMicUi();
-              if (!sessionHadError) {
-                var finalText = (sessionLatest || '').trim();
-                if (finalText && finalText !== sessionTranslatedText) {
-                  sessionTranslatedText = finalText;
-                  if (debounceTimer) clearTimeout(debounceTimer);
-                  executeTranslation(finalText, sourceLangEl.value, targetLangEl.value);
-                }
-              }
+              setMicListeningUi(false);
+              translateHeardTextOnce();
             };
 
-            rec.start();
+            recognition.start();
           } catch (err) {
-            sessionHadError = true;
-            micRecognition = null;
-            resetMicUi();
+            sessionErrored = true;
+            activeRecognition = null;
+            setMicListeningUi(false);
             showToast('Mic error: ' + ((err && (err.name || err.message)) || 'start-failed'));
           }
         }
@@ -3571,7 +3521,7 @@
           });
         }
 
-        micBtn.addEventListener('click', toggleMicrophone);
+        micBtn.addEventListener('click', handleMicButtonClick);
         pasteBtn.addEventListener('click', async function () {
           if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
             showToast('Unable to read clipboard. Please paste manually.');
@@ -3600,10 +3550,10 @@
           showToast('Text cleared');
         });
         sourceListenBtn.addEventListener('click', function () {
-          speakText(sourceTextEl.value, sourceLangEl.value, 'source');
+          playBrowserSpeech(sourceTextEl.value, sourceLangEl.value, 'source');
         });
         listenBtn.addEventListener('click', function () {
-          speakText(currentOutputText, targetLangEl.value, 'target');
+          playBrowserSpeech(currentOutputText, targetLangEl.value, 'target');
         });
         copyBtn.addEventListener('click', function () {
           if (!currentOutputText) return;
@@ -3663,7 +3613,7 @@
             if (!item) return;
             if (action === 'use') loadEntryIntoTranslator(item);
             else if (action === 'copy') copyTextToClipboard(item.output);
-            else if (action === 'speak') speakText(item.output, item.to, 'history');
+            else if (action === 'speak') playBrowserSpeech(item.output, item.to, 'history');
             else if (action === 'del') deleteHistoryEntry(id);
           });
         });
@@ -3676,7 +3626,7 @@
             var id = (btnSpeak || btnCopy || btnUse) && (btnSpeak || btnCopy || btnUse).getAttribute(btnSpeak ? 'data-saved-speak' : btnCopy ? 'data-saved-copy' : 'data-saved-use');
             var item = savedItems.find(function (i) { return i.id === id; });
             if (!item) return;
-            if (btnSpeak) speakText(item.output, item.to, 'saved');
+            if (btnSpeak) playBrowserSpeech(item.output, item.to, 'saved');
             else if (btnCopy) copyTextToClipboard(item.output);
             else if (btnUse) loadEntryIntoTranslator(item);
           });
@@ -3731,7 +3681,7 @@
           copyTextToClipboard(ocrTranslatedText);
         });
         ocrListenBtn.addEventListener('click', function () {
-          speakText(ocrTranslatedText, ocrTargetEl.value, 'ocr');
+          playBrowserSpeech(ocrTranslatedText, ocrTargetEl.value, 'ocr');
         });
         imageTranslateBtn.addEventListener('click', function () {
           loadEntryIntoTranslator({

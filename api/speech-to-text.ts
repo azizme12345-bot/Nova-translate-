@@ -2,7 +2,7 @@ import { TranslationService } from '../server/translationService';
 import { enforceSameOriginAndRateLimit } from '../server/apiSecurity';
 
 export default async function handler(req: any, res: any) {
-  if (!enforceSameOriginAndRateLimit(req, res, { maxRequestsPerMinute: 30 })) {
+  if (!(await enforceSameOriginAndRateLimit(req, res, { maxRequestsPerMinute: 30 }))) {
     return;
   }
 
