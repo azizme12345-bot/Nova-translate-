@@ -3156,13 +3156,11 @@
 
           if (activeRecognition) {
             var recToStop = activeRecognition;
+            activeRecognition = null;
             setMicListeningUi(false);
             try {
               recToStop.stop();
-            } catch (err) {
-              activeRecognition = null;
-              showToast('Mic error: ' + ((err && (err.name || err.message)) || 'stop-failed'));
-            }
+            } catch (err) {}
             return;
           }
 
@@ -3175,19 +3173,9 @@
 
           var srcLang = sourceLangEl.value || 'English 🇬🇧';
           var langWord = srcLang.split(/\s+/)[0];
-          var recognizedText = '';
+          var recognizedText = sourceTextEl.value || '';
           var sessionErrored = false;
-          var didTranslate = false;
           var retryAttempted = false;
-
-          function translateHeardTextOnce() {
-            if (didTranslate || sessionErrored) return;
-            var finalText = String(recognizedText || '').trim();
-            if (!finalText) return;
-            didTranslate = true;
-            if (debounceTimer) clearTimeout(debounceTimer);
-            executeTranslation(finalText, sourceLangEl.value, targetLangEl.value);
-          }
 
           try {
             var recognition = new BrowserSpeechRecognition();
@@ -3196,29 +3184,38 @@
 
             recognition.lang = languageToSpeechLocale(srcLang);
             recognition.interimResults = true;
-            recognition.continuous = false;
+            recognition.continuous = true;
             recognition.maxAlternatives = 1;
 
             recognition.onstart = function () {
               if (activeRecognition !== recognition) return;
-              showToast('Listening in ' + langWord + '…');
+              showToast('Listening in ' + langWord + '… Speak now');
             };
 
             recognition.onresult = function (event) {
               if (activeRecognition !== recognition) return;
-              var combined = '';
-              for (var i = 0; i < event.results.length; i++) {
-                var result = event.results[i];
-                var piece = result && result[0] ? result[0].transcript : '';
-                if (piece) {
-                  combined += piece + (result.isFinal ? ' ' : '');
+              var interimPart = '';
+              var finalPart = recognizedText;
+
+              for (var i = event.resultIndex; i < event.results.length; i++) {
+                var res = event.results[i];
+                var transcript = res && res[0] ? res[0].transcript : '';
+                if (res.isFinal) {
+                  finalPart += (finalPart ? ' ' : '') + transcript.trim();
+                } else {
+                  interimPart += transcript;
                 }
               }
-              combined = combined.trim();
-              if (combined) {
-                recognizedText = combined;
-                sourceTextEl.value = combined;
+
+              var currentCombined = (finalPart + (interimPart ? ' ' + interimPart : '')).trim();
+              if (currentCombined) {
+                recognizedText = finalPart;
+                sourceTextEl.value = currentCombined;
                 updateCharCount();
+                if (debounceTimer) clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () {
+                  executeTranslation(currentCombined, sourceLangEl.value, targetLangEl.value);
+                }, 600);
               }
             };
 
@@ -3231,9 +3228,12 @@
                     if (activeRecognition === recognition) {
                       recognition.start();
                     }
-                  }, 250);
+                  }, 200);
                   return;
                 } catch (e) {}
+              }
+              if (errName === 'no-speech') {
+                return;
               }
               sessionErrored = true;
               if (activeRecognition === recognition) {
@@ -3245,24 +3245,22 @@
 
             recognition.onend = function () {
               if (activeRecognition === recognition) {
+                if (!sessionErrored) {
+                  try {
+                    recognition.start();
+                    return;
+                  } catch (e) {}
+                }
                 activeRecognition = null;
               }
               setMicListeningUi(false);
-              translateHeardTextOnce();
+              var finalVal = (sourceTextEl.value || '').trim();
+              if (finalVal) {
+                executeTranslation(finalVal, sourceLangEl.value, targetLangEl.value);
+              }
             };
 
-            setTimeout(function () {
-              if (activeRecognition === recognition) {
-                try {
-                  recognition.start();
-                } catch (err) {
-                  sessionErrored = true;
-                  activeRecognition = null;
-                  setMicListeningUi(false);
-                  showToast('Mic error: ' + ((err && (err.name || err.message)) || 'start-failed'));
-                }
-              }
-            }, 60);
+            recognition.start();
           } catch (err) {
             sessionErrored = true;
             activeRecognition = null;
