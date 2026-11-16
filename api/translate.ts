@@ -238,7 +238,8 @@ ${text}
 
     let translatedText = '';
     let detectedSource = isAutoDetect ? 'Auto-detected' : sourceLang;
-    let confidence = 0.99;
+    let confidence: number | null = null;
+    let provider: 'gemini' | 'google' = 'gemini';
     let isRTL = false;
 
     if (response && response.text) {
@@ -253,6 +254,7 @@ ${text}
         const parsed = JSON.parse(clean);
         translatedText = (parsed.translatedText || '').trim();
         if (parsed.sourceLanguage) detectedSource = parsed.sourceLanguage;
+        if (typeof parsed.confidence === 'number') confidence = parsed.confidence;
       }
     }
 
@@ -260,7 +262,8 @@ ${text}
       const gtxOut = await fallbackTranslateViaGtx(text, sourceLang, targetLang);
       if (gtxOut) {
         translatedText = gtxOut;
-        confidence = 0.98;
+        confidence = null;
+        provider = 'google';
       }
     }
 
@@ -276,6 +279,7 @@ ${text}
       originalText: text,
       translatedText,
       confidence,
+      provider,
       alternatives: [],
       details: '',
       direction: isTargetRTL ? 'rtl' : 'ltr',

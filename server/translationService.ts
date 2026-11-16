@@ -131,7 +131,8 @@ export interface TranslationResponse {
   targetLanguage: string;
   originalText: string;
   translatedText: string;
-  confidence: number;
+  confidence: number | null;
+  provider?: 'gemini' | 'google';
   alternatives?: string[];
   details?: string;
   direction: 'ltr' | 'rtl';
@@ -265,7 +266,8 @@ ${rawText}
           targetLanguage: targetLang,
           originalText: rawText,
           translatedText: gtxOut,
-          confidence: 0.98,
+          confidence: null,
+          provider: 'google',
           alternatives: [],
           details: '',
           direction: isTargetRTL ? 'rtl' : 'ltr',
@@ -298,7 +300,8 @@ ${rawText}
       targetLanguage: parsed.targetLanguage || targetLang,
       originalText: rawText,
       translatedText: finalTranslatedText,
-      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.99,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : null,
+      provider: 'gemini',
       alternatives: Array.isArray(parsed.alternatives)
         ? parsed.alternatives.filter((a: any) => typeof a === 'string' && a.trim() && a !== finalTranslatedText)
         : [],

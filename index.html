@@ -1924,7 +1924,7 @@
 
           <h2 class="prose-h2">Have Questions or Feedback?</h2>
           <p class="prose-p">
-            We welcome suggestions, bug reports, and general questions by email anytime. Email <a href="mailto:azizme12345@gmail.com" class="prose-link">azizme12345@gmail.com</a>.
+            We welcome suggestions, bug reports, and general questions anytime. Contact [OWNER NAME] at [CONTACT EMAIL].
           </p>
         </article>
       </section>
@@ -1986,7 +1986,7 @@
             The simplest way to reach us is by sending an email with a clear subject line that summarizes your question, feedback, or technical note. We do not use embedded contact forms, pop-up chat widgets, or user accounts on this site, so writing directly to our email address ensures your message arrives cleanly without extra steps.
           </p>
           <p class="prose-p">
-            Email: <a href="mailto:azizme12345@gmail.com" class="prose-link">azizme12345@gmail.com</a>
+            Email: [CONTACT EMAIL]
           </p>
 
           <h2 class="prose-h2">What Kinds of Messages Are Welcome</h2>
@@ -2295,7 +2295,6 @@
         var isSpeaking = false;
         var speakingField = null;
         var currentUtterance = null;
-        var speechStartTimer = null;
         var speechResumeTimer = null;
         var voiceGender = getSavedVoiceGender();
 
@@ -2526,7 +2525,8 @@
             translatedText: translated,
             sourceLanguage: srcLang,
             targetLanguage: tgtLang,
-            confidence: 0.9,
+            confidence: null,
+            provider: 'offline',
             fromCache: false,
             isOffline: true,
             isError: isMissing
@@ -2836,11 +2836,17 @@
             lastOutputIsError = !!result.isError;
             currentOutputText = result.translatedText || '';
             isTranslating = false;
-            if (result.isOffline || result.isError) {
-              confidenceBadgeEl.classList.add('hidden');
-            } else {
-              confidenceBadgeEl.textContent = Math.round((result.confidence || 0.99) * 100) + '% Match';
+            if (
+              !result.isOffline &&
+              !result.isError &&
+              result.provider !== 'google' &&
+              typeof result.confidence === 'number' &&
+              result.confidence > 0
+            ) {
+              confidenceBadgeEl.textContent = Math.round(result.confidence * 100) + '% Match';
               confidenceBadgeEl.classList.remove('hidden');
+            } else {
+              confidenceBadgeEl.classList.add('hidden');
             }
             renderOutputState();
 
@@ -2904,10 +2910,6 @@
         }
 
         function clearSpeechTimers() {
-          if (speechStartTimer) {
-            clearTimeout(speechStartTimer);
-            speechStartTimer = null;
-          }
           if (speechResumeTimer) {
             clearInterval(speechResumeTimer);
             speechResumeTimer = null;
@@ -2976,7 +2978,7 @@
             }
           } catch (e) {}
 
-          timer = setTimeout(finish, 1200);
+          timer = setTimeout(finish, 300);
         }
 
         function pickBestVoice(voices, targetLangCode, langWord) {
@@ -3093,11 +3095,14 @@
           waitForVoices(function (voices) {
             if (!isSpeaking || speakingField !== field) return;
 
-            var matchedVoice = pickBestVoice(voices, targetLangCode, langWord);
-            if (!matchedVoice) {
-              stopSpeech();
-              showToast('Is device par ' + langWord + ' ki awaaz nahi hai.');
-              return;
+            var matchedVoice = null;
+            if (voices && voices.length > 0) {
+              matchedVoice = pickBestVoice(voices, targetLangCode, langWord);
+              if (!matchedVoice) {
+                stopSpeech();
+                showToast('Is device par ' + langWord + ' ki awaaz nahi hai.');
+                return;
+              }
             }
 
             function startUtterance() {
@@ -3105,23 +3110,15 @@
               try {
                 var utterance = new SpeechSynthesisUtterance(clean);
                 currentUtterance = utterance;
-                utterance.voice = matchedVoice;
-                utterance.lang = matchedVoice.lang || targetLangCode;
+                if (matchedVoice) {
+                  utterance.voice = matchedVoice;
+                  utterance.lang = matchedVoice.lang || targetLangCode;
+                } else {
+                  utterance.lang = targetLangCode;
+                }
                 utterance.volume = 1;
                 utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
                 utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
-
-                var started = false;
-
-                utterance.onstart = function () {
-                  if (currentUtterance !== utterance) return;
-                  started = true;
-                  if (speechStartTimer) {
-                    clearTimeout(speechStartTimer);
-                    speechStartTimer = null;
-                  }
-                  showToast('Speaking in ' + langWord + '…');
-                };
 
                 utterance.onend = function () {
                   if (currentUtterance !== utterance) return;
@@ -3139,13 +3136,6 @@
                   showToast('Speech error: ' + errName);
                 };
 
-                speechStartTimer = setTimeout(function () {
-                  if (currentUtterance === utterance && !started) {
-                    stopSpeech();
-                    showToast('Speech error: audio did not start for ' + langWord + '.');
-                  }
-                }, 3000);
-
                 speechResumeTimer = setInterval(function () {
                   if (!isSpeaking) return;
                   try {
@@ -3161,6 +3151,7 @@
                   }
                 } catch (e) {}
 
+                showToast('Speaking in ' + langWord + '…');
                 window.speechSynthesis.speak(utterance);
               } catch (err) {
                 stopSpeech();
@@ -3218,109 +3209,92 @@
           userStoppedMic = false;
           var srcLang = sourceLangEl.value || 'English 🇬🇧';
           var langWord = srcLang.split(/\s+/)[0];
-          var autoRestartedOnce = false;
-          var sessionPrefix = '';
           var sessionLatest = '';
           var sessionTranslatedText = '';
           var sessionHadError = false;
 
-          function startRecognitionSession() {
-            if (userStoppedMic || sessionHadError) return;
-            try {
-              var rec = new SpeechRecognition();
-              micRecognition = rec;
-              micListening = true;
-              micBtn.classList.add('recording');
-              micBtnLabel.textContent = 'Stop';
-              listeningIndicator.classList.remove('hidden');
+          try {
+            var rec = new SpeechRecognition();
+            micRecognition = rec;
+            micListening = true;
+            micBtn.classList.add('recording');
+            micBtnLabel.textContent = 'Stop';
+            listeningIndicator.classList.remove('hidden');
 
-              rec.lang = getSpeechLangCode(srcLang);
-              rec.interimResults = true;
-              rec.continuous = true;
-              rec.maxAlternatives = 1;
+            rec.lang = getSpeechLangCode(srcLang);
+            rec.interimResults = true;
+            rec.continuous = false;
+            rec.maxAlternatives = 1;
 
-              rec.onstart = function () {
-                if (micRecognition !== rec) return;
-                if (!autoRestartedOnce) {
-                  showToast('Listening in ' + langWord + '…');
+            rec.onstart = function () {
+              if (micRecognition !== rec) return;
+              showToast('Listening in ' + langWord + '…');
+            };
+
+            rec.onresult = function (event) {
+              if (micRecognition !== rec) return;
+              var finalPart = '';
+              var interimPart = '';
+              for (var i = 0; i < event.results.length; i++) {
+                var res = event.results[i];
+                var transcript = res && res[0] ? res[0].transcript : '';
+                if (res.isFinal) {
+                  finalPart += transcript + ' ';
+                } else {
+                  interimPart += transcript;
                 }
-              };
-
-              rec.onresult = function (event) {
-                if (micRecognition !== rec) return;
-                var finalPart = '';
-                var interimPart = '';
-                for (var i = 0; i < event.results.length; i++) {
-                  var res = event.results[i];
-                  var transcript = res && res[0] ? res[0].transcript : '';
-                  if (res.isFinal) {
-                    finalPart += transcript + ' ';
-                  } else {
-                    interimPart += transcript;
-                  }
-                }
-                var currentPart = (finalPart + interimPart).trim();
-                var fullText = (sessionPrefix ? sessionPrefix + ' ' : '') + currentPart;
-                fullText = fullText.trim();
-                if (fullText) {
-                  sessionLatest = fullText;
-                  sourceTextEl.value = fullText;
-                  updateCharCount();
-                  var lastRes = event.results[event.results.length - 1];
-                  if (lastRes && lastRes.isFinal) {
-                    var finalSoFar = ((sessionPrefix ? sessionPrefix + ' ' : '') + finalPart).trim();
-                    if (finalSoFar && finalSoFar !== sessionTranslatedText) {
-                      sessionTranslatedText = finalSoFar;
-                      if (debounceTimer) clearTimeout(debounceTimer);
-                      executeTranslation(finalSoFar, sourceLangEl.value, targetLangEl.value);
-                    }
-                  }
-                }
-              };
-
-              rec.onerror = function (ev) {
-                var errName = (ev && ev.error) ? ev.error : 'unknown-error';
-                sessionHadError = true;
-                if (micRecognition === rec) {
-                  micRecognition = null;
-                }
-                resetMicUi();
-                showToast('Mic error: ' + errName);
-              };
-
-              rec.onend = function () {
-                if (micRecognition === rec) {
-                  micRecognition = null;
-                }
-
-                if (!userStoppedMic && !sessionHadError && !autoRestartedOnce) {
-                  autoRestartedOnce = true;
-                  sessionPrefix = sessionLatest || (sourceTextEl.value || '').trim();
-                  startRecognitionSession();
-                  return;
-                }
-
-                resetMicUi();
-                if (!sessionHadError) {
-                  var finalText = (sessionLatest || '').trim();
-                  if (finalText && finalText !== sessionTranslatedText) {
-                    sessionTranslatedText = finalText;
+              }
+              var combined = (finalPart + interimPart).trim();
+              if (combined) {
+                sessionLatest = combined;
+                sourceTextEl.value = combined;
+                updateCharCount();
+                var lastRes = event.results[event.results.length - 1];
+                if (lastRes && lastRes.isFinal) {
+                  var finalSoFar = finalPart.trim() || combined;
+                  if (finalSoFar && finalSoFar !== sessionTranslatedText) {
+                    sessionTranslatedText = finalSoFar;
                     if (debounceTimer) clearTimeout(debounceTimer);
-                    executeTranslation(finalText, sourceLangEl.value, targetLangEl.value);
+                    executeTranslation(finalSoFar, sourceLangEl.value, targetLangEl.value);
                   }
                 }
-              };
+              }
+            };
 
-              rec.start();
-            } catch (err) {
+            rec.onerror = function (ev) {
+              var errName = (ev && ev.error) ? ev.error : 'unknown-error';
               sessionHadError = true;
-              micRecognition = null;
+              if (micRecognition === rec) {
+                micRecognition = null;
+              }
               resetMicUi();
-              showToast('Mic error: ' + ((err && (err.name || err.message)) || 'start-failed'));
-            }
-          }
+              if (!userStoppedMic) {
+                showToast('Mic error: ' + errName);
+              }
+            };
 
-          startRecognitionSession();
+            rec.onend = function () {
+              if (micRecognition === rec) {
+                micRecognition = null;
+              }
+              resetMicUi();
+              if (!sessionHadError) {
+                var finalText = (sessionLatest || '').trim();
+                if (finalText && finalText !== sessionTranslatedText) {
+                  sessionTranslatedText = finalText;
+                  if (debounceTimer) clearTimeout(debounceTimer);
+                  executeTranslation(finalText, sourceLangEl.value, targetLangEl.value);
+                }
+              }
+            };
+
+            rec.start();
+          } catch (err) {
+            sessionHadError = true;
+            micRecognition = null;
+            resetMicUi();
+            showToast('Mic error: ' + ((err && (err.name || err.message)) || 'start-failed'));
+          }
         }
 
         /* Camera OCR */

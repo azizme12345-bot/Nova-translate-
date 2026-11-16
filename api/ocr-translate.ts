@@ -1,5 +1,5 @@
 import { TranslationService } from '../server/translationService';
-import { enforceSameOriginAndRateLimit } from './_security';
+import { enforceSameOriginAndRateLimit } from '../server/apiSecurity';
 
 export const config = {
   api: {

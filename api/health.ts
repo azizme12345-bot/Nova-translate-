@@ -1,4 +1,4 @@
-import { enforceSameOriginAndRateLimit } from './_security';
+import { enforceSameOriginAndRateLimit } from '../server/apiSecurity';
 
 export default function handler(req: any, res: any) {
   if (!enforceSameOriginAndRateLimit(req, res)) {

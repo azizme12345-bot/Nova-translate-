@@ -1,9 +1,8 @@
-const CACHE_NAME = 'lafz-translation-shell-v1';
+const CACHE_NAME = 'lafz-translation-shell-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/manifest.json',
   '/favicon.png',
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
