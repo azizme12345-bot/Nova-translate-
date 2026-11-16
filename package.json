@@ -18,8 +18,6 @@
     "@google/genai": "^3.3.0",
     "@google/generative-ai": "^0.24.1",
     "@tailwindcss/vite": "^4.3.3",
-    "@upstash/ratelimit": "^2.2.1",
-    "@upstash/redis": "^1.41.0",
     "@vitejs/plugin-react": "^6.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",

@@ -3075,70 +3075,73 @@
             return;
           }
 
-          var cancelledPrevious = haltBrowserSpeech();
+          haltBrowserSpeech();
           var langWord = String(langName || 'English').split(/\s+/)[0];
           var locale = languageToSpeechLocale(langName);
 
           activeAudioKey = key;
           updateListenButtonsUi(key);
 
-          loadBrowserVoices(function (voices) {
-            if (activeAudioKey !== key) return;
-
-            var selectedVoice = findMatchingVoice(voices, locale, langWord);
-            if (!selectedVoice) {
-              haltBrowserSpeech();
-              showToast('Is device par ' + langWord + ' ki awaaz nahi hai.');
-              return;
+          try {
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+              window.speechSynthesis.cancel();
             }
 
-            function dispatchUtterance() {
+            var utterance = new SpeechSynthesisUtterance(clean);
+            activeAudioUtterance = utterance;
+            utterance.lang = locale;
+            utterance.volume = 1;
+            utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
+            utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
+
+            loadBrowserVoices(function (voices) {
               if (activeAudioKey !== key) return;
               try {
-                var utterance = new SpeechSynthesisUtterance(clean);
-                activeAudioUtterance = utterance;
-                utterance.voice = selectedVoice;
-                utterance.lang = selectedVoice.lang || locale;
-                utterance.volume = 1;
-                utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
-                utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
-
-                utterance.onend = function () {
-                  if (activeAudioUtterance !== utterance) return;
-                  activeAudioUtterance = null;
-                  activeAudioKey = null;
-                  updateListenButtonsUi(null);
-                };
-
-                utterance.onerror = function (ev) {
-                  if (activeAudioUtterance !== utterance) return;
-                  var errName = (ev && ev.error) ? ev.error : 'unknown-error';
-                  activeAudioUtterance = null;
-                  activeAudioKey = null;
-                  updateListenButtonsUi(null);
-                  showToast('Speech error: ' + errName);
-                };
-
-                try {
-                  if (window.speechSynthesis.paused) {
-                    window.speechSynthesis.resume();
+                var matched = findMatchingVoice(voices, locale, langWord);
+                if (matched) {
+                  utterance.voice = matched;
+                  utterance.lang = matched.lang || locale;
+                } else {
+                  var baseLang = locale.split('-')[0].toLowerCase();
+                  var baseMatched = voices.find(function (v) {
+                    return String(v.lang || '').toLowerCase().indexOf(baseLang) !== -1;
+                  });
+                  if (baseMatched) {
+                    utterance.voice = baseMatched;
+                    utterance.lang = baseMatched.lang;
                   }
-                } catch (e) {}
+                }
+              } catch (e) {}
+            });
 
-                showToast('Speaking in ' + langWord + '…');
-                window.speechSynthesis.speak(utterance);
-              } catch (err) {
-                haltBrowserSpeech();
-                showToast('Speech error: ' + ((err && (err.message || err.name)) || 'failed'));
+            utterance.onend = function () {
+              if (activeAudioUtterance !== utterance) return;
+              activeAudioUtterance = null;
+              activeAudioKey = null;
+              updateListenButtonsUi(null);
+            };
+
+            utterance.onerror = function (ev) {
+              if (activeAudioUtterance !== utterance) return;
+              var errName = (ev && ev.error) ? ev.error : 'unknown-error';
+              activeAudioUtterance = null;
+              activeAudioKey = null;
+              updateListenButtonsUi(null);
+              showToast('Speech error: ' + errName);
+            };
+
+            try {
+              if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
               }
-            }
+            } catch (e) {}
 
-            if (cancelledPrevious) {
-              setTimeout(dispatchUtterance, 60);
-            } else {
-              dispatchUtterance();
-            }
-          });
+            showToast('Speaking in ' + langWord + '…');
+            window.speechSynthesis.speak(utterance);
+          } catch (err) {
+            haltBrowserSpeech();
+            showToast('Speech error: ' + ((err && (err.message || err.name)) || 'failed'));
+          }
         }
 
         /* Microphone (Browser SpeechRecognition only) */

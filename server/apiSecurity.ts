@@ -1,41 +1,9 @@
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-
-const limiters = new Map<number, Ratelimit>();
-let warnedMissingRedisEnv = false;
-
-function getUpstashLimiter(maxRequestsPerMinute: number): Ratelimit | null {
-  const url = (process.env.UPSTASH_REDIS_REST_URL || '').trim();
-  const token = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
-
-  if (!url || !token) {
-    if (!warnedMissingRedisEnv) {
-      warnedMissingRedisEnv = true;
-      console.warn(
-        '[rate-limit] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is missing. Skipping rate limit.'
-      );
-    }
-    return null;
-  }
-
-  let limiter = limiters.get(maxRequestsPerMinute);
-  if (!limiter) {
-    try {
-      const redis = new Redis({ url, token });
-      limiter = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(maxRequestsPerMinute, '1 m'),
-        analytics: false,
-        prefix: 'lafz:ratelimit',
-      });
-      limiters.set(maxRequestsPerMinute, limiter);
-    } catch (err) {
-      console.warn('[rate-limit] Failed to initialize Upstash Redis client. Skipping rate limit.', err);
-      return null;
-    }
-  }
-  return limiter;
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
 }
+
+const ipBucket = new Map<string, RateLimitEntry>();
 
 function getHostOnly(val: string | string[] | undefined): string {
   const first = (Array.isArray(val) ? val[0] : val || '').split(',')[0].trim();
@@ -50,17 +18,6 @@ function parseUrlHost(raw: string | string[] | undefined): string {
   } catch {
     return '';
   }
-}
-
-function getClientIp(req: any): string {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  const realIp = req.headers?.['x-real-ip'];
-  return (
-    (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0].trim() ||
-    (Array.isArray(realIp) ? realIp[0] : realIp)?.trim() ||
-    req.socket?.remoteAddress ||
-    'anonymous'
-  );
 }
 
 export async function enforceSameOriginAndRateLimit(
@@ -112,34 +69,41 @@ export async function enforceSameOriginAndRateLimit(
   }
 
   if (options.maxRequestsPerMinute && options.maxRequestsPerMinute > 0) {
-    const limiter = getUpstashLimiter(options.maxRequestsPerMinute);
-    if (limiter) {
-      try {
-        const ip = getClientIp(req);
-        const { success, limit, remaining, reset } = await limiter.limit(ip);
-        const retryAfter = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    const forwarded = req.headers?.['x-forwarded-for'];
+    const ip =
+      (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0].trim() ||
+      req.socket?.remoteAddress ||
+      'anonymous';
 
-        res.setHeader('X-RateLimit-Limit', String(limit));
-        res.setHeader('X-RateLimit-Remaining', String(remaining));
-        res.setHeader('X-RateLimit-Reset', String(retryAfter));
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    let entry = ipBucket.get(ip);
+    if (!entry || now > entry.resetTime) {
+      entry = { count: 1, resetTime: now + windowMs };
+      ipBucket.set(ip, entry);
+    } else {
+      entry.count += 1;
+    }
 
-        if (!success) {
-          res.statusCode = 429;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(
-            JSON.stringify({
-              error: {
-                code: 'RATE_LIMIT_EXCEEDED',
-                message: 'Too many requests. Please wait a minute and try again.',
-                retryAfter,
-              },
-            })
-          );
-          return false;
-        }
-      } catch (err) {
-        console.warn('[rate-limit] Upstash rate limit check failed. Skipping limit.', err);
-      }
+    const remaining = Math.max(0, options.maxRequestsPerMinute - entry.count);
+    const retryAfter = Math.max(1, Math.ceil((entry.resetTime - now) / 1000));
+    res.setHeader('X-RateLimit-Limit', String(options.maxRequestsPerMinute));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(retryAfter));
+
+    if (entry.count > options.maxRequestsPerMinute) {
+      res.statusCode = 429;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'Too many requests. Please wait a minute and try again.',
+            retryAfter,
+          },
+        })
+      );
+      return false;
     }
   }
 
