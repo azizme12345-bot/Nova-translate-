@@ -128,7 +128,7 @@ export default async function handler(req: any, res: any) {
 ${text}
 """`;
 
-    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
+    const models = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
     let response: any = null;
     let lastError: any = null;
 

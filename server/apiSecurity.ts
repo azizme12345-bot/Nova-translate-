@@ -20,14 +20,19 @@ function getUpstashLimiter(maxRequestsPerMinute: number): Ratelimit | null {
 
   let limiter = limiters.get(maxRequestsPerMinute);
   if (!limiter) {
-    const redis = new Redis({ url, token });
-    limiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(maxRequestsPerMinute, '1 m'),
-      analytics: false,
-      prefix: 'lafz:ratelimit',
-    });
-    limiters.set(maxRequestsPerMinute, limiter);
+    try {
+      const redis = new Redis({ url, token });
+      limiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(maxRequestsPerMinute, '1 m'),
+        analytics: false,
+        prefix: 'lafz:ratelimit',
+      });
+      limiters.set(maxRequestsPerMinute, limiter);
+    } catch (err) {
+      console.warn('[rate-limit] Failed to initialize Upstash Redis client. Skipping rate limit.', err);
+      return null;
+    }
   }
   return limiter;
 }

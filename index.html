@@ -3163,8 +3163,6 @@
             return;
           }
 
-          haltBrowserSpeech();
-
           var BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (!BrowserSpeechRecognition) {
             setMicListeningUi(false);
@@ -3177,6 +3175,7 @@
           var recognizedText = '';
           var sessionErrored = false;
           var didTranslate = false;
+          var retryAttempted = false;
 
           function translateHeardTextOnce() {
             if (didTranslate || sessionErrored) return;
@@ -3222,6 +3221,17 @@
 
             recognition.onerror = function (ev) {
               var errName = (ev && ev.error) ? ev.error : 'unknown-error';
+              if (errName === 'aborted' && !retryAttempted) {
+                retryAttempted = true;
+                try {
+                  setTimeout(function () {
+                    if (activeRecognition === recognition) {
+                      recognition.start();
+                    }
+                  }, 250);
+                  return;
+                } catch (e) {}
+              }
               sessionErrored = true;
               if (activeRecognition === recognition) {
                 activeRecognition = null;
@@ -3238,7 +3248,18 @@
               translateHeardTextOnce();
             };
 
-            recognition.start();
+            setTimeout(function () {
+              if (activeRecognition === recognition) {
+                try {
+                  recognition.start();
+                } catch (err) {
+                  sessionErrored = true;
+                  activeRecognition = null;
+                  setMicListeningUi(false);
+                  showToast('Mic error: ' + ((err && (err.name || err.message)) || 'start-failed'));
+                }
+              }
+            }, 60);
           } catch (err) {
             sessionErrored = true;
             activeRecognition = null;

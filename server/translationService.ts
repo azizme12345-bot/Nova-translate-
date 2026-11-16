@@ -114,10 +114,10 @@ async function fallbackTranslateViaGtx(text: string, sourceLang: string, targetL
   return null;
 }
 
-const PRIMARY_MODEL = 'gemini-2.5-flash';
-const LITE_MODEL = 'gemini-2.5-flash-lite';
-const TEXT_MODELS = [PRIMARY_MODEL, LITE_MODEL, 'gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
-const AUDIO_MODELS = [PRIMARY_MODEL, LITE_MODEL, 'gemini-3.5-transcribe', 'gemini-4-hydrogen'];
+const PRIMARY_MODEL = 'gemini-4-hydrogen';
+const LITE_MODEL = 'gemini-3.1-flash-lite';
+const TEXT_MODELS = [PRIMARY_MODEL, LITE_MODEL];
+const AUDIO_MODELS = ['gemini-3.5-transcribe', PRIMARY_MODEL];
 
 export interface TranslationRequest {
   text: string;
