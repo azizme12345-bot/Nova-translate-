@@ -1,31 +1,26 @@
+
 /**
- * Microphone & Browser Speech Recognition Module
- * Uses ONLY the browser's built-in Web Speech API (window.SpeechRecognition / webkitSpeechRecognition).
- * No external API, no MediaRecorder, no server speech-to-text endpoint, and no API key.
+ * Microphone Module
+ * Browser Speech Recognition API
+ * No external API or API key required.
  */
 
 import { getSpeechCode, getTranslationName } from './language-manager.js';
 import { showToast } from './ui-utils.js';
 
-const SPEECH_RECOGNITION_CODES = {
+const SPEECH_CODES = {
   english: 'en-US',
   urdu: 'ur-PK',
   arabic: 'ar-SA',
-  punjabi: 'pa-PK',
+  punjabi: 'pa-PK'
 };
-
-const MAX_SILENT_RESTARTS = 3;
-const MAX_CONSECUTIVE_FAST_ENDS = 2;
-const MAX_CONTINUATION_ABORT_RETRIES = 1;
-const FAST_END_THRESHOLD_MS = 400;
-const CONTINUATION_DELAY_MS = 320;
-const CONTINUATION_ABORT_RETRY_DELAY_MS = 450;
-const STOP_FALLBACK_TIMEOUT_MS = 1200;
-const TOGGLE_DEBOUNCE_MS = 250;
 
 export function getSpeechRecognitionConstructor() {
   if (typeof window === 'undefined') return null;
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  return window.SpeechRecognition ||
+         window.webkitSpeechRecognition ||
+         null;
 }
 
 export function isSpeechRecognitionSupported() {
@@ -34,664 +29,233 @@ export function isSpeechRecognitionSupported() {
 
 export function getRecognitionLang(langValue) {
   const name = getTranslationName(langValue).trim().toLowerCase();
-  if (SPEECH_RECOGNITION_CODES[name]) {
-    return SPEECH_RECOGNITION_CODES[name];
+
+  if (SPEECH_CODES[name]) {
+    return SPEECH_CODES[name];
   }
+
   return getSpeechCode(langValue) || 'en-US';
 }
 
-function joinTranscriptSegments(...parts) {
-  return parts
-    .map((p) => String(p || '').trim())
-    .filter(Boolean)
-    .join(' ')
+function cleanText(value) {
+  return String(value || '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-function formatDuration(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(s / 60);
-  const secs = s % 60;
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-}
-
-function isMicDebugEnabled() {
-  if (typeof window === 'undefined' || !window.location) return false;
-  try {
-    const search = String(window.location.search || '');
-    if (!search) return false;
-    return new URLSearchParams(search).get('micdebug') === '1';
-  } catch {
-    return String(window.location.search || '').includes('micdebug=1');
-  }
-}
-
-function formatDebugClock(ms) {
-  const d = new Date(ms);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  const mmm = String(d.getMilliseconds()).padStart(3, '0');
-  return `${hh}:${mm}:${ss}.${mmm}`;
-}
-
 export function createMicrophoneController(callbacks = {}) {
-  let activeRecognition = null;
-  let sessionSeq = 0;
-  let instanceCounter = 0;
-  let lifecycleState = 'idle'; // 'idle' | 'starting' | 'listening' | 'restarting' | 'stopping'
-  let isInitialized = false;
-  let isListeningState = false;
-  let manualStop = false;
-  let fatalErrorCode = '';
-  let lastErrorCode = '';
-  let isContinuationLaunch = false;
-  let transientRestartAbort = false;
-  let continuationAbortRetries = 0;
-  let lastToggleAt = 0;
-
-  let sessionPrefix = '';
-  let accumulatedFinalText = '';
-  let currentInstanceFinal = '';
-  let currentInstanceInterim = '';
-  let lastDispatchedFinal = '';
-  let gotAnyResultInSession = false;
-
-  let currentLangCode = 'en-US';
-  let currentLangName = 'English';
-  let sessionStartMs = 0;
-  let instanceStartMs = 0;
-  let gotResultInInstance = false;
-  let silentRestartCount = 0;
-  let consecutiveFastEndCount = 0;
-
-  let durationTimer = null;
-  let restartTimer = null;
-  let stopFallbackTimer = null;
-
-  const micDebugActive = isMicDebugEnabled();
-  const micDebugEntries = [];
-  let micDebugStartedSuccess = false;
-  let micDebugPanel = null;
-  let micDebugHeaderEl = null;
-  let micDebugLogEl = null;
 
   const micBtn = document.getElementById('micBtn');
   const micBtnLabel = document.getElementById('micBtnLabel');
   const listeningIndicator = document.getElementById('listeningIndicator');
 
-  function ensureMicDebugPanel() {
-    if (!micDebugActive || typeof document === 'undefined' || !document.body) return null;
-    if (micDebugPanel) return micDebugPanel;
+  let recognition = null;
+  let isActive = false;
+  let manualStop = false;
+  let initialized = false;
 
-    const panel = document.createElement('div');
-    panel.id = 'micDebugPanel';
-    panel.style.cssText =
-      'position:fixed;left:8px;right:8px;bottom:8px;max-height:42vh;z-index:99999;' +
-      'background:rgba(15,23,42,0.96);color:#e2e8f0;border:1px solid #38bdf8;' +
-      'border-radius:10px;padding:10px;font-family:monospace;font-size:11px;' +
-      'line-height:1.4;box-shadow:0 10px 25px rgba(0,0,0,0.45);display:flex;flex-direction:column;gap:6px;';
+  let sessionPrefix = '';
+  let finalTranscript = '';
+  let interimTranscript = '';
+  let lastTranslatedText = '';
 
-    const topBar = document.createElement('div');
-    topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;';
+  let currentLangCode = 'en-US';
+  let currentLangName = 'English';
 
-    const title = document.createElement('strong');
-    title.textContent = 'MIC DEBUG (?micdebug=1)';
-    title.style.color = '#38bdf8';
+  let sessionStartTime = 0;
+  let durationTimer = null;
+  let lastError = '';
 
-    const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = 'display:flex;gap:6px;';
+  function updateUi(active) {
+    isActive = Boolean(active);
 
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.textContent = 'Copy';
-    copyBtn.style.cssText =
-      'background:#0284c7;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;';
-    copyBtn.addEventListener('click', () => {
-      const payload = [micDebugHeaderEl ? micDebugHeaderEl.textContent : '', ...micDebugEntries].join('\n');
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(payload).then(
-          () => showToast('Mic debug log copied'),
-          () => showToast('Copy failed — select log text manually')
-        );
-      } else {
-        showToast('Clipboard unavailable — screenshot or copy text');
-      }
-    });
-
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.textContent = 'Clear';
-    clearBtn.style.cssText =
-      'background:#334155;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;';
-    clearBtn.addEventListener('click', () => {
-      micDebugEntries.length = 0;
-      if (micDebugLogEl) micDebugLogEl.textContent = '';
-    });
-
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.textContent = 'Hide';
-    closeBtn.style.cssText =
-      'background:#475569;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;';
-    closeBtn.addEventListener('click', () => {
-      panel.style.display = 'none';
-    });
-
-    btnWrap.appendChild(copyBtn);
-    btnWrap.appendChild(clearBtn);
-    btnWrap.appendChild(closeBtn);
-    topBar.appendChild(title);
-    topBar.appendChild(btnWrap);
-
-    const statusLine = document.createElement('div');
-    statusLine.style.cssText = 'color:#fde047;word-break:break-word;';
-    micDebugHeaderEl = statusLine;
-
-    const logBox = document.createElement('pre');
-    logBox.style.cssText =
-      'margin:0;overflow:auto;max-height:26vh;white-space:pre-wrap;word-break:break-word;' +
-      'background:#020617;padding:8px;border-radius:6px;border:1px solid #1e293b;color:#f8fafc;';
-    micDebugLogEl = logBox;
-
-    panel.appendChild(topBar);
-    panel.appendChild(statusLine);
-    panel.appendChild(logBox);
-    document.body.appendChild(panel);
-    micDebugPanel = panel;
-    return panel;
-  }
-
-  function updateDebugHeader() {
-    if (!micDebugActive || !micDebugHeaderEl) return;
-    micDebugHeaderEl.textContent =
-      `lang=${currentLangCode} (${currentLangName}) | started=${micDebugStartedSuccess ? 'YES' : 'NO'} | ` +
-      `state=${lifecycleState} | session=${sessionSeq} | inst=${instanceCounter}`;
-  }
-
-  function logMicDebug(eventName, details = '') {
-    if (!micDebugActive) return;
-    try {
-      const now = Date.now();
-      const relSession = sessionStartMs ? `+${now - sessionStartMs}ms` : '+0ms';
-      const relInst = instanceStartMs ? `+${now - instanceStartMs}ms` : '+0ms';
-      const line = `[${formatDebugClock(now)} | sess:${relSession} | inst:${relInst}] ${eventName}${
-        details ? ' | ' + details : ''
-      }`;
-      micDebugEntries.push(line);
-      if (micDebugEntries.length > 150) {
-        micDebugEntries.shift();
-      }
-      if (typeof console !== 'undefined' && console.log) {
-        console.log('[MicDebug]', line);
-      }
-      ensureMicDebugPanel();
-      if (micDebugPanel) {
-        micDebugPanel.style.display = 'flex';
-      }
-      updateDebugHeader();
-      if (micDebugLogEl) {
-        micDebugLogEl.textContent = micDebugEntries.join('\n');
-        micDebugLogEl.scrollTop = micDebugLogEl.scrollHeight;
-      }
-    } catch {
-      // Never allow diagnostic logging to affect microphone operation
-    }
-  }
-
-  function clearTimers() {
-    if (durationTimer) {
-      clearInterval(durationTimer);
-      durationTimer = null;
-    }
-    if (restartTimer) {
-      clearTimeout(restartTimer);
-      restartTimer = null;
-    }
-    if (stopFallbackTimer) {
-      clearTimeout(stopFallbackTimer);
-      stopFallbackTimer = null;
-    }
-  }
-
-  function updateListeningUi(listening) {
-    isListeningState = Boolean(listening);
     if (micBtn) {
-      micBtn.classList.toggle('recording', isListeningState);
+      micBtn.classList.toggle('recording', isActive);
       micBtn.disabled = false;
+      micBtn.setAttribute('aria-pressed', String(isActive));
     }
+
     if (micBtnLabel) {
-      micBtnLabel.textContent = isListeningState ? 'Stop' : 'Speak';
+      micBtnLabel.textContent = isActive ? 'Stop' : 'Speak';
     }
+
     if (listeningIndicator) {
-      if (isListeningState) {
+      if (isActive) {
         listeningIndicator.classList.remove('hidden');
-        const elapsed = sessionStartMs ? Math.floor((Date.now() - sessionStartMs) / 1000) : 0;
-        listeningIndicator.textContent = `● Listening (${currentLangName}) ${formatDuration(elapsed)}`;
+        listeningIndicator.textContent =
+          `● Listening (${currentLangName})`;
       } else {
         listeningIndicator.classList.add('hidden');
         listeningIndicator.textContent = '● Listening...';
       }
     }
+
     if (typeof callbacks.onStateChange === 'function') {
-      callbacks.onStateChange(isListeningState);
+      callbacks.onStateChange(isActive);
+    }
+  }
+
+  function stopDurationTimer() {
+    if (durationTimer !== null) {
+      clearInterval(durationTimer);
+      durationTimer = null;
     }
   }
 
   function startDurationTimer() {
-    if (durationTimer) clearInterval(durationTimer);
+    stopDurationTimer();
+
     durationTimer = setInterval(() => {
-      if (isListeningState && listeningIndicator && sessionStartMs) {
-        const elapsed = Math.floor((Date.now() - sessionStartMs) / 1000);
-        listeningIndicator.textContent = `● Listening (${currentLangName}) ${formatDuration(elapsed)}`;
-      }
+      if (!isActive || !listeningIndicator) return;
+
+      const elapsed = Math.floor(
+        (Date.now() - sessionStartTime) / 1000
+      );
+
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+
+      listeningIndicator.textContent =
+        `● Listening (${currentLangName}) ${minutes}:${String(seconds).padStart(2, '0')}`;
+
     }, 1000);
   }
 
-  function mapErrorMessage(code) {
+  function writeTranscript() {
+
+    const combined = [
+      sessionPrefix,
+      finalTranscript,
+      interimTranscript
+    ]
+      .map(cleanText)
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    const sourceText = document.getElementById('sourceText');
+
+    if (sourceText && sourceText.value !== combined) {
+      sourceText.value = combined;
+
+      sourceText.dispatchEvent(
+        new Event('input', { bubbles: true })
+      );
+    }
+
+    if (typeof callbacks.onInterimTranscript === 'function') {
+      callbacks.onInterimTranscript(combined);
+    }
+
+    const finalCombined = [
+      sessionPrefix,
+      finalTranscript
+    ]
+      .map(cleanText)
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    if (
+      finalTranscript &&
+      finalCombined &&
+      finalCombined !== sessionPrefix &&
+      finalCombined !== lastTranslatedText
+    ) {
+      lastTranslatedText = finalCombined;
+
+      if (typeof callbacks.onFinalTranscript === 'function') {
+        callbacks.onFinalTranscript(finalCombined);
+      }
+    }
+  }
+
+  function errorMessage(code) {
+
     switch (code) {
+
       case 'unsupported':
-        return 'Browser speech recognition is not supported here. Please use Google Chrome.';
+        return 'Speech recognition is not supported in this browser. Please use Google Chrome.';
+
       case 'insecure-context':
-        return 'Microphone speech recognition requires HTTPS or localhost.';
+        return 'Microphone access requires HTTPS or localhost.';
+
       case 'not-allowed':
       case 'permission-denied':
-        return 'Microphone permission denied. Please allow microphone access in browser settings and try again.';
+        return 'Microphone permission denied. Allow microphone access in Chrome settings.';
+
       case 'service-not-allowed':
-      case 'service-unavailable':
-        return 'Speech recognition service is unavailable on this browser or device.';
+        return 'The browser blocked its speech recognition service.';
+
       case 'audio-capture':
-        return 'No working microphone found or microphone is in use by another app.';
+        return 'No microphone is available, or another app is using it.';
+
       case 'network':
-        return 'Network error during speech recognition. Check your connection and tap Speak to retry.';
+        return 'Speech recognition network error. Check your internet connection.';
+
       case 'language-not-supported':
-        return `${currentLangName} (${currentLangCode}) speech recognition is not supported by your browser.`;
+        return `Speech recognition does not support ${currentLangName} (${currentLangCode}).`;
+
       case 'no-speech':
-        return 'No speech detected. Tap Speak and speak clearly into your microphone.';
+        return 'No speech was detected. Tap Speak and try again.';
+
       case 'aborted':
-        return 'Speech recognition was interrupted. Tap Speak to start again.';
-      case 'unexpected-end':
-        return `Speech recognition stopped unexpectedly${
-          gotAnyResultInSession ? '' : ` for ${currentLangName} (${currentLangCode})`
-        }. Tap Speak to try again.`;
+        return 'The browser interrupted speech recognition. Tap Speak to try again.';
+
       default:
-        return `Microphone error (${code || 'unknown'}). Tap Speak to try again.`;
+        return `Microphone error (${code || 'unknown'}).`;
     }
   }
 
-  function getComposedText(includeInterim = true) {
-    const newSpeech = includeInterim
-      ? joinTranscriptSegments(accumulatedFinalText, currentInstanceFinal, currentInstanceInterim)
-      : joinTranscriptSegments(accumulatedFinalText, currentInstanceFinal);
-    return joinTranscriptSegments(sessionPrefix, newSpeech);
-  }
+  function finishSession(reason = '') {
 
-  function syncSourceInput(fullText) {
-    const sourceTextEl = document.getElementById('sourceText');
-    if (sourceTextEl && sourceTextEl.value !== fullText) {
-      sourceTextEl.value = fullText;
-    }
-    if (typeof callbacks.onInterimTranscript === 'function') {
-      callbacks.onInterimTranscript(fullText);
-    }
-  }
+    stopDurationTimer();
 
-  function dispatchTranslationIfChanged(fullText) {
-    const clean = String(fullText || '').trim();
-    if (!clean || clean === sessionPrefix || clean === lastDispatchedFinal) {
-      return;
-    }
-    lastDispatchedFinal = clean;
-    if (typeof callbacks.onFinalTranscript === 'function') {
-      callbacks.onFinalTranscript(clean);
-    }
-  }
+    recognition = null;
 
-  function finalizeSession({ reason = 'manual', errorCode = '' } = {}) {
-    clearTimers();
-    activeRecognition = null;
-    lifecycleState = 'idle';
-    isContinuationLaunch = false;
-    transientRestartAbort = false;
-    continuationAbortRetries = 0;
+    updateUi(false);
 
-    accumulatedFinalText = joinTranscriptSegments(
-      accumulatedFinalText,
-      currentInstanceFinal,
-      currentInstanceInterim
-    );
-    currentInstanceFinal = '';
-    currentInstanceInterim = '';
+    interimTranscript = '';
 
-    const finalText = getComposedText(true);
-    const hasCapturedNewSpeech = Boolean(accumulatedFinalText.trim());
+    writeTranscript();
 
-    logMicDebug(
-      'session.finalize',
-      `reason=${reason} errorCode=${errorCode || 'none'} startedSuccess=${micDebugStartedSuccess} capturedChars=${accumulatedFinalText.trim().length}`
-    );
+    if (manualStop) {
 
-    if (finalText) {
-      syncSourceInput(finalText);
-    }
-
-    updateListeningUi(false);
-
-    if (hasCapturedNewSpeech) {
-      dispatchTranslationIfChanged(finalText);
-    }
-
-    if (reason === 'manual') {
-      showToast(hasCapturedNewSpeech ? 'Speech converted and translating…' : 'Listening stopped');
-      return;
-    }
-
-    const codeToShow = errorCode || 'unexpected-end';
-    const message = mapErrorMessage(codeToShow);
-    showToast(message);
-    if (typeof callbacks.onError === 'function') {
-      callbacks.onError(codeToShow, message);
-    }
-  }
-
-  function launchRecognitionInstance(seq, { fromContinuation = false } = {}) {
-    if (seq !== sessionSeq || manualStop || lifecycleState === 'stopping' || activeRecognition) {
-      return;
-    }
-
-    const SpeechRecognitionCtor = getSpeechRecognitionConstructor();
-    if (!SpeechRecognitionCtor) {
-      finalizeSession({ reason: 'error', errorCode: 'unsupported' });
-      return;
-    }
-
-    let recognition;
-    try {
-      recognition = new SpeechRecognitionCtor();
-    } catch {
-      finalizeSession({ reason: 'error', errorCode: 'service-not-allowed' });
-      return;
-    }
-
-    activeRecognition = recognition;
-    lifecycleState = 'starting';
-    isContinuationLaunch = Boolean(fromContinuation);
-    transientRestartAbort = false;
-    instanceStartMs = Date.now();
-    instanceCounter += 1;
-    const currentInstanceId = instanceCounter;
-    let instanceStarted = false;
-    gotResultInInstance = false;
-    currentInstanceFinal = '';
-    currentInstanceInterim = '';
-    lastErrorCode = '';
-
-    recognition.lang = currentLangCode;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    logMicDebug(
-      'instance.init',
-      `id=#${currentInstanceId} lang=${recognition.lang} continuous=${recognition.continuous} ` +
-        `interimResults=${recognition.interimResults} fromContinuation=${isContinuationLaunch}`
-    );
-
-    if (micDebugActive) {
-      recognition.onaudiostart = () => {
-        logMicDebug('onaudiostart', `id=#${currentInstanceId} seqMatch=${seq === sessionSeq}`);
-      };
-      recognition.onspeechstart = () => {
-        logMicDebug('onspeechstart', `id=#${currentInstanceId} seqMatch=${seq === sessionSeq}`);
-      };
-      recognition.onspeechend = () => {
-        logMicDebug('onspeechend', `id=#${currentInstanceId} seqMatch=${seq === sessionSeq}`);
-      };
-    }
-
-    recognition.onstart = () => {
-      instanceStarted = true;
-      micDebugStartedSuccess = true;
-      logMicDebug(
-        'onstart',
-        `id=#${currentInstanceId} lang=${currentLangCode} started=true manualStop=${manualStop} state=${lifecycleState}`
-      );
-      if (seq !== sessionSeq || activeRecognition !== recognition) return;
-      if (manualStop || lifecycleState === 'stopping') {
-        try {
-          recognition.stop();
-        } catch {
-          // Ignore late stop error
-        }
-        return;
-      }
-      lifecycleState = 'listening';
-      isContinuationLaunch = false;
-      continuationAbortRetries = 0;
-      updateDebugHeader();
-    };
-
-    recognition.onresult = (event) => {
-      if (seq !== sessionSeq || activeRecognition !== recognition) return;
-
-      const finalParts = [];
-      const interimParts = [];
-
-      if (event && event.results) {
-        for (let i = 0; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (!result || !result[0]) continue;
-          const piece = String(result[0].transcript || '').trim();
-          if (!piece) continue;
-          if (result.isFinal) {
-            finalParts.push(piece);
-          } else {
-            interimParts.push(piece);
-          }
-        }
-      }
-
-      currentInstanceFinal = finalParts.join(' ').trim();
-      currentInstanceInterim = interimParts.join(' ').trim();
-
-      logMicDebug(
-        'onresult',
-        `id=#${currentInstanceId} resultsLen=${event && event.results ? event.results.length : 0} ` +
-          `finalChars=${currentInstanceFinal.length} interimChars=${currentInstanceInterim.length}`
+      showToast(
+        finalTranscript
+          ? 'Speech converted. Translating…'
+          : 'Listening stopped'
       );
 
-      if (currentInstanceFinal || currentInstanceInterim) {
-        gotResultInInstance = true;
-        gotAnyResultInSession = true;
-        silentRestartCount = 0;
-        consecutiveFastEndCount = 0;
+    } else if (lastError) {
+
+      const message = errorMessage(lastError);
+
+      showToast(message);
+
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError(lastError, message);
       }
 
-      const fullDisplayText = getComposedText(true);
-      syncSourceInput(fullDisplayText);
+    } else if (finalTranscript) {
 
-      if (currentInstanceFinal) {
-        const stableText = getComposedText(false);
-        dispatchTranslationIfChanged(stableText);
+      showToast('Speech captured. You can continue or tap Speak again.');
+
+    } else if (reason === 'ended') {
+
+      const message = errorMessage('no-speech');
+
+      showToast(message);
+
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError('no-speech', message);
       }
-    };
-
-    recognition.onerror = (event) => {
-      const errName = (event && event.error) || 'unknown';
-      const errMessage = (event && event.message) || '';
-      logMicDebug(
-        'onerror',
-        `id=#${currentInstanceId} error=${errName} message=${JSON.stringify(errMessage)} ` +
-          `started=${instanceStarted} manualStop=${manualStop} state=${lifecycleState} isCont=${isContinuationLaunch}`
-      );
-      if (seq !== sessionSeq || activeRecognition !== recognition) return;
-      lastErrorCode = errName;
-
-      if (errName === 'aborted') {
-        if (manualStop || lifecycleState === 'stopping') {
-          return;
-        }
-        // Only recover once if Android RecognitionService had not finished tearing down the previous instance
-        if (isContinuationLaunch && continuationAbortRetries < MAX_CONTINUATION_ABORT_RETRIES) {
-          continuationAbortRetries += 1;
-          transientRestartAbort = true;
-          return;
-        }
-        fatalErrorCode = 'aborted';
-        return;
-      }
-
-      // A single 'no-speech' event on Android Chrome should not kill an active session right away
-      if (errName === 'no-speech' && !manualStop && silentRestartCount < MAX_SILENT_RESTARTS) {
-        return;
-      }
-
-      fatalErrorCode = errName;
-    };
-
-    recognition.onend = () => {
-      logMicDebug(
-        'onend',
-        `id=#${currentInstanceId} started=${instanceStarted} gotResult=${gotResultInInstance} ` +
-          `fatal=${fatalErrorCode || 'none'} lastErr=${lastErrorCode || 'none'} manualStop=${manualStop} state=${lifecycleState}`
-      );
-      if (seq !== sessionSeq || activeRecognition !== recognition) return;
-
-      if (stopFallbackTimer) {
-        clearTimeout(stopFallbackTimer);
-        stopFallbackTimer = null;
-      }
-      activeRecognition = null;
-      accumulatedFinalText = joinTranscriptSegments(
-        accumulatedFinalText,
-        currentInstanceFinal,
-        currentInstanceInterim
-      );
-      currentInstanceFinal = '';
-      currentInstanceInterim = '';
-
-      if (manualStop || lifecycleState === 'stopping') {
-        finalizeSession({ reason: 'manual' });
-        return;
-      }
-
-      if (fatalErrorCode) {
-        const code = fatalErrorCode;
-        fatalErrorCode = '';
-        finalizeSession({ reason: 'error', errorCode: code });
-        return;
-      }
-
-      if (transientRestartAbort) {
-        transientRestartAbort = false;
-        lifecycleState = 'restarting';
-        restartTimer = setTimeout(() => {
-          restartTimer = null;
-          if (seq === sessionSeq && !manualStop && lifecycleState === 'restarting') {
-            launchRecognitionInstance(seq, { fromContinuation: true });
-          }
-        }, CONTINUATION_ABORT_RETRY_DELAY_MS);
-        return;
-      }
-
-      const elapsedMs = Date.now() - instanceStartMs;
-      if (elapsedMs < FAST_END_THRESHOLD_MS && !gotResultInInstance) {
-        consecutiveFastEndCount += 1;
-      } else {
-        consecutiveFastEndCount = 0;
-      }
-
-      if (!gotResultInInstance) {
-        silentRestartCount += 1;
-      }
-
-      if (consecutiveFastEndCount >= MAX_CONSECUTIVE_FAST_ENDS) {
-        const code =
-          lastErrorCode && lastErrorCode !== 'no-speech'
-            ? lastErrorCode
-            : 'unexpected-end';
-        finalizeSession({ reason: 'error', errorCode: code });
-        return;
-      }
-
-      if (silentRestartCount > MAX_SILENT_RESTARTS) {
-        finalizeSession({
-          reason: 'error',
-          errorCode: lastErrorCode === 'no-speech' ? 'no-speech' : 'unexpected-end',
-        });
-        return;
-      }
-
-      // Keep continuous recognition alive on Android Chrome after Android releases audio capture
-      lifecycleState = 'restarting';
-      restartTimer = setTimeout(() => {
-        restartTimer = null;
-        if (seq === sessionSeq && !manualStop && lifecycleState === 'restarting') {
-          launchRecognitionInstance(seq, { fromContinuation: true });
-        }
-      }, CONTINUATION_DELAY_MS);
-    };
-
-    try {
-      logMicDebug('recognition.start.call', `id=#${currentInstanceId} lang=${currentLangCode}`);
-      recognition.start();
-    } catch (err) {
-      logMicDebug('recognition.start.throw', `id=#${currentInstanceId} err=${err && err.message ? err.message : err}`);
-      activeRecognition = null;
-      finalizeSession({ reason: 'error', errorCode: 'service-not-allowed' });
     }
-  }
-
-  function stop() {
-    if (lifecycleState === 'stopping') {
-      return true;
-    }
-
-    if (lifecycleState === 'idle' && !isListeningState && !activeRecognition && !restartTimer) {
-      return false;
-    }
-
-    manualStop = true;
-    lifecycleState = 'stopping';
-
-    if (durationTimer) {
-      clearInterval(durationTimer);
-      durationTimer = null;
-    }
-
-    if (restartTimer) {
-      clearTimeout(restartTimer);
-      restartTimer = null;
-    }
-
-    if (activeRecognition) {
-      if (stopFallbackTimer) clearTimeout(stopFallbackTimer);
-      stopFallbackTimer = setTimeout(() => {
-        stopFallbackTimer = null;
-        if (lifecycleState === 'stopping') {
-          finalizeSession({ reason: 'manual' });
-        }
-      }, STOP_FALLBACK_TIMEOUT_MS);
-
-      try {
-        activeRecognition.stop();
-      } catch {
-        finalizeSession({ reason: 'manual' });
-      }
-      return true;
-    }
-
-    finalizeSession({ reason: 'manual' });
-    return true;
   }
 
   function start() {
-    if (lifecycleState === 'stopping') {
-      return false;
-    }
 
-    if (lifecycleState !== 'idle' || isListeningState || activeRecognition || restartTimer) {
+    if (isActive || recognition) {
       return stop();
     }
 
@@ -699,105 +263,224 @@ export function createMicrophoneController(callbacks = {}) {
       callbacks.onBeforeStart();
     }
 
-    if (!isSpeechRecognitionSupported()) {
-      const msg = mapErrorMessage('unsupported');
-      showToast(msg);
-      if (typeof callbacks.onError === 'function') callbacks.onError('unsupported', msg);
+    const SpeechRecognitionCtor =
+      getSpeechRecognitionConstructor();
+
+    if (!SpeechRecognitionCtor) {
+
+      const message = errorMessage('unsupported');
+
+      showToast(message);
+
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError('unsupported', message);
+      }
+
       return false;
     }
 
-    if (typeof window !== 'undefined' && window.isSecureContext === false) {
-      const msg = mapErrorMessage('insecure-context');
-      showToast(msg);
-      if (typeof callbacks.onError === 'function') callbacks.onError('insecure-context', msg);
+    if (window.isSecureContext === false) {
+
+      const message = errorMessage('insecure-context');
+
+      showToast(message);
+
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError('insecure-context', message);
+      }
+
       return false;
     }
 
-    const srcLang =
+    const selectedLanguage =
       typeof callbacks.getSourceLanguage === 'function'
         ? callbacks.getSourceLanguage()
-        : 'English 🇬🇧';
-    currentLangCode = getRecognitionLang(srcLang);
-    currentLangName = getTranslationName(srcLang);
+        : 'English';
 
-    const sourceTextEl = document.getElementById('sourceText');
-    sessionPrefix = sourceTextEl && sourceTextEl.value ? sourceTextEl.value.trim() : '';
-    accumulatedFinalText = '';
-    currentInstanceFinal = '';
-    currentInstanceInterim = '';
-    lastDispatchedFinal = '';
-    gotAnyResultInSession = false;
+    currentLangCode = getRecognitionLang(selectedLanguage);
 
+    currentLangName =
+      getTranslationName(selectedLanguage) || 'Selected language';
+
+    const sourceText = document.getElementById('sourceText');
+
+    sessionPrefix = sourceText
+      ? cleanText(sourceText.value)
+      : '';
+
+    finalTranscript = '';
+    interimTranscript = '';
+    lastTranslatedText = '';
+    lastError = '';
     manualStop = false;
-    fatalErrorCode = '';
-    lastErrorCode = '';
-    isContinuationLaunch = false;
-    transientRestartAbort = false;
-    continuationAbortRetries = 0;
-    silentRestartCount = 0;
-    consecutiveFastEndCount = 0;
-    sessionStartMs = Date.now();
 
-    sessionSeq += 1;
-    const seq = sessionSeq;
-    micDebugStartedSuccess = false;
+    sessionStartTime = Date.now();
 
-    if (micDebugActive) {
-      const apiName =
-        typeof window !== 'undefined' && window.SpeechRecognition
-          ? 'SpeechRecognition'
-          : 'webkitSpeechRecognition';
-      let inIframe = false;
-      try {
-        inIframe = typeof window !== 'undefined' && window.top !== window.self;
-      } catch {
-        inIframe = true;
+    try {
+
+      const newRecognition = new SpeechRecognitionCtor();
+
+      recognition = newRecognition;
+
+      newRecognition.lang = currentLangCode;
+      newRecognition.continuous = true;
+      newRecognition.interimResults = true;
+      newRecognition.maxAlternatives = 1;
+
+      newRecognition.onstart = () => {
+
+        if (recognition !== newRecognition) return;
+
+        updateUi(true);
+
+        startDurationTimer();
+
+        showToast(`Listening in ${currentLangName}...`);
+      };
+
+      newRecognition.onresult = (event) => {
+
+        if (recognition !== newRecognition) return;
+
+        if (!event || !event.results) return;
+
+        const finalParts = [];
+        const interimParts = [];
+
+        for (
+          let index = 0;
+          index < event.results.length;
+          index++
+        ) {
+
+          const result = event.results[index];
+
+          const text = result && result[0]
+            ? cleanText(result[0].transcript)
+            : '';
+
+          if (!text) continue;
+
+          if (result.isFinal) {
+            finalParts.push(text);
+          } else {
+            interimParts.push(text);
+          }
+        }
+
+        finalTranscript = finalParts.join(' ');
+        interimTranscript = interimParts.join(' ');
+
+        writeTranscript();
+      };
+
+      newRecognition.onerror = (event) => {
+
+        if (recognition !== newRecognition) return;
+
+        const code =
+          event && event.error
+            ? event.error
+            : 'unknown';
+
+        if (!(code === 'aborted' && manualStop)) {
+          lastError = code;
+        }
+
+        console.error('Speech Recognition Error:', {
+          error: code,
+          message: event ? event.message : ''
+        });
+      };
+
+      newRecognition.onend = () => {
+
+        if (recognition !== newRecognition) return;
+
+        finishSession('ended');
+      };
+
+      // Start directly from the user's microphone button tap.
+      updateUi(true);
+
+      newRecognition.start();
+
+      return true;
+
+    } catch (error) {
+
+      recognition = null;
+
+      stopDurationTimer();
+
+      updateUi(false);
+
+      const code =
+        error && error.name === 'NotAllowedError'
+          ? 'not-allowed'
+          : error && error.name === 'InvalidStateError'
+            ? 'service-not-allowed'
+            : 'service-not-allowed';
+
+      const message = errorMessage(code);
+
+      showToast(message);
+
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError(code, message);
       }
-      logMicDebug(
-        'session.start',
-        `seq=${seq} api=${apiName} lang=${currentLangCode} secure=${Boolean(
-          typeof window !== 'undefined' && window.isSecureContext
-        )} iframe=${inIframe} ua=${typeof navigator !== 'undefined' ? navigator.userAgent : ''}`
-      );
+
+      console.error('Microphone start error:', error);
+
+      return false;
+    }
+  }
+
+  function stop() {
+
+    if (!recognition) {
+
+      stopDurationTimer();
+
+      updateUi(false);
+
+      return false;
     }
 
-    updateListeningUi(true);
-    startDurationTimer();
-    showToast(`Listening in ${currentLangName} (${currentLangCode})… Tap Stop when finished`);
+    manualStop = true;
 
-    // Invoke recognition.start() synchronously within the user tap gesture for Android Chrome
-    launchRecognitionInstance(seq, { fromContinuation: false });
+    try {
+
+      recognition.stop();
+
+    } catch (error) {
+
+      console.error('Microphone stop error:', error);
+
+      finishSession('manual');
+    }
+
     return true;
   }
 
-  function toggle(e) {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    const now = Date.now();
-    if (now - lastToggleAt < TOGGLE_DEBOUNCE_MS) {
-      return isListeningState;
-    }
-    lastToggleAt = now;
+  function toggle(event) {
 
-    if (lifecycleState === 'stopping') {
-      return false;
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
     }
-    if (lifecycleState !== 'idle' || isListeningState || activeRecognition || restartTimer) {
-      return stop();
-    }
-    return start();
+
+    return isActive || recognition
+      ? stop()
+      : start();
   }
 
   function init() {
-    if (isInitialized) return;
-    isInitialized = true;
-    if (micBtn) {
-      micBtn.addEventListener('click', toggle);
-    }
-    if (micDebugActive) {
-      ensureMicDebugPanel();
-      updateDebugHeader();
-      logMicDebug('init', 'Diagnostic panel ready (?micdebug=1)');
-    }
+
+    if (initialized || !micBtn) return;
+
+    initialized = true;
+
+    micBtn.addEventListener('click', toggle);
   }
 
   return {
@@ -805,9 +488,8 @@ export function createMicrophoneController(callbacks = {}) {
     start,
     stop,
     toggle,
-    isListening: () => isListeningState,
+    isListening: () => isActive,
     isSupported: isSpeechRecognitionSupported,
-    getRecognitionLang,
-    getLifecycleState: () => lifecycleState,
+    getRecognitionLang
   };
 }
