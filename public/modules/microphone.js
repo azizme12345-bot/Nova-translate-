@@ -1,8 +1,7 @@
-
 /**
  * Microphone Module
- * Browser Speech Recognition API
- * No external API or API key required.
+ * Uses ONLY the browser's built-in Web Speech API (window.SpeechRecognition / webkitSpeechRecognition).
+ * No external API, no audio upload, and no API key required.
  */
 
 import { getSpeechCode, getTranslationName } from './language-manager.js';
@@ -12,15 +11,22 @@ const SPEECH_CODES = {
   english: 'en-US',
   urdu: 'ur-PK',
   arabic: 'ar-SA',
-  punjabi: 'pa-PK'
+  punjabi: 'pa-PK',
+  hindi: 'hi-IN',
 };
+
+const ABORT_RETRY_DELAY_MS = 150;
+const IFRAME_BLOCKED_MSG =
+  'Mic is blocked inside preview frame. Please open the app in a new browser tab to use the microphone.';
 
 export function getSpeechRecognitionConstructor() {
   if (typeof window === 'undefined') return null;
 
-  return window.SpeechRecognition ||
-         window.webkitSpeechRecognition ||
-         null;
+  return (
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition ||
+    null
+  );
 }
 
 export function isSpeechRecognitionSupported() {
@@ -37,6 +43,14 @@ export function getRecognitionLang(langValue) {
   return getSpeechCode(langValue) || 'en-US';
 }
 
+function isInsideIframe() {
+  try {
+    return typeof window !== 'undefined' && window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
 function cleanText(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
@@ -44,7 +58,6 @@ function cleanText(value) {
 }
 
 export function createMicrophoneController(callbacks = {}) {
-
   const micBtn = document.getElementById('micBtn');
   const micBtnLabel = document.getElementById('micBtnLabel');
   const listeningIndicator = document.getElementById('listeningIndicator');
@@ -53,6 +66,7 @@ export function createMicrophoneController(callbacks = {}) {
   let isActive = false;
   let manualStop = false;
   let initialized = false;
+  let hasRetriedAbort = false;
 
   let sessionPrefix = '';
   let finalTranscript = '';
@@ -64,6 +78,7 @@ export function createMicrophoneController(callbacks = {}) {
 
   let sessionStartTime = 0;
   let durationTimer = null;
+  let retryTimer = null;
   let lastError = '';
 
   function updateUi(active) {
@@ -82,8 +97,7 @@ export function createMicrophoneController(callbacks = {}) {
     if (listeningIndicator) {
       if (isActive) {
         listeningIndicator.classList.remove('hidden');
-        listeningIndicator.textContent =
-          `● Listening (${currentLangName})`;
+        listeningIndicator.textContent = `● Listening (${currentLangName})`;
       } else {
         listeningIndicator.classList.add('hidden');
         listeningIndicator.textContent = '● Listening...';
@@ -92,6 +106,13 @@ export function createMicrophoneController(callbacks = {}) {
 
     if (typeof callbacks.onStateChange === 'function') {
       callbacks.onStateChange(isActive);
+    }
+  }
+
+  function clearRetryTimer() {
+    if (retryTimer !== null) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
     }
   }
 
@@ -108,26 +129,25 @@ export function createMicrophoneController(callbacks = {}) {
     durationTimer = setInterval(() => {
       if (!isActive || !listeningIndicator) return;
 
-      const elapsed = Math.floor(
-        (Date.now() - sessionStartTime) / 1000
-      );
-
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
       const minutes = Math.floor(elapsed / 60);
       const seconds = elapsed % 60;
 
       listeningIndicator.textContent =
         `● Listening (${currentLangName}) ${minutes}:${String(seconds).padStart(2, '0')}`;
-
     }, 1000);
   }
 
-  function writeTranscript() {
+  function detachHandlers(rec) {
+    if (!rec) return;
+    rec.onstart = null;
+    rec.onresult = null;
+    rec.onerror = null;
+    rec.onend = null;
+  }
 
-    const combined = [
-      sessionPrefix,
-      finalTranscript,
-      interimTranscript
-    ]
+  function writeTranscript() {
+    const combined = [sessionPrefix, finalTranscript, interimTranscript]
       .map(cleanText)
       .filter(Boolean)
       .join(' ')
@@ -137,20 +157,14 @@ export function createMicrophoneController(callbacks = {}) {
 
     if (sourceText && sourceText.value !== combined) {
       sourceText.value = combined;
-
-      sourceText.dispatchEvent(
-        new Event('input', { bubbles: true })
-      );
+      sourceText.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     if (typeof callbacks.onInterimTranscript === 'function') {
       callbacks.onInterimTranscript(combined);
     }
 
-    const finalCombined = [
-      sessionPrefix,
-      finalTranscript
-    ]
+    const finalCombined = [sessionPrefix, finalTranscript]
       .map(cleanText)
       .filter(Boolean)
       .join(' ')
@@ -171,194 +185,129 @@ export function createMicrophoneController(callbacks = {}) {
   }
 
   function errorMessage(code) {
+    if (
+      isInsideIframe() &&
+      (code === 'not-allowed' ||
+        code === 'permission-denied' ||
+        code === 'service-not-allowed' ||
+        code === 'aborted' ||
+        code === 'interrupted')
+    ) {
+      return IFRAME_BLOCKED_MSG;
+    }
 
     switch (code) {
-
       case 'unsupported':
         return 'Speech recognition is not supported in this browser. Please use Google Chrome.';
-
       case 'insecure-context':
         return 'Microphone access requires HTTPS or localhost.';
-
       case 'not-allowed':
       case 'permission-denied':
-        return 'Microphone permission denied. Allow microphone access in Chrome settings.';
-
+        return 'Microphone permission is blocked. Please allow microphone access in your browser site settings and tap Speak again.';
       case 'service-not-allowed':
-        return 'The browser blocked its speech recognition service.';
-
+        return 'Speech recognition is blocked or unavailable in this browser/tab.';
       case 'audio-capture':
         return 'No microphone is available, or another app is using it.';
-
       case 'network':
         return 'Speech recognition network error. Check your internet connection.';
-
       case 'language-not-supported':
         return `Speech recognition does not support ${currentLangName} (${currentLangCode}).`;
-
       case 'no-speech':
         return 'No speech was detected. Tap Speak and try again.';
-
       case 'aborted':
-        return 'The browser interrupted speech recognition. Tap Speak to try again.';
-
+      case 'interrupted':
+        return 'Speech recognition was interrupted. Tap Speak to try again.';
       default:
         return `Microphone error (${code || 'unknown'}).`;
     }
   }
 
   function finishSession(reason = '') {
-
+    clearRetryTimer();
     stopDurationTimer();
 
-    recognition = null;
+    if (recognition) {
+      detachHandlers(recognition);
+      recognition = null;
+    }
 
     updateUi(false);
 
-    interimTranscript = '';
+    if (interimTranscript) {
+      finalTranscript = [finalTranscript, interimTranscript]
+        .map(cleanText)
+        .filter(Boolean)
+        .join(' ');
+      interimTranscript = '';
+    }
 
     writeTranscript();
 
     if (manualStop) {
+      showToast(finalTranscript ? 'Speech converted. Translating…' : 'Listening stopped');
+      return;
+    }
 
-      showToast(
-        finalTranscript
-          ? 'Speech converted. Translating…'
-          : 'Listening stopped'
-      );
-
-    } else if (lastError) {
-
+    if (lastError) {
       const message = errorMessage(lastError);
-
       showToast(message);
-
       if (typeof callbacks.onError === 'function') {
         callbacks.onError(lastError, message);
       }
+      return;
+    }
 
-    } else if (finalTranscript) {
+    if (finalTranscript) {
+      showToast('Speech converted. Translating…');
+      return;
+    }
 
-      showToast('Speech captured. You can continue or tap Speak again.');
-
-    } else if (reason === 'ended') {
-
+    if (reason === 'ended') {
       const message = errorMessage('no-speech');
-
       showToast(message);
-
       if (typeof callbacks.onError === 'function') {
         callbacks.onError('no-speech', message);
       }
     }
   }
 
-  function start() {
+  function launchRecognition() {
+    if (manualStop) return false;
 
-    if (isActive || recognition) {
-      return stop();
-    }
-
-    if (typeof callbacks.onBeforeStart === 'function') {
-      callbacks.onBeforeStart();
-    }
-
-    const SpeechRecognitionCtor =
-      getSpeechRecognitionConstructor();
-
+    const SpeechRecognitionCtor = getSpeechRecognitionConstructor();
     if (!SpeechRecognitionCtor) {
-
-      const message = errorMessage('unsupported');
-
-      showToast(message);
-
-      if (typeof callbacks.onError === 'function') {
-        callbacks.onError('unsupported', message);
-      }
-
+      lastError = 'unsupported';
+      finishSession('error');
       return false;
     }
-
-    if (window.isSecureContext === false) {
-
-      const message = errorMessage('insecure-context');
-
-      showToast(message);
-
-      if (typeof callbacks.onError === 'function') {
-        callbacks.onError('insecure-context', message);
-      }
-
-      return false;
-    }
-
-    const selectedLanguage =
-      typeof callbacks.getSourceLanguage === 'function'
-        ? callbacks.getSourceLanguage()
-        : 'English';
-
-    currentLangCode = getRecognitionLang(selectedLanguage);
-
-    currentLangName =
-      getTranslationName(selectedLanguage) || 'Selected language';
-
-    const sourceText = document.getElementById('sourceText');
-
-    sessionPrefix = sourceText
-      ? cleanText(sourceText.value)
-      : '';
-
-    finalTranscript = '';
-    interimTranscript = '';
-    lastTranslatedText = '';
-    lastError = '';
-    manualStop = false;
-
-    sessionStartTime = Date.now();
 
     try {
-
       const newRecognition = new SpeechRecognitionCtor();
-
       recognition = newRecognition;
 
       newRecognition.lang = currentLangCode;
-      newRecognition.continuous = true;
+      newRecognition.continuous = false;
       newRecognition.interimResults = true;
       newRecognition.maxAlternatives = 1;
 
       newRecognition.onstart = () => {
-
         if (recognition !== newRecognition) return;
-
         updateUi(true);
-
         startDurationTimer();
-
-        showToast(`Listening in ${currentLangName}...`);
+        if (!hasRetriedAbort) {
+          showToast(`Listening in ${currentLangName}...`);
+        }
       };
 
       newRecognition.onresult = (event) => {
-
-        if (recognition !== newRecognition) return;
-
-        if (!event || !event.results) return;
+        if (recognition !== newRecognition || !event || !event.results) return;
 
         const finalParts = [];
         const interimParts = [];
 
-        for (
-          let index = 0;
-          index < event.results.length;
-          index++
-        ) {
-
+        for (let index = 0; index < event.results.length; index++) {
           const result = event.results[index];
-
-          const text = result && result[0]
-            ? cleanText(result[0].transcript)
-            : '';
-
+          const text = result && result[0] ? cleanText(result[0].transcript) : '';
           if (!text) continue;
 
           if (result.isFinal) {
@@ -375,55 +324,81 @@ export function createMicrophoneController(callbacks = {}) {
       };
 
       newRecognition.onerror = (event) => {
-
         if (recognition !== newRecognition) return;
 
-        const code =
-          event && event.error
-            ? event.error
-            : 'unknown';
+        const code = event && event.error ? event.error : 'unknown';
 
-        if (!(code === 'aborted' && manualStop)) {
-          lastError = code;
+        if (manualStop && (code === 'aborted' || code === 'interrupted')) {
+          return;
         }
 
-        console.error('Speech Recognition Error:', {
-          error: code,
-          message: event ? event.message : ''
-        });
+        lastError = code;
+        if (code === 'aborted' || code === 'interrupted' || code === 'no-speech') {
+          console.warn('Speech Recognition interrupted:', {
+            error: code,
+            message: event ? event.message : '',
+          });
+        } else {
+          console.error('Speech Recognition Error:', {
+            error: code,
+            message: event ? event.message : '',
+          });
+        }
       };
 
       newRecognition.onend = () => {
-
         if (recognition !== newRecognition) return;
+
+        detachHandlers(newRecognition);
+        recognition = null;
+
+        const isInterruption = lastError === 'aborted' || lastError === 'interrupted';
+
+        if (!manualStop && isInterruption && !isInsideIframe() && !hasRetriedAbort) {
+          hasRetriedAbort = true;
+          lastError = '';
+
+          const partial = [sessionPrefix, finalTranscript, interimTranscript]
+            .map(cleanText)
+            .filter(Boolean)
+            .join(' ');
+          sessionPrefix = partial;
+          finalTranscript = '';
+          interimTranscript = '';
+
+          clearRetryTimer();
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            if (!manualStop) {
+              launchRecognition();
+            }
+          }, ABORT_RETRY_DELAY_MS);
+          return;
+        }
+
+        // Ignore false aborted/interrupted if we already captured valid speech
+        if (!manualStop && isInterruption && (finalTranscript || interimTranscript)) {
+          lastError = '';
+        }
 
         finishSession('ended');
       };
 
-      // Start directly from the user's microphone button tap.
       updateUi(true);
-
       newRecognition.start();
-
       return true;
-
     } catch (error) {
-
       recognition = null;
-
+      clearRetryTimer();
       stopDurationTimer();
-
       updateUi(false);
 
       const code =
         error && error.name === 'NotAllowedError'
           ? 'not-allowed'
-          : error && error.name === 'InvalidStateError'
-            ? 'service-not-allowed'
-            : 'service-not-allowed';
+          : 'service-not-allowed';
 
       const message = errorMessage(code);
-
       showToast(message);
 
       if (typeof callbacks.onError === 'function') {
@@ -431,32 +406,72 @@ export function createMicrophoneController(callbacks = {}) {
       }
 
       console.error('Microphone start error:', error);
-
       return false;
     }
   }
 
-  function stop() {
+  function start() {
+    if (isActive || recognition || retryTimer !== null) {
+      return stop();
+    }
 
-    if (!recognition) {
+    if (typeof callbacks.onBeforeStart === 'function') {
+      callbacks.onBeforeStart();
+    }
 
-      stopDurationTimer();
-
-      updateUi(false);
-
+    if (!isSpeechRecognitionSupported()) {
+      const message = errorMessage('unsupported');
+      showToast(message);
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError('unsupported', message);
+      }
       return false;
     }
 
+    if (window.isSecureContext === false) {
+      const message = errorMessage('insecure-context');
+      showToast(message);
+      if (typeof callbacks.onError === 'function') {
+        callbacks.onError('insecure-context', message);
+      }
+      return false;
+    }
+
+    const selectedLanguage =
+      typeof callbacks.getSourceLanguage === 'function'
+        ? callbacks.getSourceLanguage()
+        : 'English';
+
+    currentLangCode = getRecognitionLang(selectedLanguage);
+    currentLangName = getTranslationName(selectedLanguage) || 'Selected language';
+
+    const sourceText = document.getElementById('sourceText');
+    sessionPrefix = sourceText ? cleanText(sourceText.value) : '';
+    finalTranscript = '';
+    interimTranscript = '';
+    lastTranslatedText = '';
+    lastError = '';
+    manualStop = false;
+    hasRetriedAbort = false;
+    sessionStartTime = Date.now();
+
+    return launchRecognition();
+  }
+
+  function stop() {
     manualStop = true;
+    clearRetryTimer();
+
+    if (!recognition) {
+      stopDurationTimer();
+      updateUi(false);
+      return false;
+    }
 
     try {
-
       recognition.stop();
-
     } catch (error) {
-
       console.error('Microphone stop error:', error);
-
       finishSession('manual');
     }
 
@@ -464,22 +479,16 @@ export function createMicrophoneController(callbacks = {}) {
   }
 
   function toggle(event) {
-
     if (event && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
 
-    return isActive || recognition
-      ? stop()
-      : start();
+    return isActive || recognition || retryTimer !== null ? stop() : start();
   }
 
   function init() {
-
     if (initialized || !micBtn) return;
-
     initialized = true;
-
     micBtn.addEventListener('click', toggle);
   }
 
@@ -490,6 +499,6 @@ export function createMicrophoneController(callbacks = {}) {
     toggle,
     isListening: () => isActive,
     isSupported: isSpeechRecognitionSupported,
-    getRecognitionLang
+    getRecognitionLang,
   };
 }

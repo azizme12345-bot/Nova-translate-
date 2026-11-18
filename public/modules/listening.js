@@ -1,21 +1,81 @@
 /**
  * Text-to-Speech / Listening Module
- * Handles browser speechSynthesis playback, play/pause/resume/stop controls,
- * language-specific voice matching, speaking state, and playback errors.
+ * Browser-only speech playback for both Source and Translation boxes:
+ * 1. Cancels any prior utterance and loads browser voices (speechSynthesis + onvoiceschanged).
+ * 2. Falls back seamlessly to chunked HTML5 Audio via Google client-side TTS when a device lacks
+ *    a local voice for the language (common on Android for Urdu, Hindi, Arabic, etc.) or stays silent.
  */
 
-import { getSpeechCode, getTranslationName } from './language-manager.js';
+import { getShortCode, getSpeechCode, getTranslationName } from './language-manager.js';
 import { showToast } from './ui-utils.js';
 
 const PLACEHOLDER_OUTPUT = 'Translation will appear here...';
 const VOICE_GENDER_KEY = 'novaVoiceGender';
+const TTS_CHUNK_MAX_LEN = 180;
+const VOICE_LOAD_TIMEOUT_MS = 500;
+const SPEECH_SILENCE_FALLBACK_MS = 1800;
+
+const TTS_LANG_OVERRIDES = {
+  zh: 'zh-CN',
+};
+
+function ensureSpeakingAnimationStyle() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('lafzSpeakingPulseStyle')) return;
+  const style = document.createElement('style');
+  style.id = 'lafzSpeakingPulseStyle';
+  style.textContent =
+    '@keyframes lafzSpeakPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(217,119,6,0.35);}50%{transform:scale(1.04);box-shadow:0 0 0 6px rgba(217,119,6,0);}}' +
+    '.tool-chip.speaking{animation:lafzSpeakPulse 1.15s ease-in-out infinite;}';
+  document.head.appendChild(style);
+}
+
+export function splitTtsChunks(text, maxLen = TTS_CHUNK_MAX_LEN) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return [];
+  if (clean.length <= maxLen) return [clean];
+
+  const chunks = [];
+  let remaining = clean;
+
+  while (remaining.length > maxLen) {
+    const slice = remaining.slice(0, maxLen);
+    let cut = -1;
+
+    const punctuationMatches = [...slice.matchAll(/[.!?؟۔,;:\n]/g)];
+    if (punctuationMatches.length > 0) {
+      const lastPunct = punctuationMatches[punctuationMatches.length - 1];
+      if (typeof lastPunct.index === 'number' && lastPunct.index >= Math.floor(maxLen * 0.4)) {
+        cut = lastPunct.index + 1;
+      }
+    }
+
+    if (cut === -1) {
+      const lastSpace = slice.lastIndexOf(' ');
+      if (lastSpace > Math.floor(maxLen * 0.3)) {
+        cut = lastSpace;
+      } else {
+        cut = maxLen;
+      }
+    }
+
+    const piece = remaining.slice(0, cut).trim();
+    if (piece) chunks.push(piece);
+    remaining = remaining.slice(cut).trim();
+  }
+
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
 
 export function createListeningController(callbacks = {}) {
   let activeUtterance = null;
+  let activeAudio = null;
   let activeKey = null;
   let isPausedState = false;
   let sessionSeq = 0;
   let speakTimer = null;
+  let silenceTimer = null;
   let voiceGender = readSavedGender();
 
   const voiceGenderBtn = document.getElementById('voiceGenderBtn');
@@ -48,15 +108,66 @@ export function createListeningController(callbacks = {}) {
     return voiceGender;
   }
 
+  function clearTimers() {
+    if (speakTimer) {
+      clearTimeout(speakTimer);
+      speakTimer = null;
+    }
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+  }
+
+  function cleanupAudioElement() {
+    if (!activeAudio) return;
+    const audio = activeAudio;
+    activeAudio = null;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.oncanplaythrough = null;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.removeAttribute('src');
+      audio.load();
+    } catch {
+      // Ignore audio cleanup errors
+    }
+  }
+
   function updateButtonsUi(key) {
+    ensureSpeakingAnimationStyle();
+
     const sourceListenBtn = document.getElementById('sourceListenBtn');
     const listenBtn = document.getElementById('listenBtn');
     const ocrListenBtn = document.getElementById('ocrListenBtn');
 
-    if (sourceListenBtn) sourceListenBtn.classList.toggle('speaking', key === 'source');
-    if (listenBtn) listenBtn.classList.toggle('speaking', key === 'target');
+    if (sourceListenBtn) {
+      const isSource = key === 'source';
+      sourceListenBtn.classList.toggle('speaking', isSource);
+      sourceListenBtn.setAttribute('aria-pressed', String(isSource));
+      sourceListenBtn.title = isSource ? 'Stop speaking' : 'Listen to pronunciation';
+      sourceListenBtn.textContent = isSource ? '⏹️' : '🔊';
+    }
+
+    if (listenBtn) {
+      const isTarget = key === 'target';
+      listenBtn.classList.toggle('speaking', isTarget);
+      listenBtn.setAttribute('aria-pressed', String(isTarget));
+      listenBtn.title = isTarget ? 'Stop speaking' : 'Listen to translation';
+      const labelEl = listenBtn.querySelector('.tool-chip-label');
+      if (labelEl) {
+        labelEl.textContent = isTarget ? 'Speaking...' : 'Listen';
+      }
+      const iconSpan = listenBtn.querySelector('span:first-child');
+      if (iconSpan && !iconSpan.classList.contains('tool-chip-label')) {
+        iconSpan.textContent = isTarget ? '⏹️' : '🔊';
+      }
+    }
+
     if (ocrListenBtn) {
-      ocrListenBtn.textContent = key === 'ocr' ? '🔊 Stop' : '🔊 Listen';
+      ocrListenBtn.textContent = key === 'ocr' ? '⏹️ Stop' : '🔊 Listen';
     }
 
     if (typeof callbacks.onStateChange === 'function') {
@@ -69,15 +180,20 @@ export function createListeningController(callbacks = {}) {
     sessionSeq++;
     isPausedState = false;
 
-    if (speakTimer) {
-      clearTimeout(speakTimer);
-      speakTimer = null;
+    clearTimers();
+
+    if (activeAudio) {
+      hadActive = true;
+      cleanupAudioElement();
     }
+
     if (activeUtterance) {
+      activeUtterance.onstart = null;
       activeUtterance.onend = null;
       activeUtterance.onerror = null;
       activeUtterance = null;
     }
+
     if (activeKey !== null) {
       hadActive = true;
       activeKey = null;
@@ -100,6 +216,16 @@ export function createListeningController(callbacks = {}) {
   }
 
   function pause() {
+    if (activeAudio && !activeAudio.paused) {
+      try {
+        activeAudio.pause();
+        isPausedState = true;
+        updateButtonsUi(activeKey);
+        return true;
+      } catch {
+        return false;
+      }
+    }
     if (!('speechSynthesis' in window) || !window.speechSynthesis.speaking || isPausedState) {
       return false;
     }
@@ -114,6 +240,16 @@ export function createListeningController(callbacks = {}) {
   }
 
   function resume() {
+    if (activeAudio && activeAudio.paused && isPausedState) {
+      try {
+        activeAudio.play();
+        isPausedState = false;
+        updateButtonsUi(activeKey);
+        return true;
+      } catch {
+        return false;
+      }
+    }
     if (!('speechSynthesis' in window) || !isPausedState) {
       return false;
     }
@@ -133,6 +269,11 @@ export function createListeningController(callbacks = {}) {
   }
 
   function loadBrowserVoices(onReady) {
+    if (!('speechSynthesis' in window)) {
+      onReady([]);
+      return;
+    }
+
     const synth = window.speechSynthesis;
     let existing = [];
     try {
@@ -191,7 +332,7 @@ export function createListeningController(callbacks = {}) {
       // Ignore event binding errors
     }
 
-    waitTimer = setTimeout(resolveVoices, 500);
+    waitTimer = setTimeout(resolveVoices, VOICE_LOAD_TIMEOUT_MS);
   }
 
   function findMatchingVoice(voices, locale, langWord) {
@@ -279,15 +420,117 @@ export function createListeningController(callbacks = {}) {
     return chosen;
   }
 
+  function playGoogleTtsFallback(cleanText, ttsLangCode, langWord, token, key, allowSpeechSynthRetry = false, locale = 'en-US') {
+    if (token !== sessionSeq || activeKey !== key) return;
+    if (typeof Audio === 'undefined') {
+      stop();
+      showToast(`Audio playback is not supported in this browser.`);
+      return;
+    }
+
+    const chunks = splitTtsChunks(cleanText, TTS_CHUNK_MAX_LEN);
+    if (chunks.length === 0) {
+      stop();
+      return;
+    }
+
+    let chunkIndex = 0;
+
+    function playNextChunk() {
+      if (token !== sessionSeq || activeKey !== key) return;
+
+      if (chunkIndex >= chunks.length) {
+        activeKey = null;
+        isPausedState = false;
+        cleanupAudioElement();
+        updateButtonsUi(null);
+        return;
+      }
+
+      const chunk = chunks[chunkIndex];
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(
+        ttsLangCode
+      )}&q=${encodeURIComponent(chunk)}`;
+
+      cleanupAudioElement();
+
+      const audio = new Audio(ttsUrl);
+      activeAudio = audio;
+      audio.preload = 'auto';
+      try {
+        audio.referrerPolicy = 'no-referrer';
+      } catch {
+        // Ignore if unsupported
+      }
+
+      audio.onended = () => {
+        if (token !== sessionSeq || activeAudio !== audio) return;
+        chunkIndex += 1;
+        playNextChunk();
+      };
+
+      audio.onerror = () => {
+        if (token !== sessionSeq || activeAudio !== audio) return;
+        cleanupAudioElement();
+
+        if (
+          allowSpeechSynthRetry &&
+          'speechSynthesis' in window &&
+          typeof SpeechSynthesisUtterance !== 'undefined'
+        ) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            activeUtterance = utterance;
+            utterance.lang = locale;
+            utterance.onend = () => {
+              if (activeUtterance !== utterance) return;
+              activeUtterance = null;
+              activeKey = null;
+              isPausedState = false;
+              updateButtonsUi(null);
+            };
+            utterance.onerror = () => {
+              if (activeUtterance !== utterance) return;
+              stop();
+              showToast(`No speech audio available for ${langWord}.`);
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+            return;
+          } catch {
+            // Fall through to toast error
+          }
+        }
+
+        stop();
+        showToast(`Could not play ${langWord} speech audio.`);
+      };
+
+      try {
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            if (token !== sessionSeq || activeAudio !== audio) return;
+            if (typeof audio.onerror === 'function') {
+              audio.onerror();
+            }
+          });
+        }
+      } catch {
+        if (typeof audio.onerror === 'function') {
+          audio.onerror();
+        }
+      }
+    }
+
+    showToast(`Speaking in ${langWord}…`);
+    playNextChunk();
+  }
+
   function play(rawText, langName, key = 'custom') {
     const clean = String(rawText || '').trim();
     if (!clean || clean === PLACEHOLDER_OUTPUT) {
       showToast('No text to speak');
-      return false;
-    }
-
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      showToast('Speech synthesis is not supported in this browser.');
       return false;
     }
 
@@ -300,10 +543,28 @@ export function createListeningController(callbacks = {}) {
     const token = sessionSeq;
     const langWord = getTranslationName(langName);
     const locale = getSpeechCode(langName);
+    const shortCode = getShortCode(langName);
+    const ttsLangCode = TTS_LANG_OVERRIDES[shortCode] || shortCode || 'en';
 
     activeKey = key;
     isPausedState = false;
     updateButtonsUi(key);
+
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // Ignore cancel errors
+      }
+    }
+
+    const speechSupported =
+      'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+
+    if (!speechSupported) {
+      playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, false, locale);
+      return true;
+    }
 
     loadBrowserVoices((voices) => {
       if (token !== sessionSeq || activeKey !== key) return;
@@ -318,31 +579,41 @@ export function createListeningController(callbacks = {}) {
           }) || null;
       }
 
-      if (voices && voices.length > 0 && !matched) {
-        activeKey = null;
-        activeUtterance = null;
-        isPausedState = false;
-        updateButtonsUi(null);
-        showToast(`No speech voice is installed on this device for ${langWord}.`);
+      // Crucial fallback: if device has no local voice for this language (e.g. Urdu, Hindi, Arabic on Android),
+      // use HTML5 Audio Google TTS immediately so it does not stay silent.
+      if (!matched) {
+        playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, true, locale);
         return;
       }
 
       function dispatchSpeak() {
         if (token !== sessionSeq || activeKey !== key) return;
         try {
+          window.speechSynthesis.cancel();
+
           const utterance = new SpeechSynthesisUtterance(clean);
           activeUtterance = utterance;
-          if (matched) {
-            utterance.voice = matched;
-            utterance.lang = matched.lang || locale;
-          } else {
-            utterance.lang = locale;
-          }
+          utterance.voice = matched;
+          utterance.lang = matched.lang || locale;
           utterance.volume = 1;
           utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
           utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
 
+          let started = false;
+
+          utterance.onstart = () => {
+            started = true;
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+          };
+
           utterance.onend = () => {
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
             if (activeUtterance !== utterance) return;
             activeUtterance = null;
             activeKey = null;
@@ -351,14 +622,20 @@ export function createListeningController(callbacks = {}) {
           };
 
           utterance.onerror = (ev) => {
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
             if (activeUtterance !== utterance) return;
             const errName = ev && ev.error ? ev.error : 'unknown-error';
             activeUtterance = null;
-            activeKey = null;
-            isPausedState = false;
-            updateButtonsUi(null);
-            if (errName === 'canceled' || errName === 'interrupted') return;
-            showToast(`Speech error: ${errName}`);
+            if (errName === 'canceled' || errName === 'interrupted') {
+              activeKey = null;
+              isPausedState = false;
+              updateButtonsUi(null);
+              return;
+            }
+            playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, false, locale);
           };
 
           try {
@@ -371,9 +648,31 @@ export function createListeningController(callbacks = {}) {
 
           showToast(`Speaking in ${langWord}…`);
           window.speechSynthesis.speak(utterance);
-        } catch (err) {
-          stop();
-          showToast(`Speech error: ${(err && (err.message || err.name)) || 'failed'}`);
+
+          // If Android speechSynthesis stays silent without starting, switch to HTML5 Audio fallback.
+          silenceTimer = setTimeout(() => {
+            silenceTimer = null;
+            if (
+              token === sessionSeq &&
+              activeKey === key &&
+              activeUtterance === utterance &&
+              !started &&
+              !window.speechSynthesis.speaking
+            ) {
+              activeUtterance.onstart = null;
+              activeUtterance.onend = null;
+              activeUtterance.onerror = null;
+              activeUtterance = null;
+              try {
+                window.speechSynthesis.cancel();
+              } catch {
+                // Ignore
+              }
+              playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, false, locale);
+            }
+          }, SPEECH_SILENCE_FALLBACK_MS);
+        } catch {
+          playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, false, locale);
         }
       }
 
@@ -391,6 +690,8 @@ export function createListeningController(callbacks = {}) {
   }
 
   function init() {
+    ensureSpeakingAnimationStyle();
+
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.getVoices();
