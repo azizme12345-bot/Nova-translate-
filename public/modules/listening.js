@@ -19,6 +19,8 @@ const TTS_LANG_OVERRIDES = {
   zh: 'zh-CN',
 };
 
+const DIRECT_AUDIO_LANGS = new Set(['ur', 'hi', 'ar', 'pa', 'fa', 'ps', 'sd', 'bn']);
+
 function ensureSpeakingAnimationStyle() {
   if (typeof document === 'undefined') return;
   if (document.getElementById('lafzSpeakingPulseStyle')) return;
@@ -561,8 +563,8 @@ export function createListeningController(callbacks = {}) {
     const speechSupported =
       'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
-    if (!speechSupported) {
-      playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, false, locale);
+    if (DIRECT_AUDIO_LANGS.has(shortCode) || !speechSupported) {
+      playGoogleTtsFallback(clean, ttsLangCode, langWord, token, key, speechSupported, locale);
       return true;
     }
 
