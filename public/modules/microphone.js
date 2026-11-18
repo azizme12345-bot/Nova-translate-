@@ -1,202 +1,216 @@
-let mediaRecorder = null;
-let audioChunks = [];
-let isRecording = false;
-let activeStream = null;
+/**
+ * Microphone Speech-to-Text Module
+ * Uses browser native SpeechRecognition / webkitSpeechRecognition only.
+ * Tap once to start, tap again to stop, live interim words in Source box,
+ * translates final text via Part 1 on stop, and never restarts in a loop.
+ */
 
-function showMicToast(message, isError = false) {
-  let toast = document.getElementById('lafz-mic-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'lafz-mic-toast';
-    toast.style.cssText =
-      'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:12px;font-size:14px;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.25);transition:opacity 0.25s;text-align:center;max-width:90%;';
-    document.body.appendChild(toast);
-  }
-  toast.style.background = isError ? '#dc2626' : '#0f172a';
-  toast.textContent = message;
-  toast.style.opacity = '1';
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => {
-    toast.style.opacity = '0';
-  }, 3500);
-}
+import { getSpeechCode } from './language-manager.js';
+import { showToast } from './ui-utils.js';
 
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result || '';
-      const base64 = result.toString().split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
+export function createMicrophoneController(callbacks = {}) {
+  let recognition = null;
+  let isListening = false;
+  let baseText = '';
+  let latestSpokenText = '';
+  let hasError = false;
+  let hasFinalized = false;
+  let stopWaiters = [];
 
-function getSelectedSourceLanguage() {
-  const select =
-    document.getElementById('source-lang') ||
-    document.getElementById('sourceLang') ||
-    document.querySelector('select[data-role="source"]');
-  if (select && select.options && select.selectedIndex >= 0) {
-    return select.options[select.selectedIndex].text || select.value;
-  }
-  return 'Auto-detected language';
-}
+  const micBtn = document.getElementById('micBtn');
+  const micBtnLabel = document.getElementById('micBtnLabel');
+  const sourceTextEl = document.getElementById('sourceText');
+  const listeningIndicator = document.getElementById('listeningIndicator');
 
-function insertTextAndTranslate(text) {
-  const inputBox =
-    document.getElementById('source-text') ||
-    document.getElementById('sourceText') ||
-    document.querySelector('textarea');
-
-  if (!inputBox) return;
-
-  const existing = inputBox.value.trim();
-  inputBox.value = existing ? `${existing} ${text}` : text;
-
-  // Input event trigger karein taake counter aur auto-translate chal pare
-  inputBox.dispatchEvent(new Event('input', { bubbles: true }));
-  inputBox.dispatchEvent(new Event('change', { bubbles: true }));
-
-  // Translate button par click trigger karein agar auto-translate na chale
-  const translateBtn =
-    document.getElementById('translate-btn') ||
-    document.getElementById('translateBtn') ||
-    document.querySelector('button[type="submit"]');
-  if (translateBtn) {
-    setTimeout(() => translateBtn.click(), 100);
-  }
-}
-
-function updateMicButtonUI(btn, recording, processing = false) {
-  if (!btn) return;
-  if (recording) {
-    btn.classList.add('recording', 'active');
-    btn.style.backgroundColor = '#ef4444';
-    btn.style.color = '#ffffff';
-  } else if (processing) {
-    btn.classList.remove('recording');
-    btn.style.backgroundColor = '#f59e0b';
-    btn.style.color = '#ffffff';
-  } else {
-    btn.classList.remove('recording', 'active');
-    btn.style.backgroundColor = '';
-    btn.style.color = '';
-  }
-}
-
-async function handleMicToggle(btn) {
-  // Agar pehle se recording ho rahi hai to stop karein
-  if (isRecording && mediaRecorder) {
-    isRecording = false;
-    updateMicButtonUI(btn, false, true);
-    showMicToast('Awaz likhi ja rahi hai...');
-    mediaRecorder.stop();
-    return;
+  function updateUi(active) {
+    if (micBtn) {
+      micBtn.classList.toggle('recording', active);
+      micBtn.setAttribute('aria-pressed', String(active));
+    }
+    if (micBtnLabel) {
+      micBtnLabel.textContent = active ? 'Stop' : 'Speak';
+    }
+    if (listeningIndicator) {
+      listeningIndicator.classList.toggle('hidden', !active);
+    }
+    if (typeof callbacks.onStateChange === 'function') {
+      callbacks.onStateChange({ listening: active });
+    }
   }
 
-  try {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+  function resolveStopWaiters() {
+    if (stopWaiters.length === 0) return;
+    const waiters = stopWaiters.splice(0, stopWaiters.length);
+    waiters.forEach((resolve) => resolve(true));
+  }
+
+  function composeSourceValue(spoken) {
+    const cleanSpoken = String(spoken || '').trim();
+    if (!baseText) return cleanSpoken;
+    if (!cleanSpoken) return baseText;
+    return `${baseText} ${cleanSpoken}`;
+  }
+
+  function finalizeSession() {
+    isListening = false;
+    recognition = null;
+    updateUi(false);
+    resolveStopWaiters();
+
+    if (!hasError && !hasFinalized && latestSpokenText) {
+      hasFinalized = true;
+      const fullText = composeSourceValue(latestSpokenText);
+      if (typeof callbacks.onFinalTranscript === 'function' && fullText.trim()) {
+        callbacks.onFinalTranscript(fullText);
+      }
+    }
+  }
+
+  function getSpeechRecognitionCtor() {
+    if (typeof window === 'undefined') return null;
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function start() {
+    if (isListening) return true;
+
+    const SpeechRecognitionCtor = getSpeechRecognitionCtor();
+    if (!SpeechRecognitionCtor) {
+      showToast('Is browser mein mic support nahi hai. Chrome use karein.');
+      return false;
     }
 
-    activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const sourceLang =
+      typeof callbacks.getSourceLanguage === 'function'
+        ? callbacks.getSourceLanguage()
+        : 'English 🇬🇧';
+    const locale = getSpeechCode(sourceLang);
 
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : 'audio/mp4';
+    baseText = sourceTextEl ? sourceTextEl.value.trim() : '';
+    latestSpokenText = '';
+    hasError = false;
+    hasFinalized = false;
 
-    mediaRecorder = new MediaRecorder(activeStream, { mimeType });
-    audioChunks = [];
+    try {
+      const rec = new SpeechRecognitionCtor();
+      recognition = rec;
+      rec.lang = locale;
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        audioChunks.push(event.data);
-      }
-    };
+      rec.onstart = () => {
+        if (recognition !== rec) return;
+        isListening = true;
+        updateUi(true);
+      };
 
-    mediaRecorder.onstop = async () => {
-      if (activeStream) {
-        activeStream.getTracks().forEach((track) => track.stop());
-        activeStream = null;
-      }
+      rec.onresult = (event) => {
+        if (recognition !== rec || !event || !event.results) return;
+        let finalPart = '';
+        let interimPart = '';
 
-      try {
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
-        if (audioBlob.size < 500) {
-          updateMicButtonUI(btn, false, false);
-          showMicToast('Awaz bohat choti thi, dobara bolein.', true);
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcript = result && result[0] && result[0].transcript ? result[0].transcript : '';
+          if (result.isFinal) {
+            finalPart += `${transcript} `;
+          } else {
+            interimPart += transcript;
+          }
+        }
+
+        const combinedSpoken = `${finalPart}${interimPart}`.trim();
+        if (combinedSpoken) {
+          latestSpokenText = combinedSpoken;
+          const fullValue = composeSourceValue(combinedSpoken);
+          if (sourceTextEl) {
+            sourceTextEl.value = fullValue;
+          }
+          if (typeof callbacks.onInterimTranscript === 'function') {
+            callbacks.onInterimTranscript(fullValue);
+          }
+        }
+      };
+
+      rec.onerror = (event) => {
+        if (recognition !== rec) return;
+        hasError = true;
+        const errCode = event && event.error ? String(event.error) : 'unknown';
+        showToast(`Mic error: ${errCode}`);
+      };
+
+      rec.onend = () => {
+        if (recognition !== rec) {
+          resolveStopWaiters();
           return;
         }
+        finalizeSession();
+      };
 
-        const audioBase64 = await blobToBase64(audioBlob);
-        const language = getSelectedSourceLanguage();
-
-        const response = await fetch('/api/speech-to-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            audioBase64,
-            mimeType: mimeType.split(';')[0],
-            language,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Transcription failed');
-        }
-
-        if (data.text) {
-          insertTextAndTranslate(data.text);
-          showMicToast('Mukammal!');
-        } else {
-          showMicToast('Koi awaz sunai nahi di.', true);
-        }
-      } catch (err) {
-        console.error('Gemini STT Error:', err);
-        showMicToast(err.message || 'Mic error aa gaya.', true);
-      } finally {
-        updateMicButtonUI(btn, false, false);
-      }
-    };
-
-    mediaRecorder.start();
-    isRecording = true;
-    updateMicButtonUI(btn, true, false);
-    showMicToast('Boliye... (Rokne ke liye dobara mic dabayein)');
-  } catch (err) {
-    console.error('Mic permission error:', err);
-    isRecording = false;
-    updateMicButtonUI(btn, false, false);
-    showMicToast('Microphone ki ijazat (Permission) allow karein.', true);
+      isListening = true;
+      updateUi(true);
+      rec.start();
+      return true;
+    } catch (err) {
+      hasError = true;
+      isListening = false;
+      recognition = null;
+      updateUi(false);
+      resolveStopWaiters();
+      showToast(`Mic error: ${(err && err.message) || 'start-failed'}`);
+      return false;
+    }
   }
-}
 
-export function initMicrophone() {
-  const micBtn =
-    document.getElementById('mic-btn') ||
-    document.getElementById('micBtn') ||
-    document.getElementById('voice-btn') ||
-    document.querySelector('[data-action="mic"], button[aria-label*="Speak" i], button[title*="Speak" i]');
+  function stop() {
+    if (!isListening || !recognition) {
+      isListening = false;
+      recognition = null;
+      updateUi(false);
+      resolveStopWaiters();
+      return Promise.resolve(false);
+    }
 
-  if (micBtn && !micBtn.dataset.geminiBound) {
-    micBtn.dataset.geminiBound = 'true';
-    micBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleMicToggle(micBtn);
+    const activeRec = recognition;
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(true);
+      };
+
+      const safetyTimer = setTimeout(() => {
+        if (recognition === activeRec) {
+          finalizeSession();
+        }
+        done();
+      }, 300);
+
+      stopWaiters.push(done);
+
+      try {
+        activeRec.stop();
+      } catch {
+        if (recognition === activeRec) {
+          finalizeSession();
+        }
+        done();
+      }
     });
   }
-}
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initMicrophone);
-} else {
-  initMicrophone();
+  function init() {
+    updateUi(false);
+  }
+
+  return {
+    init,
+    start,
+    stop,
+    isListening: () => isListening,
+    isSupported: () => Boolean(getSpeechRecognitionCtor()),
+  };
 }

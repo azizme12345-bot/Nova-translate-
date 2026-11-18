@@ -30,6 +30,7 @@ const requiredFiles = [
   'urdu-to-english.html',
   'urdu-to-arabic.html',
   'modules/app.js',
+  'modules/audio-mode.js',
   'modules/microphone.js',
   'modules/listening.js',
   'modules/text-translation.js',

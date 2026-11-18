@@ -1,106 +1,17 @@
 /**
  * Text Translation Module
- * Handles normal text-to-text translation only: caching, offline fallback,
- * input debouncing, API translation calls, output rendering, and loading/error states.
+ * Handles text-to-text translation via server-side Gemini (/api/translate),
+ * debouncing, loading/error display, and real score visibility.
  */
 
 import { translateText } from './translation-api.js';
-import { getShortCode, getTranslationName } from './language-manager.js';
+import { getTranslationName } from './language-manager.js';
 import { showToast } from './ui-utils.js';
 
 const PLACEHOLDER_OUTPUT = 'Translation will appear here...';
-const CACHE_KEY = 'nova_translation_cache_v3';
-const FORCE_OFFLINE_KEY = 'nova_force_offline';
+const CACHE_KEY = 'nova_translation_cache_v4';
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MAX_CACHE_SIZE = 250;
-
-const OFFLINE_DICTIONARY = {
-  en_to_ur: {
-    hello: 'سلام / ہیلو',
-    welcome: 'خوش آمدید',
-    'how are you': 'آپ کیسے ہیں؟',
-    'thank you': 'شکریہ',
-    thanks: 'شکریہ',
-    'good morning': 'صبح بخیر',
-    'good evening': 'شام بخیر',
-    'good night': 'شب بخیر',
-    yes: 'جی ہاں',
-    no: 'جی نہیں',
-    please: 'براہ کرم',
-    sorry: 'معذرت / معاف کیجیے',
-    goodbye: 'خدا حافظ',
-    bye: 'اللہ حافظ',
-    'what is your name': 'آپ کا نام کیا ہے؟',
-    'my name is': 'میرا نام ... ہے',
-    'where is the bathroom': 'باتھ روم کہاں ہے؟',
-    help: 'مدد کریں',
-    'i love you': 'میں آپ سے محبت کرتا ہوں',
-    'how much is this': 'یہ کتنے کا ہے؟',
-    water: 'پانی',
-    food: 'کھانا',
-    hospital: 'ہسپتال',
-    doctor: 'ڈاکٹر',
-  },
-  ur_to_en: {
-    'سلام': 'Hello / Peace be upon you',
-    'ہیلو': 'Hello',
-    'خوش آمدید': 'Welcome',
-    'آپ کیسے ہیں': 'How are you?',
-    'آپ کیسے ہیں؟': 'How are you?',
-    'شکریہ': 'Thank you',
-    'صبح بخیر': 'Good morning',
-    'شام بخیر': 'Good evening',
-    'شب بخیر': 'Good night',
-    'جی ہاں': 'Yes',
-    'جی نہیں': 'No',
-    'براہ کرم': 'Please',
-    'معذرت': 'Sorry',
-    'خدا حافظ': 'Goodbye',
-    'الله حافظ': 'Goodbye',
-    'آپ کا نام کیا ہے؟': 'What is your name?',
-    'پانی': 'Water',
-    'کھانا': 'Food',
-    'ہسپتال': 'Hospital',
-    'مدد': 'Help',
-  },
-  en_to_ar: {
-    hello: 'مرحباً / السلام عليكم',
-    welcome: 'أهلاً وسهلاً',
-    'how are you': 'كيف حالك؟',
-    'thank you': 'شكراً جزيلاً',
-    'good morning': 'صباح الخير',
-    'good evening': 'مساء الخير',
-    yes: 'نعم',
-    no: 'لا',
-    please: 'من فضلك',
-    sorry: 'آسف',
-    goodbye: 'مع السلامة',
-  },
-  en_to_hi: {
-    hello: 'नमस्ते (Namaste)',
-    welcome: 'स्वागत है',
-    'how are you': 'आप कैसे हैं?',
-    'thank you': 'धन्यवाद / शुक्रिया',
-    'good morning': 'सुप्रभात',
-    yes: 'हाँ',
-    no: 'नहीं',
-    please: 'कृपया',
-    sorry: 'क्षमा करें',
-    goodbye: 'अलविदा',
-  },
-  en_to_es: {
-    hello: 'Hola',
-    welcome: 'Bienvenido',
-    'how are you': '¿Cómo estás?',
-    'thank you': 'Gracias',
-    'good morning': 'Buenos días',
-    yes: 'Sí',
-    no: 'No',
-    please: 'Por favor',
-    sorry: 'Lo siento',
-    goodbye: 'Adiós',
-  },
-};
 
 function normalizeCacheKey(text, src, tgt) {
   return encodeURIComponent(
@@ -126,7 +37,7 @@ function getCachedTranslation(text, src, tgt) {
 }
 
 function setCachedTranslation(text, src, tgt, result) {
-  if (!text || !result || !result.translatedText || result.isOffline) return;
+  if (!text || !result || !result.translatedText || result.isError) return;
   try {
     const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
     const key = normalizeCacheKey(text, src, tgt);
@@ -138,38 +49,8 @@ function setCachedTranslation(text, src, tgt, result) {
     cache[key] = { result, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {
-    // Ignore quota errors
+    // Ignore storage quota errors
   }
-}
-
-function translateOffline(text, srcLang, tgtLang) {
-  const clean = text.trim();
-  const lower = clean.toLowerCase();
-  const srcCode = getShortCode(srcLang || 'English');
-  const tgtCode = getShortCode(tgtLang || 'Urdu');
-  const dict = OFFLINE_DICTIONARY[`${srcCode}_to_${tgtCode}`];
-
-  let translated = '';
-  let isMissing = false;
-
-  if (dict && dict[lower]) {
-    translated = dict[lower];
-  } else {
-    translated = 'Translation not available offline. Please try again when online.';
-    isMissing = true;
-  }
-
-  return {
-    originalText: clean,
-    translatedText: translated,
-    sourceLanguage: srcLang,
-    targetLanguage: tgtLang,
-    confidence: null,
-    provider: 'offline',
-    fromCache: false,
-    isOffline: true,
-    isError: isMissing,
-  };
 }
 
 export function createTextTranslationController(callbacks = {}) {
@@ -229,19 +110,25 @@ export function createTextTranslationController(callbacks = {}) {
     if (isTranslating) {
       resultStatusEl.textContent = 'Translating...';
       resultStatusEl.className = 'status-pill busy';
-      outputEl.innerHTML = '<span style="color:var(--blue);font-weight:500;">Translating smoothly...</span>';
+      outputEl.style.color = '';
+      outputEl.innerHTML = '<span style="color:var(--blue);font-weight:500;">Translating...</span>';
       confidenceBadgeEl.classList.add('hidden');
       translateBtn.disabled = true;
       translateBtn.innerHTML = '<span>Translating...</span>';
     } else if (currentOutputText) {
       resultStatusEl.textContent = lastOutputIsError ? 'Error' : 'Ready';
       resultStatusEl.className = lastOutputIsError ? 'status-pill' : 'status-pill ready';
+      outputEl.style.color = lastOutputIsError ? '#dc2626' : '';
       outputEl.textContent = currentOutputText;
+      if (lastOutputIsError) {
+        confidenceBadgeEl.classList.add('hidden');
+      }
       translateBtn.disabled = false;
       translateBtn.innerHTML = '<span>Translate</span><span style="font-size:12px;opacity:0.85;">↵</span>';
     } else {
       resultStatusEl.textContent = 'Waiting';
       resultStatusEl.className = 'status-pill';
+      outputEl.style.color = '';
       outputEl.innerHTML = `<span class="output-placeholder">${PLACEHOLDER_OUTPUT}</span>`;
       confidenceBadgeEl.classList.add('hidden');
       translateBtn.disabled = false;
@@ -277,48 +164,32 @@ export function createTextTranslationController(callbacks = {}) {
     activeAbortController = controller;
 
     try {
-      let forceOffline = false;
-      try {
-        forceOffline = localStorage.getItem(FORCE_OFFLINE_KEY) === '1';
-      } catch {
-        forceOffline = false;
-      }
-      const online = !forceOffline && (typeof navigator !== 'undefined' ? navigator.onLine : true);
       const apiSrc = getTranslationName(srcLang);
       const apiTgt = getTranslationName(tgtLang);
 
-      let result = null;
-      if (!online) {
-        result = translateOffline(trimmed, srcLang, tgtLang);
-      } else {
-        result = getCachedTranslation(trimmed, apiSrc, apiTgt);
-        if (!result) {
-          result = await translateText(
-            {
-              text: trimmed,
-              sourceLanguage: apiSrc,
-              targetLanguage: apiTgt,
-              tone: 'natural',
-            },
-            { signal: controller.signal }
-          );
-          if (requestId !== activeTranslationId) return null;
-          setCachedTranslation(trimmed, apiSrc, apiTgt, result);
-        }
+      let result = getCachedTranslation(trimmed, apiSrc, apiTgt);
+      if (!result) {
+        result = await translateText(
+          {
+            text: trimmed,
+            sourceLanguage: apiSrc,
+            targetLanguage: apiTgt,
+          },
+          { signal: controller.signal }
+        );
+        if (requestId !== activeTranslationId) return null;
+        setCachedTranslation(trimmed, apiSrc, apiTgt, result);
       }
 
       if (requestId !== activeTranslationId) return null;
       activeAbortController = null;
-      lastOutputIsError = Boolean(result.isError);
+      lastOutputIsError = false;
       currentOutputText = result.translatedText || '';
       isTranslating = false;
 
-      const fromGemini = String(result.provider || '').toLowerCase() === 'gemini';
       if (
-        !result.isOffline &&
-        !result.isError &&
-        fromGemini &&
         typeof result.confidence === 'number' &&
+        Number.isFinite(result.confidence) &&
         result.confidence > 0 &&
         confidenceBadgeEl
       ) {
@@ -335,7 +206,7 @@ export function createTextTranslationController(callbacks = {}) {
 
       renderOutputState();
 
-      if (!result.isOffline && !result.isError && currentOutputText && typeof callbacks.onTranslated === 'function') {
+      if (currentOutputText && typeof callbacks.onTranslated === 'function') {
         callbacks.onTranslated({
           from: srcLang,
           to: tgtLang,

@@ -8,6 +8,7 @@ import { createLanguageManager } from './language-manager.js';
 import { createClipboardController } from './clipboard.js';
 import { createListeningController } from './listening.js';
 import { createMicrophoneController } from './microphone.js';
+import { createAudioModeController } from './audio-mode.js';
 import { createTextTranslationController } from './text-translation.js';
 import { createImageTranslationController } from './image-translation.js';
 import { createHistoryManager } from './history-manager.js';
@@ -18,6 +19,7 @@ export function initApp() {
   let imageTranslator = null;
   let listeningController = null;
   let microphoneController = null;
+  let audioModeController = null;
   let clipboardController = null;
   let historyManager = null;
 
@@ -33,7 +35,32 @@ export function initApp() {
     showToast('Loaded into translator');
   }
 
-  listeningController = createListeningController();
+  listeningController = createListeningController({
+    onStateChange: (state) => {
+      if (audioModeController) audioModeController.syncFromListening(state);
+    },
+  });
+
+  microphoneController = createMicrophoneController({
+    getSourceLanguage: () => (languageManager ? languageManager.getSourceLanguage() : 'English 🇬🇧'),
+    onStateChange: (state) => {
+      if (audioModeController) audioModeController.syncFromMicrophone(state);
+    },
+    onInterimTranscript: () => {
+      if (textTranslator) textTranslator.updateCharCount();
+    },
+    onFinalTranscript: (finalText) => {
+      if (textTranslator) {
+        textTranslator.clearDebounce();
+        textTranslator.translate(finalText);
+      }
+    },
+  });
+
+  audioModeController = createAudioModeController({
+    microphone: microphoneController,
+    listening: listeningController,
+  });
 
   textTranslator = createTextTranslationController({
     getSourceLanguage: () => (languageManager ? languageManager.getSourceLanguage() : 'English 🇬🇧'),
@@ -54,7 +81,7 @@ export function initApp() {
       if (clipboardController) clipboardController.copyText(text);
     },
     onSpeakText: (text, lang, key) => {
-      if (listeningController) listeningController.play(text, lang, key);
+      if (audioModeController) audioModeController.toggleListening(text, lang, key);
     },
     onOpenInTextTranslator: (entry) => {
       loadEntryIntoTranslator(entry);
@@ -79,22 +106,6 @@ export function initApp() {
     },
   });
 
-  microphoneController = createMicrophoneController({
-    getSourceLanguage: () => (languageManager ? languageManager.getSourceLanguage() : 'English 🇬🇧'),
-    onBeforeStart: () => {
-      if (listeningController) listeningController.stop();
-    },
-    onInterimTranscript: () => {
-      if (textTranslator) textTranslator.updateCharCount();
-    },
-    onFinalTranscript: (finalText) => {
-      if (textTranslator) {
-        textTranslator.clearDebounce();
-        textTranslator.translate(finalText);
-      }
-    },
-  });
-
   clipboardController = createClipboardController({
     getTranslatedText: () => (textTranslator ? textTranslator.getOutputText() : ''),
     onPaste: (text) => {
@@ -114,7 +125,7 @@ export function initApp() {
       if (clipboardController) clipboardController.copyText(text);
     },
     onSpeakEntry: (text, lang, key) => {
-      if (listeningController) listeningController.play(text, lang, key);
+      if (audioModeController) audioModeController.toggleListening(text, lang, key);
     },
     getCurrentTranslation: () => {
       if (!textTranslator || !textTranslator.hasValidOutput()) return null;
@@ -127,10 +138,18 @@ export function initApp() {
     },
   });
 
+  const micBtn = document.getElementById('micBtn');
+  if (micBtn) {
+    micBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      audioModeController.toggleMic();
+    });
+  }
+
   const sourceListenBtn = document.getElementById('sourceListenBtn');
   if (sourceListenBtn) {
     sourceListenBtn.addEventListener('click', () => {
-      listeningController.play(
+      audioModeController.toggleListening(
         textTranslator.getSourceText(),
         languageManager.getSourceLanguage(),
         'source'
@@ -146,7 +165,7 @@ export function initApp() {
         showToast('No translation to speak');
         return;
       }
-      listeningController.play(out, languageManager.getTargetLanguage(), 'target');
+      audioModeController.toggleListening(out, languageManager.getTargetLanguage(), 'target');
     });
   }
 
@@ -167,6 +186,7 @@ export function initApp() {
     imageTranslator,
     listeningController,
     microphoneController,
+    audioModeController,
     clipboardController,
     historyManager,
     loadEntryIntoTranslator,

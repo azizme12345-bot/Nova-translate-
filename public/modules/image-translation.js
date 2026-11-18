@@ -1,12 +1,23 @@
 /**
  * Image & Camera OCR Translation Module
- * Completely independent of normal text translation: handles file/camera upload,
- * preview, Canvas image resizing, OCR extraction, translation display, and errors.
+ * Resizes images in browser (max 1280px, JPEG 0.85), checks <= 4 MB limit,
+ * and sends to /api/image-translate without any browser OCR library.
  */
 
 import { translateImage } from './translation-api.js';
 import { getTranslationName, isRtl } from './language-manager.js';
 import { showToast } from './ui-utils.js';
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_DIMENSION = 1280;
+const JPEG_QUALITY = 0.85;
+
+function estimateDataUrlBytes(dataUrl) {
+  const raw = String(dataUrl || '');
+  const base64 = raw.includes(',') ? raw.split(',')[1] : raw;
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+}
 
 export function createImageTranslationController(callbacks = {}) {
   let scannedImageBase64 = '';
@@ -53,6 +64,11 @@ export function createImageTranslationController(callbacks = {}) {
   }
 
   async function processOcrImage(dataUrl) {
+    if (estimateDataUrlBytes(dataUrl) > MAX_IMAGE_BYTES) {
+      showToast('Photo bahut bari hai. Chhoti photo chunein.');
+      return null;
+    }
+
     scannedImageBase64 = dataUrl;
     if (previewImg) previewImg.src = dataUrl;
     if (uploadBox) uploadBox.classList.add('hidden');
@@ -63,7 +79,7 @@ export function createImageTranslationController(callbacks = {}) {
     isOcrLoading = true;
     if (ocrLoadingEl) ocrLoadingEl.classList.remove('hidden');
     if (ocrResultsEl) ocrResultsEl.classList.add('hidden');
-    showToast('Scanning and extracting text...');
+    showToast('Scanning and translating image...');
 
     const mimeMatch = String(dataUrl || '').match(/^data:([^;]+);base64,/);
     const detectedMime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
@@ -94,7 +110,7 @@ export function createImageTranslationController(callbacks = {}) {
           output: ocrTranslatedText,
         });
       }
-      showToast('Image processed successfully!');
+      showToast('Image translated!');
       return data;
     } catch (err) {
       ocrExtractedText = '';
@@ -125,25 +141,28 @@ export function createImageTranslationController(callbacks = {}) {
         const canvas = document.createElement('canvas');
         let w = img.width;
         let h = img.height;
-        const maxDim = 1280;
-        if (w > maxDim || h > maxDim) {
+        if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
           if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
+            h = Math.round((h * MAX_DIMENSION) / w);
+            w = MAX_DIMENSION;
           } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
+            w = Math.round((w * MAX_DIMENSION) / h);
+            h = MAX_DIMENSION;
           }
         }
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          processOcrImage(canvas.toDataURL('image/jpeg', 0.85));
-        } else {
-          processOcrImage(rawUrl);
+        const preparedUrl = ctx
+          ? (ctx.drawImage(img, 0, 0, w, h), canvas.toDataURL('image/jpeg', JPEG_QUALITY))
+          : rawUrl;
+
+        if (estimateDataUrlBytes(preparedUrl) > MAX_IMAGE_BYTES) {
+          showToast('Photo bahut bari hai. Chhoti photo chunein.');
+          return;
         }
+
+        processOcrImage(preparedUrl);
       };
       img.src = rawUrl;
     };
