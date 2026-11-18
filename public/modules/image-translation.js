@@ -153,9 +153,13 @@ export function createImageTranslationController(callbacks = {}) {
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d');
-        const preparedUrl = ctx
-          ? (ctx.drawImage(img, 0, 0, w, h), canvas.toDataURL('image/jpeg', JPEG_QUALITY))
-          : rawUrl;
+        let preparedUrl = rawUrl;
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          preparedUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+        }
 
         if (estimateDataUrlBytes(preparedUrl) > MAX_IMAGE_BYTES) {
           showToast('Photo bahut bari hai. Chhoti photo chunein.');

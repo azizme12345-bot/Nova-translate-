@@ -6,8 +6,9 @@ import {
   extractGeminiError,
   getGeminiClient,
   parseModelJson,
-  parseRequestBody,
-} from './_config';
+  readRequestBody,
+  sendJson,
+} from './_config.js';
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -29,14 +30,12 @@ function estimateBase64Bytes(base64: string): number {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  res.setHeader('Content-Type', 'application/json');
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const body = parseRequestBody<ImageTranslateBody>(req.body);
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const body = await readRequestBody<ImageTranslateBody>(req);
     let rawBase64 = String(body.imageBase64 || '').trim();
     let mimeType = String(body.mimeType || 'image/jpeg').trim() || 'image/jpeg';
 
@@ -47,11 +46,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     }
 
     if (!rawBase64) {
-      return res.status(400).json({ error: 'Image data is required.' });
+      return sendJson(res, 400, { error: 'Image data is required.' });
     }
 
     if (estimateBase64Bytes(rawBase64) > MAX_IMAGE_BYTES) {
-      return res.status(413).json({ error: 'Photo bahut bari hai. Chhoti photo chunein.' });
+      return sendJson(res, 413, { error: 'Photo bahut bari hai. Chhoti photo chunein.' });
     }
 
     const sourceLanguage = String(body.sourceLanguage || 'auto').trim() || 'auto';
@@ -105,19 +104,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const translatedText = String(parsed.translatedText || '').trim();
 
     if (!extractedText) {
-      return res.status(422).json({ error: 'Is photo mein koi likhai nazar nahi aayi.' });
+      return sendJson(res, 422, { error: 'Is photo mein koi likhai nazar nahi aayi.' });
     }
 
     if (!translatedText) {
-      return res.status(502).json({ error: 'Gemini returned an empty image translation.' });
+      return sendJson(res, 502, { error: 'Gemini returned an empty image translation.' });
     }
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       extractedText,
       translatedText,
     });
   } catch (err) {
     const { status, message } = extractGeminiError(err);
-    return res.status(status).json({ error: message });
+    return sendJson(res, status, { error: message });
   }
 }

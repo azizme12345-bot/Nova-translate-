@@ -22,26 +22,75 @@ export function getGeminiClient(): GoogleGenAI {
 export interface ApiRequest {
   method?: string;
   body?: unknown;
+  [Symbol.asyncIterator]?: () => AsyncIterator<unknown>;
 }
 
 export interface ApiResponse {
-  status: (code: number) => ApiResponse;
-  json: (body: unknown) => void;
-  setHeader: (name: string, value: string) => void;
+  statusCode?: number;
+  status?: (code: number) => ApiResponse;
+  json?: (body: unknown) => void;
+  end?: (chunk?: string) => void;
+  setHeader?: (name: string, value: string) => void;
 }
 
-export function parseRequestBody<T extends Record<string, unknown>>(body: unknown): T {
-  if (!body) return {} as T;
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body) as T;
-    } catch {
-      return {} as T;
+export function sendJson(res: ApiResponse, statusCode: number, payload: unknown): void {
+  if (typeof res.setHeader === 'function') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  }
+  if (typeof res.status === 'function') {
+    const target = res.status(statusCode);
+    if (target && typeof target.json === 'function') {
+      target.json(payload);
+      return;
     }
   }
-  if (typeof body === 'object') {
-    return body as T;
+  res.statusCode = statusCode;
+  if (typeof res.end === 'function') {
+    res.end(JSON.stringify(payload));
   }
+}
+
+export async function readRequestBody<T extends Record<string, unknown>>(req: ApiRequest): Promise<T> {
+  const rawBody = req ? req.body : undefined;
+  if (rawBody !== undefined && rawBody !== null) {
+    if (typeof rawBody === 'string') {
+      try {
+        return JSON.parse(rawBody) as T;
+      } catch {
+        return {} as T;
+      }
+    }
+    if (typeof Buffer !== 'undefined' && Buffer.isBuffer(rawBody)) {
+      try {
+        return JSON.parse(rawBody.toString('utf8')) as T;
+      } catch {
+        return {} as T;
+      }
+    }
+    if (typeof rawBody === 'object') {
+      return rawBody as T;
+    }
+  }
+
+  if (req && typeof req[Symbol.asyncIterator] === 'function') {
+    const chunks: string[] = [];
+    for await (const chunk of req as AsyncIterable<unknown>) {
+      if (typeof chunk === 'string') {
+        chunks.push(chunk);
+      } else if (chunk instanceof Uint8Array) {
+        chunks.push(Buffer.from(chunk).toString('utf8'));
+      }
+    }
+    const combined = chunks.join('').trim();
+    if (combined) {
+      try {
+        return JSON.parse(combined) as T;
+      } catch {
+        return {} as T;
+      }
+    }
+  }
+
   return {} as T;
 }
 

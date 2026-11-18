@@ -6,8 +6,9 @@ import {
   extractGeminiError,
   getGeminiClient,
   parseModelJson,
-  parseRequestBody,
-} from './_config';
+  readRequestBody,
+  sendJson,
+} from './_config.js';
 
 const MAX_TEXT_LENGTH = 5000;
 
@@ -23,23 +24,21 @@ interface TranslateModelOutput {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  res.setHeader('Content-Type', 'application/json');
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const body = parseRequestBody<TranslateBody>(req.body);
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const body = await readRequestBody<TranslateBody>(req);
     const text = String(body.text || '').trim();
     const sourceLanguage = String(body.sourceLanguage || 'auto').trim() || 'auto';
     const targetLanguage = String(body.targetLanguage || 'Urdu').trim() || 'Urdu';
 
     if (!text) {
-      return res.status(400).json({ error: 'Please enter text to translate.' });
+      return sendJson(res, 400, { error: 'Please enter text to translate.' });
     }
     if (text.length > MAX_TEXT_LENGTH) {
-      return res.status(400).json({ error: `Text exceeds ${MAX_TEXT_LENGTH} character limit.` });
+      return sendJson(res, 400, { error: `Text exceeds ${MAX_TEXT_LENGTH} character limit.` });
     }
 
     const ai = getGeminiClient();
@@ -83,15 +82,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       (isAuto ? 'Auto-detected' : sourceLanguage);
 
     if (!translatedText) {
-      return res.status(502).json({ error: 'Gemini returned an empty translation.' });
+      return sendJson(res, 502, { error: 'Gemini returned an empty translation.' });
     }
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       translatedText,
       detectedSourceLanguage,
     });
   } catch (err) {
     const { status, message } = extractGeminiError(err);
-    return res.status(status).json({ error: message });
+    return sendJson(res, status, { error: message });
   }
 }
