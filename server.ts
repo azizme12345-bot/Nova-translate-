@@ -92,14 +92,14 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   next(err);
 });
 
-// Apply stricter rate limit (30 req/min per IP) on AI endpoints
-const aiEndpointLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 30 });
+// Apply rate limit (120 req/min per IP) on AI endpoints
+const aiEndpointLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 120 });
 app.use('/api/translate', aiEndpointLimiter);
 app.use('/api/ocr-translate', aiEndpointLimiter);
 app.use('/api/speech-to-text', aiEndpointLimiter);
 
-// General rate limiter for remaining /api endpoints (60 req/min per IP)
-app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 60 }));
+// General rate limiter for /api endpoints (240 req/min per IP)
+app.use('/api', createRateLimiter({ windowMs: 60 * 1000, max: 240 }));
 
 // Mount centralized API router
 app.use('/api', apiRouter);

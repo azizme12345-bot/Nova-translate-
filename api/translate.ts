@@ -2,7 +2,7 @@ import { enforceSameOriginAndRateLimit } from '../server/apiSecurity.ts';
 import { TranslationService } from '../server/translationService.ts';
 
 export default async function handler(req: any, res: any) {
-  if (!(await enforceSameOriginAndRateLimit(req, res, { maxRequestsPerMinute: 30 }))) {
+  if (!(await enforceSameOriginAndRateLimit(req, res, { maxRequestsPerMinute: 120 }))) {
     return;
   }
 
