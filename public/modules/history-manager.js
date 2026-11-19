@@ -11,7 +11,12 @@ const SAVED_KEY = 'nova_saved_items';
 function readStorage(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(fallback)) {
+      return Array.isArray(parsed) ? parsed : fallback;
+    }
+    return parsed ?? fallback;
   } catch {
     return fallback;
   }

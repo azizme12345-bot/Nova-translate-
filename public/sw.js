@@ -1,4 +1,17 @@
-const CACHE_NAME = 'lafz-translation-shell-v2';
+const CACHE_NAME = 'lafz-translation-shell-v3';
+const APP_MODULES = [
+  '/modules/app.js',
+  '/modules/audio-mode.js',
+  '/modules/clipboard.js',
+  '/modules/history-manager.js',
+  '/modules/image-translation.js',
+  '/modules/language-manager.js',
+  '/modules/listening.js',
+  '/modules/microphone.js',
+  '/modules/text-translation.js',
+  '/modules/translation-api.js',
+  '/modules/ui-utils.js'
+];
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -8,7 +21,8 @@ const APP_SHELL = [
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/pwa-maskable-512x512.png',
-  '/lafz-logo-icon.png'
+  '/lafz-logo-icon.png',
+  ...APP_MODULES
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,7 +62,7 @@ self.addEventListener('fetch', (event) => {
 
   if (isHtmlRequest) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok && (url.pathname === '/' || url.pathname === '/index.html')) {
             const copy = networkResponse.clone();
@@ -61,6 +75,23 @@ self.addEventListener('fetch', (event) => {
         .catch(() => {
           return caches.match('/index.html').then((cached) => cached || caches.match('/'));
         })
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/modules/')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(url.pathname, copy);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(url.pathname))
     );
     return;
   }
