@@ -9,8 +9,8 @@ import { getTranslationName, isRtl } from './language-manager.js';
 import { showToast } from './ui-utils.js';
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const MAX_DIMENSION = 1280;
-const JPEG_QUALITY = 0.85;
+const MAX_DIMENSION = 1024;
+const JPEG_QUALITY = 0.8;
 
 function estimateDataUrlBytes(dataUrl) {
   const raw = String(dataUrl || '');
@@ -79,7 +79,6 @@ export function createImageTranslationController(callbacks = {}) {
     isOcrLoading = true;
     if (ocrLoadingEl) ocrLoadingEl.classList.remove('hidden');
     if (ocrResultsEl) ocrResultsEl.classList.add('hidden');
-    showToast('Scanning and translating image...');
 
     const mimeMatch = String(dataUrl || '').match(/^data:([^;]+);base64,/);
     const detectedMime = mimeMatch ? mimeMatch[1] : 'image/jpeg';

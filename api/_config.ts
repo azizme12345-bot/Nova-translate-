@@ -1,7 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
-export const TEXT_MODEL = 'gemini-4-hydrogen';
-export const IMAGE_MODEL = 'gemini-4-hydrogen';
+export const TEXT_MODEL = 'gemini-3.1-flash-lite';
+export const IMAGE_MODEL = 'gemini-3.1-flash-lite';
+export const THINKING_LEVEL = ThinkingLevel.MINIMAL;
 
 export function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -22,19 +23,27 @@ export function getGeminiClient(): GoogleGenAI {
 export interface ApiRequest {
   method?: string;
   body?: unknown;
+  on?: (event: string, listener: () => void) => void;
   [Symbol.asyncIterator]?: () => AsyncIterator<unknown>;
 }
 
 export interface ApiResponse {
   statusCode?: number;
+  headersSent?: boolean;
+  writableEnded?: boolean;
+  writableFinished?: boolean;
   status?: (code: number) => ApiResponse;
   json?: (body: unknown) => void;
+  writeHead?: (statusCode: number, headers: Record<string, string>) => void;
+  flushHeaders?: () => void;
+  write?: (chunk: string) => boolean;
   end?: (chunk?: string) => void;
   setHeader?: (name: string, value: string) => void;
+  on?: (event: string, listener: () => void) => void;
 }
 
 export function sendJson(res: ApiResponse, statusCode: number, payload: unknown): void {
-  if (typeof res.setHeader === 'function') {
+  if (typeof res.setHeader === 'function' && !res.headersSent) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
   }
   if (typeof res.status === 'function') {
@@ -96,9 +105,37 @@ export async function readRequestBody<T extends Record<string, unknown>>(req: Ap
 
 export function extractGeminiError(err: unknown): { status: number; message: string } {
   const anyErr = err as { status?: number; statusCode?: number; message?: string } | null;
-  const message = anyErr && anyErr.message ? String(anyErr.message) : 'Gemini service request failed.';
+  let message = anyErr && anyErr.message ? String(anyErr.message) : 'Gemini service request failed.';
   const rawStatus = anyErr ? Number(anyErr.status || anyErr.statusCode || 0) : 0;
-  const status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 500;
+  let status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 500;
+
+  for (let i = 0; i < 3; i++) {
+    const trimmed = message.trim();
+    if (!trimmed.startsWith('{')) break;
+    try {
+      const parsed = JSON.parse(trimmed) as {
+        error?: { code?: number; message?: string } | string;
+        message?: string;
+      };
+      if (parsed?.error && typeof parsed.error === 'object') {
+        if (parsed.error.code && parsed.error.code >= 400 && parsed.error.code < 600) {
+          status = parsed.error.code;
+        }
+        if (typeof parsed.error.message === 'string' && parsed.error.message) {
+          message = parsed.error.message;
+          continue;
+        }
+      }
+      if (typeof parsed?.message === 'string' && parsed.message) {
+        message = parsed.message;
+        continue;
+      }
+      break;
+    } catch {
+      break;
+    }
+  }
+
   return { status, message };
 }
 

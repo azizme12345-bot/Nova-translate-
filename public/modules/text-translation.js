@@ -1,7 +1,7 @@
 /**
  * Text Translation Module
- * Handles text-to-text translation via server-side Gemini (/api/translate),
- * debouncing, loading/error display, and real score visibility.
+ * Handles streaming text-to-text translation via /api/translate,
+ * 400ms typing debounce, AbortController cancellation, and browser caching.
  */
 
 import { translateText } from './translation-api.js';
@@ -12,6 +12,7 @@ const PLACEHOLDER_OUTPUT = 'Translation will appear here...';
 const CACHE_KEY = 'nova_translation_cache_v4';
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MAX_CACHE_SIZE = 250;
+const TYPING_DEBOUNCE_MS = 400;
 
 function normalizeCacheKey(text, src, tgt) {
   return encodeURIComponent(
@@ -55,6 +56,7 @@ function setCachedTranslation(text, src, tgt, result) {
 
 export function createTextTranslationController(callbacks = {}) {
   let currentOutputText = '';
+  let streamingOutputText = '';
   let isTranslating = false;
   let lastOutputIsError = false;
   let activeTranslationId = 0;
@@ -102,8 +104,9 @@ export function createTextTranslationController(callbacks = {}) {
   }
 
   function renderOutputState() {
+    const showRtl = hasValidOutput() || (isTranslating && Boolean(streamingOutputText));
     if (typeof callbacks.onSyncDirections === 'function') {
-      callbacks.onSyncDirections(hasValidOutput());
+      callbacks.onSyncDirections(showRtl);
     }
     if (!resultStatusEl || !outputEl || !confidenceBadgeEl || !translateBtn) return;
 
@@ -111,7 +114,11 @@ export function createTextTranslationController(callbacks = {}) {
       resultStatusEl.textContent = 'Translating...';
       resultStatusEl.className = 'status-pill busy';
       outputEl.style.color = '';
-      outputEl.innerHTML = '<span style="color:var(--blue);font-weight:500;">Translating...</span>';
+      if (streamingOutputText) {
+        outputEl.textContent = streamingOutputText;
+      } else {
+        outputEl.innerHTML = '<span style="color:var(--blue);font-weight:500;">Translating...</span>';
+      }
       confidenceBadgeEl.classList.add('hidden');
       translateBtn.disabled = true;
       translateBtn.innerHTML = '<span>Translating...</span>';
@@ -151,12 +158,14 @@ export function createTextTranslationController(callbacks = {}) {
     if (!trimmed) {
       lastOutputIsError = false;
       currentOutputText = '';
+      streamingOutputText = '';
       isTranslating = false;
       renderOutputState();
       return null;
     }
 
     lastOutputIsError = false;
+    streamingOutputText = '';
     isTranslating = true;
     renderOutputState();
 
@@ -168,14 +177,23 @@ export function createTextTranslationController(callbacks = {}) {
       const apiTgt = getTranslationName(tgtLang);
 
       let result = getCachedTranslation(trimmed, apiSrc, apiTgt);
-      if (!result) {
+      if (result) {
+        console.log('Translate: 0ms (cache)');
+      } else {
         result = await translateText(
           {
             text: trimmed,
             sourceLanguage: apiSrc,
             targetLanguage: apiTgt,
           },
-          { signal: controller.signal }
+          {
+            signal: controller.signal,
+            onChunk: (partial) => {
+              if (requestId !== activeTranslationId) return;
+              streamingOutputText = partial;
+              renderOutputState();
+            },
+          }
         );
         if (requestId !== activeTranslationId) return null;
         setCachedTranslation(trimmed, apiSrc, apiTgt, result);
@@ -184,6 +202,7 @@ export function createTextTranslationController(callbacks = {}) {
       if (requestId !== activeTranslationId) return null;
       activeAbortController = null;
       lastOutputIsError = false;
+      streamingOutputText = '';
       currentOutputText = result.translatedText || '';
       isTranslating = false;
 
@@ -222,6 +241,7 @@ export function createTextTranslationController(callbacks = {}) {
       }
       activeAbortController = null;
       isTranslating = false;
+      streamingOutputText = '';
       lastOutputIsError = true;
       currentOutputText =
         err && err.message ? err.message : 'Translation failed. Please try again.';
@@ -236,6 +256,7 @@ export function createTextTranslationController(callbacks = {}) {
     clearDebounce();
     cancelPending();
     isTranslating = false;
+    streamingOutputText = '';
     if (sourceTextEl) sourceTextEl.value = '';
     lastOutputIsError = false;
     currentOutputText = '';
@@ -246,6 +267,8 @@ export function createTextTranslationController(callbacks = {}) {
   function loadTranslation({ input = '', output = '' }) {
     clearDebounce();
     cancelPending();
+    isTranslating = false;
+    streamingOutputText = '';
     if (sourceTextEl) sourceTextEl.value = input;
     lastOutputIsError = false;
     currentOutputText = output;
@@ -278,10 +301,11 @@ export function createTextTranslationController(callbacks = {}) {
         if (val.trim().length > 1) {
           debounceTimer = setTimeout(() => {
             translate(val);
-          }, 350);
+          }, TYPING_DEBOUNCE_MS);
         } else if (!val.trim()) {
           cancelPending();
           isTranslating = false;
+          streamingOutputText = '';
           lastOutputIsError = false;
           currentOutputText = '';
           renderOutputState();

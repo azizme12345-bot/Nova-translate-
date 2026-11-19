@@ -1,11 +1,10 @@
-import { ThinkingLevel, Type } from '@google/genai';
 import {
   ApiRequest,
   ApiResponse,
   TEXT_MODEL,
+  THINKING_LEVEL,
   extractGeminiError,
   getGeminiClient,
-  parseModelJson,
   readRequestBody,
   sendJson,
 } from './_config.js';
@@ -18,12 +17,23 @@ interface TranslateBody extends Record<string, unknown> {
   targetLanguage?: string;
 }
 
-interface TranslateModelOutput {
-  translatedText: string;
-  detectedSourceLanguage: string;
+function writeSseEvent(res: ApiResponse, payload: unknown): void {
+  if (res.writableEnded || typeof res.write !== 'function') return;
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
+  let streamStarted = false;
+  let clientClosed = false;
+
+  if (res && typeof res.on === 'function') {
+    res.on('close', () => {
+      if (!res.writableFinished) {
+        clientClosed = true;
+      }
+    });
+  }
+
   try {
     if (req.method !== 'POST') {
       return sendJson(res, 405, { error: 'Method not allowed' });
@@ -47,50 +57,78 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       sourceLanguage.toLowerCase().startsWith('auto');
 
     const prompt = isAuto
-      ? `Detect the source language and translate the following text accurately into ${targetLanguage}.\n\nText:\n${text}`
-      : `Translate the following text accurately from ${sourceLanguage} into ${targetLanguage}.\n\nText:\n${text}`;
+      ? `Detect the source language and translate the following text accurately into ${targetLanguage}. Output ONLY the translated text.\n\nText:\n${text}`
+      : `Translate the following text accurately from ${sourceLanguage} into ${targetLanguage}. Output ONLY the translated text.\n\nText:\n${text}`;
 
-    const response = await ai.models.generateContent({
+    const stream = await ai.models.generateContentStream({
       model: TEXT_MODEL,
       contents: prompt,
       config: {
         systemInstruction:
-          'You are a fast, accurate translator. Preserve the meaning, tone, punctuation, and line breaks of the input text. Return ONLY valid JSON with translatedText and detectedSourceLanguage (the English name of the source language, e.g. "English", "Urdu", "Arabic").',
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            translatedText: {
-              type: Type.STRING,
-              description: 'The accurate translation in the target language.',
-            },
-            detectedSourceLanguage: {
-              type: Type.STRING,
-              description: 'English name of the detected or provided source language.',
-            },
-          },
-          required: ['translatedText', 'detectedSourceLanguage'],
-        },
+          'You are a fast, accurate translator. Preserve the meaning, tone, punctuation, and line breaks. Output ONLY the translated text without quotes, notes, or explanations.',
+        thinkingConfig: { thinkingLevel: THINKING_LEVEL },
       },
     });
 
-    const parsed = parseModelJson<TranslateModelOutput>(response.text);
-    const translatedText = String(parsed.translatedText || '').trim();
-    const detectedSourceLanguage =
-      String(parsed.detectedSourceLanguage || (isAuto ? '' : sourceLanguage)).trim() ||
-      (isAuto ? 'Auto-detected' : sourceLanguage);
+    if (typeof res.writeHead === 'function') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+    } else if (typeof res.setHeader === 'function') {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+    }
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
+    streamStarted = true;
 
-    if (!translatedText) {
-      return sendJson(res, 502, { error: 'Gemini returned an empty translation.' });
+    let fullText = '';
+
+    for await (const chunk of stream) {
+      if (clientClosed || res.writableEnded) {
+        break;
+      }
+      const piece = chunk && typeof chunk.text === 'string' ? chunk.text : '';
+      if (piece) {
+        fullText += piece;
+        writeSseEvent(res, { chunk: piece });
+      }
     }
 
-    return sendJson(res, 200, {
-      translatedText,
-      detectedSourceLanguage,
-    });
+    if (clientClosed || res.writableEnded) {
+      if (!res.writableEnded && typeof res.end === 'function') {
+        res.end();
+      }
+      return;
+    }
+
+    const finalTranslation = fullText.trim();
+    if (!finalTranslation) {
+      writeSseEvent(res, { error: 'Gemini returned an empty translation.' });
+    } else {
+      writeSseEvent(res, {
+        done: true,
+        translatedText: finalTranslation,
+        detectedSourceLanguage: isAuto ? 'Auto-detected' : sourceLanguage,
+      });
+    }
+
+    if (typeof res.end === 'function') {
+      res.end();
+    }
   } catch (err) {
     const { status, message } = extractGeminiError(err);
+    if (streamStarted || res.headersSent) {
+      writeSseEvent(res, { error: message });
+      if (!res.writableEnded && typeof res.end === 'function') {
+        res.end();
+      }
+      return;
+    }
     return sendJson(res, status, { error: message });
   }
 }

@@ -1,8 +1,9 @@
-import { GenerateContentResponse, ThinkingLevel, Type } from '@google/genai';
+import { GenerateContentResponse, Type } from '@google/genai';
 import {
   ApiRequest,
   ApiResponse,
   IMAGE_MODEL,
+  THINKING_LEVEL,
   extractGeminiError,
   getGeminiClient,
   parseModelJson,
@@ -80,7 +81,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       config: {
         systemInstruction:
           'You perform accurate OCR and translation from images. Never invent or guess unseen text. Return ONLY valid JSON.',
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        thinkingConfig: { thinkingLevel: THINKING_LEVEL },
         responseMimeType: 'application/json',
         responseSchema: {
           type: Type.OBJECT,

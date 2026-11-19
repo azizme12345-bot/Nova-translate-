@@ -1,7 +1,7 @@
 /**
  * Translation & Photo OCR API Client
- * Calls server-side Gemini endpoints (/api/translate, /api/image-translate)
- * with a strict 25-second timeout and real error propagation.
+ * Streams text translations from /api/translate (SSE) and sends images to /api/image-translate
+ * with a strict 25-second timeout, AbortController cancellation, and console-only timing logs.
  */
 
 import { getLanguages, getTranslationName, isRtl } from './language-manager.js';
@@ -70,7 +70,7 @@ export async function parseApiResponse(res) {
   return parsed;
 }
 
-async function postJsonWithTimeout(url, payload, { timeoutMs = API_TIMEOUT_MS, signal } = {}) {
+function createLinkedController(timeoutMs, externalSignal) {
   const controller = new AbortController();
   let timedOut = false;
 
@@ -80,35 +80,126 @@ async function postJsonWithTimeout(url, payload, { timeoutMs = API_TIMEOUT_MS, s
   }, timeoutMs);
 
   const forwardAbort = () => controller.abort();
-  if (signal) {
-    if (signal.aborted) {
+  if (externalSignal) {
+    if (externalSignal.aborted) {
       clearTimeout(timerId);
       const abortErr = new Error('Request cancelled');
       abortErr.name = 'AbortError';
       throw abortErr;
     }
-    signal.addEventListener('abort', forwardAbort, { once: true });
+    externalSignal.addEventListener('abort', forwardAbort, { once: true });
   }
+
+  return {
+    controller,
+    isTimedOut: () => timedOut,
+    cleanup: () => {
+      clearTimeout(timerId);
+      if (externalSignal) {
+        externalSignal.removeEventListener('abort', forwardAbort);
+      }
+    },
+  };
+}
+
+async function postJsonWithTimeout(url, payload, { timeoutMs = API_TIMEOUT_MS, signal } = {}) {
+  const linked = createLinkedController(timeoutMs, signal);
 
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: buildApiHeaders(),
       body: JSON.stringify(payload),
-      signal: controller.signal,
+      signal: linked.controller.signal,
     });
     return await parseApiResponse(res);
   } catch (err) {
-    if (timedOut) {
+    if (linked.isTimedOut()) {
       throw new Error('Server ne time par jawab nahi diya. Dobara koshish karein.');
     }
     throw err;
   } finally {
-    clearTimeout(timerId);
-    if (signal) {
-      signal.removeEventListener('abort', forwardAbort);
+    linked.cleanup();
+  }
+}
+
+async function readSseTranslation(res, onChunk) {
+  if (!res.body || typeof res.body.getReader !== 'function') {
+    const text = await res.text();
+    throw new Error(text || 'Streaming is not supported in this response.');
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let accumulated = '';
+  let finalTranslated = '';
+  let detectedSourceLanguage = '';
+
+  function handleFrame(frame) {
+    const lines = frame.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line.startsWith('data:')) continue;
+      const jsonStr = line.slice(5).trim();
+      if (!jsonStr) continue;
+
+      let msg = null;
+      try {
+        msg = JSON.parse(jsonStr);
+      } catch {
+        continue;
+      }
+
+      if (msg.error) {
+        throw new Error(String(msg.error));
+      }
+      if (typeof msg.chunk === 'string' && msg.chunk) {
+        accumulated += msg.chunk;
+        if (typeof onChunk === 'function') {
+          onChunk(accumulated);
+        }
+      }
+      if (msg.done) {
+        if (typeof msg.translatedText === 'string' && msg.translatedText.trim()) {
+          finalTranslated = msg.translatedText.trim();
+        }
+        if (typeof msg.detectedSourceLanguage === 'string' && msg.detectedSourceLanguage.trim()) {
+          detectedSourceLanguage = msg.detectedSourceLanguage.trim();
+        }
+      }
     }
   }
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+      let sepIndex = buffer.indexOf('\n\n');
+      while (sepIndex !== -1) {
+        const frame = buffer.slice(0, sepIndex);
+        buffer = buffer.slice(sepIndex + 2);
+        if (frame.trim()) {
+          handleFrame(frame);
+        }
+        sepIndex = buffer.indexOf('\n\n');
+      }
+    }
+
+    buffer += decoder.decode().replace(/\r\n/g, '\n');
+    if (buffer.trim()) {
+      handleFrame(buffer);
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+
+  return {
+    translatedText: (finalTranslated || accumulated).trim(),
+    detectedSourceLanguage,
+  };
 }
 
 export async function translateText(
@@ -129,38 +220,66 @@ export async function translateText(
   const payloadSource = isAutoLanguage(cleanSource) ? 'auto' : getTranslationName(cleanSource);
   const payloadTarget = getTranslationName(cleanTarget);
 
-  const data = await postJsonWithTimeout(
-    '/api/translate',
-    {
-      text: cleanText,
-      sourceLanguage: payloadSource,
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const linked = createLinkedController(options.timeoutMs || API_TIMEOUT_MS, options.signal);
+
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: buildApiHeaders(),
+      body: JSON.stringify({
+        text: cleanText,
+        sourceLanguage: payloadSource,
+        targetLanguage: payloadTarget,
+      }),
+      signal: linked.controller.signal,
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    let data;
+
+    if (res.ok && contentType.includes('text/event-stream')) {
+      data = await readSseTranslation(res, options.onChunk);
+    } else {
+      data = await parseApiResponse(res);
+    }
+
+    const translatedText = String(data.translatedText || '').trim();
+    if (!translatedText) {
+      throw new Error('Server ne khaali translation bheji.');
+    }
+
+    const detectedSourceLanguage = String(
+      data.detectedSourceLanguage || (payloadSource === 'auto' ? 'Auto-detected' : payloadSource)
+    ).trim();
+
+    const elapsed = Math.round(
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt
+    );
+    console.log(`Translate: ${elapsed}ms`);
+
+    return {
+      sourceLanguage: detectedSourceLanguage,
+      detectedSourceLanguage,
       targetLanguage: payloadTarget,
-    },
-    options
-  );
-
-  const translatedText = String(data.translatedText || '').trim();
-  if (!translatedText) {
-    throw new Error('Server ne khaali translation bheji.');
+      originalText: cleanText,
+      translatedText,
+      confidence:
+        typeof data.confidence === 'number' && Number.isFinite(data.confidence)
+          ? data.confidence
+          : null,
+      provider: 'gemini',
+      direction: detectRtlOutput(payloadTarget, translatedText) ? 'rtl' : 'ltr',
+      timestamp: new Date().toISOString(),
+    };
+  } catch (err) {
+    if (linked.isTimedOut()) {
+      throw new Error('Server ne time par jawab nahi diya. Dobara koshish karein.');
+    }
+    throw err;
+  } finally {
+    linked.cleanup();
   }
-
-  const detectedSourceLanguage = String(
-    data.detectedSourceLanguage || (payloadSource === 'auto' ? 'Auto-detected' : payloadSource)
-  ).trim();
-
-  return {
-    sourceLanguage: detectedSourceLanguage,
-    detectedSourceLanguage,
-    targetLanguage: payloadTarget,
-    originalText: cleanText,
-    translatedText,
-    confidence: typeof data.confidence === 'number' && Number.isFinite(data.confidence)
-      ? data.confidence
-      : null,
-    provider: 'gemini',
-    direction: detectRtlOutput(payloadTarget, translatedText) ? 'rtl' : 'ltr',
-    timestamp: new Date().toISOString(),
-  };
 }
 
 export async function translateImage(
@@ -183,6 +302,7 @@ export async function translateImage(
   const payloadSource = isAutoLanguage(cleanSource) ? 'auto' : getTranslationName(cleanSource);
   const payloadTarget = getTranslationName(cleanTarget);
 
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const data = await postJsonWithTimeout(
     '/api/image-translate',
     {
@@ -200,6 +320,11 @@ export async function translateImage(
   if (!extractedText || !translatedText) {
     throw new Error('Is photo se likhai ya tarjuma hasil nahi hua.');
   }
+
+  const elapsed = Math.round(
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt
+  );
+  console.log(`Photo Translate: ${elapsed}ms`);
 
   return {
     extractedText,

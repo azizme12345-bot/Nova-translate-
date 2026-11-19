@@ -28,6 +28,7 @@ export function createListeningController(callbacks = {}) {
   let isPausedState = false;
   let sessionSeq = 0;
   let voiceGender = readSavedGender();
+  let cachedVoices = [];
 
   const voiceGenderBtn = document.getElementById('voiceGenderBtn');
   const voiceGenderLabel = document.getElementById('voiceGenderLabel');
@@ -138,12 +139,7 @@ export function createListeningController(callbacks = {}) {
 
   function stop() {
     const hadActive = stopSync();
-    if (!hadActive) {
-      return Promise.resolve(false);
-    }
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 40);
-    });
+    return Promise.resolve(hadActive);
   }
 
   function pause() {
@@ -179,23 +175,34 @@ export function createListeningController(callbacks = {}) {
     return isPausedState ? resume() : pause();
   }
 
+  function refreshCachedVoices() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return [];
+    }
+    try {
+      const list = window.speechSynthesis.getVoices() || [];
+      if (list.length > 0) {
+        cachedVoices = list;
+      }
+      return cachedVoices.length > 0 ? cachedVoices : list;
+    } catch {
+      return cachedVoices;
+    }
+  }
+
   function loadBrowserVoices(onReady) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       onReady([]);
       return;
     }
 
-    const synth = window.speechSynthesis;
-    let existing = [];
-    try {
-      existing = synth.getVoices() || [];
-    } catch {
-      existing = [];
-    }
+    const existing = refreshCachedVoices();
     if (existing.length > 0) {
       onReady(existing);
       return;
     }
+
+    const synth = window.speechSynthesis;
 
     let done = false;
     let waitTimer = null;
@@ -214,12 +221,7 @@ export function createListeningController(callbacks = {}) {
       } catch {
         // Ignore
       }
-      let loaded = [];
-      try {
-        loaded = synth.getVoices() || [];
-      } catch {
-        loaded = [];
-      }
+      const loaded = refreshCachedVoices();
       onReady(loaded);
     }
 
@@ -424,8 +426,11 @@ export function createListeningController(callbacks = {}) {
     ensureSpeakingAnimationStyle();
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      refreshCachedVoices();
       try {
-        window.speechSynthesis.getVoices();
+        if (typeof window.speechSynthesis.addEventListener === 'function') {
+          window.speechSynthesis.addEventListener('voiceschanged', refreshCachedVoices);
+        }
       } catch {
         // Ignore
       }
