@@ -1,8 +1,0 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <defs>
-    <clipPath id="logoRoundClip">
-      <rect width="512" height="512" rx="112" ry="112" />
-    </clipPath>
-  </defs>
-  <image href="/app-logo.png" width="512" height="512" clip-path="url(#logoRoundClip)" preserveAspectRatio="xMidYMid slice" />
-</svg>
