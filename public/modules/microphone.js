@@ -16,11 +16,53 @@ export function createMicrophoneController(callbacks = {}) {
   let hasError = false;
   let hasFinalized = false;
   let stopWaiters = [];
+  let sessionStartedAt = 0;
+  let sessionLogs = [];
+  let alertShown = false;
+  let errorAlertTimer = null;
 
   const micBtn = document.getElementById('micBtn');
   const micBtnLabel = document.getElementById('micBtnLabel');
   const sourceTextEl = document.getElementById('sourceText');
   const listeningIndicator = document.getElementById('listeningIndicator');
+
+  function nowMs() {
+    return typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  }
+
+  function clearErrorAlertTimer() {
+    if (errorAlertTimer) {
+      clearTimeout(errorAlertTimer);
+      errorAlertTimer = null;
+    }
+  }
+
+  function addLog(name, details = '') {
+    const elapsed = sessionStartedAt ? Math.round(nowMs() - sessionStartedAt) : 0;
+    const line = details
+      ? `[Mic] ${name} (+${elapsed}ms) | ${details}`
+      : `[Mic] ${name} (+${elapsed}ms)`;
+    sessionLogs.push(line);
+    console.log(line);
+  }
+
+  function flushLogAlert() {
+    clearErrorAlertTimer();
+    if (alertShown || sessionLogs.length === 0) return;
+    alertShown = true;
+    const text = sessionLogs.join('\n');
+    try {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(text);
+      } else if (typeof alert === 'function') {
+        alert(text);
+      }
+    } catch {
+      // Ignore alert failures in restricted contexts
+    }
+  }
 
   function updateUi(active) {
     if (micBtn) {
@@ -56,6 +98,7 @@ export function createMicrophoneController(callbacks = {}) {
     recognition = null;
     updateUi(false);
     resolveStopWaiters();
+    flushLogAlert();
 
     if (!hasError && !hasFinalized && latestSpokenText) {
       hasFinalized = true;
@@ -74,9 +117,29 @@ export function createMicrophoneController(callbacks = {}) {
   function start() {
     if (isListening) return true;
 
+    clearErrorAlertTimer();
+    sessionStartedAt = nowMs();
+    sessionLogs = [];
+    alertShown = false;
+
+    const visibility = typeof document !== 'undefined' ? document.visibilityState : 'unknown';
+    const secureContext =
+      typeof window !== 'undefined' ? String(Boolean(window.isSecureContext)) : 'unknown';
+    const synthSpeaking =
+      typeof window !== 'undefined' && 'speechSynthesis' in window
+        ? String(Boolean(window.speechSynthesis.speaking))
+        : 'unavailable';
+
+    addLog(
+      'tap',
+      `visibilityState=${visibility}, isSecureContext=${secureContext}, speechSynthesis.speaking=${synthSpeaking}`
+    );
+
     const SpeechRecognitionCtor = getSpeechRecognitionCtor();
     if (!SpeechRecognitionCtor) {
+      addLog('error', 'error=unsupported, message=SpeechRecognition not available');
       showToast('Is browser mein mic support nahi hai. Chrome use karein.');
+      flushLogAlert();
       return false;
     }
 
@@ -101,12 +164,29 @@ export function createMicrophoneController(callbacks = {}) {
 
       rec.onstart = () => {
         if (recognition !== rec) return;
+        addLog('start');
         isListening = true;
         updateUi(true);
       };
 
+      rec.onaudiostart = () => {
+        if (recognition !== rec) return;
+        addLog('audiostart');
+      };
+
+      rec.onsoundstart = () => {
+        if (recognition !== rec) return;
+        addLog('soundstart');
+      };
+
+      rec.onspeechstart = () => {
+        if (recognition !== rec) return;
+        addLog('speechstart');
+      };
+
       rec.onresult = (event) => {
         if (recognition !== rec || !event || !event.results) return;
+        addLog('result', `results=${event.results.length}`);
         let finalPart = '';
         let interimPart = '';
 
@@ -137,7 +217,28 @@ export function createMicrophoneController(callbacks = {}) {
         if (recognition !== rec) return;
         hasError = true;
         const errCode = event && event.error ? String(event.error) : 'unknown';
+        const errMsg = event && event.message ? String(event.message) : '';
+        addLog('error', `error=${errCode}, message=${errMsg}`);
         showToast(`Mic error: ${errCode}`);
+        clearErrorAlertTimer();
+        errorAlertTimer = setTimeout(() => {
+          flushLogAlert();
+        }, 150);
+      };
+
+      rec.onspeechend = () => {
+        if (recognition !== rec) return;
+        addLog('speechend');
+      };
+
+      rec.onsoundend = () => {
+        if (recognition !== rec) return;
+        addLog('soundend');
+      };
+
+      rec.onaudioend = () => {
+        if (recognition !== rec) return;
+        addLog('audioend');
       };
 
       rec.onend = () => {
@@ -145,6 +246,7 @@ export function createMicrophoneController(callbacks = {}) {
           resolveStopWaiters();
           return;
         }
+        addLog('end');
         finalizeSession();
       };
 
@@ -156,9 +258,12 @@ export function createMicrophoneController(callbacks = {}) {
       hasError = true;
       isListening = false;
       recognition = null;
+      const errMsg = (err && err.message) || 'start-failed';
+      addLog('error', `error=exception, message=${errMsg}`);
       updateUi(false);
       resolveStopWaiters();
-      showToast(`Mic error: ${(err && err.message) || 'start-failed'}`);
+      showToast(`Mic error: ${errMsg}`);
+      flushLogAlert();
       return false;
     }
   }
