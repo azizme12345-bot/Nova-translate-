@@ -49,7 +49,7 @@ export function createAudioModeController({ microphone, listening } = {}) {
 
     if (!microphone) return false;
     activeMode = 'mic';
-    const started = microphone.start();
+    const started = await microphone.start();
     if (!started && seq === transitionSeq) {
       activeMode = 'idle';
     }
@@ -73,7 +73,7 @@ export function createAudioModeController({ microphone, listening } = {}) {
       (listening && listening.isSpeaking()) || activeMode === 'listening';
 
     if (needStopMic && microphone) {
-      await microphone.stop();
+      await microphone.stop({ cancel: true });
       await waitMs(SWITCH_DELAY_MS);
       if (seq !== transitionSeq) return false;
     } else if (needStopOtherListening && listening) {
@@ -84,7 +84,7 @@ export function createAudioModeController({ microphone, listening } = {}) {
 
     if (!listening) return false;
     activeMode = 'listening';
-    const started = listening.play(rawText, langName, key);
+    const started = await Promise.resolve(listening.play(rawText, langName, key));
     if (!started && seq === transitionSeq) {
       activeMode = 'idle';
     }
@@ -94,7 +94,7 @@ export function createAudioModeController({ microphone, listening } = {}) {
   async function stopAll() {
     const seq = ++transitionSeq;
     const tasks = [];
-    if (microphone) tasks.push(microphone.stop());
+    if (microphone) tasks.push(microphone.stop({ cancel: true }));
     if (listening) tasks.push(listening.stop());
     await Promise.all(tasks);
     if (seq === transitionSeq) {

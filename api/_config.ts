@@ -2,6 +2,8 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
 export const TEXT_MODEL = 'gemini-3.1-flash-lite';
 export const IMAGE_MODEL = 'gemini-3.1-flash-lite';
+export const STT_MODEL = 'gemini-3.5-transcribe';
+export const TTS_MODEL = 'gemini-3.8-flash-lite-tts';
 export const THINKING_LEVEL = ThinkingLevel.MINIMAL;
 
 export function getGeminiClient(): GoogleGenAI {

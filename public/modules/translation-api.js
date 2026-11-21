@@ -335,6 +335,91 @@ export async function translateImage(
   };
 }
 
+export async function transcribeAudio(
+  { audioBase64, mimeType = 'audio/webm', sourceLanguage = 'auto' },
+  options = {}
+) {
+  const cleanAudio = String(audioBase64 || '').trim();
+  if (!cleanAudio) {
+    throw new Error('Audio data is required.');
+  }
+
+  const rawB64 = cleanAudio.includes(',') ? cleanAudio.split(',')[1] : cleanAudio;
+  if (estimateBase64Bytes(rawB64) > MAX_IMAGE_BYTES) {
+    throw new Error('Audio recording bahut bari hai. Chhoti recording karein.');
+  }
+
+  const cleanSource = String(sourceLanguage || '').trim() || 'auto';
+  const payloadSource = isAutoLanguage(cleanSource) ? 'auto' : getTranslationName(cleanSource);
+
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const data = await postJsonWithTimeout(
+    '/api/speech-to-text',
+    {
+      audioBase64: rawB64,
+      mimeType: mimeType || 'audio/webm',
+      sourceLanguage: payloadSource,
+    },
+    options
+  );
+
+  const text = String(data.text || '').trim();
+  if (!text) {
+    throw new Error('Awaaz mein koi alfaz samajh nahi aaye.');
+  }
+
+  const elapsed = Math.round(
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt
+  );
+  console.log(`STT: ${elapsed}ms`);
+
+  return {
+    text,
+    sourceLanguage: payloadSource,
+  };
+}
+
+export async function synthesizeSpeech(
+  { text, language = 'English', voiceGender = 'female' },
+  options = {}
+) {
+  const cleanText = String(text || '').trim();
+  if (!cleanText) {
+    throw new Error('No text to speak');
+  }
+  if (cleanText.length > MAX_TEXT_LENGTH) {
+    throw new Error(`Input text exceeds the ${MAX_TEXT_LENGTH.toLocaleString()} character limit.`);
+  }
+
+  const cleanLang = getTranslationName(language || 'English');
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+  const data = await postJsonWithTimeout(
+    '/api/tts',
+    {
+      text: cleanText,
+      language: cleanLang,
+      voiceGender: voiceGender === 'male' ? 'male' : 'female',
+    },
+    options
+  );
+
+  const audioBase64 = String(data.audioBase64 || '').trim();
+  if (!audioBase64) {
+    throw new Error('Server ne khaali audio bheji.');
+  }
+
+  const elapsed = Math.round(
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt
+  );
+  console.log(`TTS: ${elapsed}ms`);
+
+  return {
+    audioBase64,
+    mimeType: String(data.mimeType || 'audio/wav'),
+  };
+}
+
 function detectScriptLocal(text) {
   const sample = String(text || '');
   if (/[\u0600-\u06FF]/.test(sample)) {

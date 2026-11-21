@@ -1,15 +1,15 @@
 /**
  * Text-to-Speech / Listening Module
- * Uses browser native window.speechSynthesis only.
- * Shows clear message if device lacks a voice for the selected language.
+ * Uses server-side Gemini TTS (/api/tts returning WAV) and browser Audio playback.
+ * Completely removes browser speechSynthesis usage.
  */
 
-import { getSpeechCode, getTranslationName } from './language-manager.js';
+import { synthesizeSpeech } from './translation-api.js';
+import { getTranslationName } from './language-manager.js';
 import { showToast } from './ui-utils.js';
 
 const PLACEHOLDER_OUTPUT = 'Translation will appear here...';
 const VOICE_GENDER_KEY = 'novaVoiceGender';
-const VOICE_LOAD_TIMEOUT_MS = 500;
 
 function ensureSpeakingAnimationStyle() {
   if (typeof document === 'undefined') return;
@@ -22,13 +22,23 @@ function ensureSpeakingAnimationStyle() {
   document.head.appendChild(style);
 }
 
+function base64ToBlob(base64, mimeType) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType || 'audio/wav' });
+}
+
 export function createListeningController(callbacks = {}) {
-  let activeUtterance = null;
+  let activeAudio = null;
+  let activeObjectUrl = '';
+  let activeAbortController = null;
   let activeKey = null;
   let isPausedState = false;
   let sessionSeq = 0;
   let voiceGender = readSavedGender();
-  let cachedVoices = [];
 
   const voiceGenderBtn = document.getElementById('voiceGenderBtn');
   const voiceGenderLabel = document.getElementById('voiceGenderLabel');
@@ -58,6 +68,17 @@ export function createListeningController(callbacks = {}) {
 
   function getVoiceGender() {
     return voiceGender;
+  }
+
+  function revokeActiveUrl() {
+    if (activeObjectUrl) {
+      try {
+        URL.revokeObjectURL(activeObjectUrl);
+      } catch {
+        // Ignore revoke errors
+      }
+      activeObjectUrl = '';
+    }
   }
 
   function updateButtonsUi(key) {
@@ -104,13 +125,26 @@ export function createListeningController(callbacks = {}) {
     sessionSeq++;
     isPausedState = false;
 
-    if (activeUtterance) {
+    if (activeAbortController) {
       hadActive = true;
-      activeUtterance.onstart = null;
-      activeUtterance.onend = null;
-      activeUtterance.onerror = null;
-      activeUtterance = null;
+      activeAbortController.abort();
+      activeAbortController = null;
     }
+
+    if (activeAudio) {
+      hadActive = true;
+      activeAudio.onended = null;
+      activeAudio.onerror = null;
+      try {
+        activeAudio.pause();
+        activeAudio.src = '';
+      } catch {
+        // Ignore audio stop failures
+      }
+      activeAudio = null;
+    }
+
+    revokeActiveUrl();
 
     if (activeKey !== null) {
       hadActive = true;
@@ -118,22 +152,6 @@ export function createListeningController(callbacks = {}) {
     }
 
     updateButtonsUi(null);
-
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        if (
-          window.speechSynthesis.speaking ||
-          window.speechSynthesis.pending ||
-          window.speechSynthesis.paused
-        ) {
-          hadActive = true;
-        }
-        window.speechSynthesis.cancel();
-      } catch {
-        // Ignore cancel failures
-      }
-    }
-
     return hadActive;
   }
 
@@ -143,11 +161,11 @@ export function createListeningController(callbacks = {}) {
   }
 
   function pause() {
-    if (!('speechSynthesis' in window) || !window.speechSynthesis.speaking || isPausedState) {
+    if (!activeAudio || activeAudio.paused || isPausedState) {
       return false;
     }
     try {
-      window.speechSynthesis.pause();
+      activeAudio.pause();
       isPausedState = true;
       updateButtonsUi(activeKey);
       return true;
@@ -157,11 +175,11 @@ export function createListeningController(callbacks = {}) {
   }
 
   function resume() {
-    if (!('speechSynthesis' in window) || !isPausedState) {
+    if (!activeAudio || !isPausedState) {
       return false;
     }
     try {
-      window.speechSynthesis.resume();
+      void activeAudio.play();
       isPausedState = false;
       updateButtonsUi(activeKey);
       return true;
@@ -175,159 +193,7 @@ export function createListeningController(callbacks = {}) {
     return isPausedState ? resume() : pause();
   }
 
-  function refreshCachedVoices() {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return [];
-    }
-    try {
-      const list = window.speechSynthesis.getVoices() || [];
-      if (list.length > 0) {
-        cachedVoices = list;
-      }
-      return cachedVoices.length > 0 ? cachedVoices : list;
-    } catch {
-      return cachedVoices;
-    }
-  }
-
-  function loadBrowserVoices(onReady) {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      onReady([]);
-      return;
-    }
-
-    const existing = refreshCachedVoices();
-    if (existing.length > 0) {
-      onReady(existing);
-      return;
-    }
-
-    const synth = window.speechSynthesis;
-
-    let done = false;
-    let waitTimer = null;
-
-    function resolveVoices() {
-      if (done) return;
-      done = true;
-      if (waitTimer) {
-        clearTimeout(waitTimer);
-        waitTimer = null;
-      }
-      try {
-        if (typeof synth.removeEventListener === 'function') {
-          synth.removeEventListener('voiceschanged', resolveVoices);
-        }
-      } catch {
-        // Ignore
-      }
-      const loaded = refreshCachedVoices();
-      onReady(loaded);
-    }
-
-    try {
-      if (typeof synth.addEventListener === 'function') {
-        synth.addEventListener('voiceschanged', resolveVoices);
-      } else {
-        const prevHandler = synth.onvoiceschanged;
-        synth.onvoiceschanged = () => {
-          if (typeof prevHandler === 'function') {
-            try {
-              prevHandler();
-            } catch {
-              // Ignore
-            }
-          }
-          resolveVoices();
-        };
-      }
-    } catch {
-      // Ignore
-    }
-
-    waitTimer = setTimeout(resolveVoices, VOICE_LOAD_TIMEOUT_MS);
-  }
-
-  function findMatchingVoice(voices, locale, langWord) {
-    if (!voices || voices.length === 0) return null;
-    const wantedFull = String(locale || 'en-US').toLowerCase();
-    const wantedBase = wantedFull.split('-')[0];
-    const wantedWord = String(langWord || '').toLowerCase();
-
-    let chosen = null;
-    let topScore = -999;
-
-    for (let i = 0; i < voices.length; i++) {
-      const voice = voices[i];
-      const vLocale = String(voice.lang || '').toLowerCase().replace(/_/g, '-');
-      const vBase = vLocale.split('-')[0];
-      const vName = String(voice.name || '').toLowerCase();
-
-      const isMatch =
-        vLocale === wantedFull ||
-        vBase === wantedBase ||
-        (wantedWord && vName.includes(wantedWord));
-
-      if (!isMatch) continue;
-
-      let score = 0;
-      if (vLocale === wantedFull) score += 40;
-      else if (vBase === wantedBase) score += 20;
-      else score += 5;
-
-      if (
-        vName.includes('natural') ||
-        vName.includes('neural') ||
-        vName.includes('online') ||
-        vName.includes('wavenet')
-      ) {
-        score += 50;
-      }
-      if (vName.includes('google')) score += 35;
-      if (
-        vName.includes('microsoft') ||
-        vName.includes('siri') ||
-        vName.includes('enhanced') ||
-        vName.includes('premium')
-      ) {
-        score += 20;
-      }
-      if (!voice.localService) score += 10;
-      if (vName.includes('espeak') || vName.includes('festival')) score -= 40;
-
-      if (voiceGender === 'female') {
-        if (
-          vName.includes('female') ||
-          vName.includes('woman') ||
-          vName.includes('uzma') ||
-          vName.includes('salma') ||
-          vName.includes('zira') ||
-          vName.includes('samantha') ||
-          vName.includes('jenny') ||
-          vName.includes('aria')
-        ) {
-          score += 15;
-        }
-      } else if (
-        (vName.includes('male') && !vName.includes('female')) ||
-        vName.includes('asad') ||
-        vName.includes('david') ||
-        vName.includes('guy') ||
-        vName.includes('daniel')
-      ) {
-        score += 15;
-      }
-
-      if (score > topScore) {
-        topScore = score;
-        chosen = voice;
-      }
-    }
-
-    return chosen;
-  }
-
-  function play(rawText, langName, key = 'custom') {
+  async function play(rawText, langName, key = 'custom') {
     const clean = String(rawText || '').trim();
     if (!clean || clean === PLACEHOLDER_OUTPUT) {
       showToast('No text to speak');
@@ -339,102 +205,87 @@ export function createListeningController(callbacks = {}) {
       return false;
     }
 
-    if (
-      typeof window === 'undefined' ||
-      !('speechSynthesis' in window) ||
-      typeof SpeechSynthesisUtterance === 'undefined'
-    ) {
-      showToast('Is device par speech synthesis support nahi hai.');
+    if (typeof Audio === 'undefined') {
+      showToast('Is browser mein audio playback support nahi hai.');
       return false;
     }
 
     stopSync();
     const token = sessionSeq;
     const langWord = getTranslationName(langName);
-    const locale = getSpeechCode(langName);
-
+    const controller = new AbortController();
+    activeAbortController = controller;
     activeKey = key;
     isPausedState = false;
     updateButtonsUi(key);
 
-    loadBrowserVoices((voices) => {
-      if (token !== sessionSeq || activeKey !== key) return;
+    try {
+      const data = await synthesizeSpeech(
+        {
+          text: clean,
+          language: langWord,
+          voiceGender,
+        },
+        { signal: controller.signal }
+      );
 
-      const matched = findMatchingVoice(voices, locale, langWord);
-      if (!matched) {
-        activeUtterance = null;
-        activeKey = null;
-        isPausedState = false;
-        updateButtonsUi(null);
-        showToast(`Is device par ${langWord} ki awaaz nahi hai.`);
-        return;
+      if (token !== sessionSeq || activeKey !== key) {
+        return false;
       }
 
-      try {
-        window.speechSynthesis.cancel();
+      if (activeAbortController === controller) {
+        activeAbortController = null;
+      }
 
-        const utterance = new SpeechSynthesisUtterance(clean);
-        activeUtterance = utterance;
-        utterance.voice = matched;
-        utterance.lang = matched.lang || locale;
-        utterance.volume = 1;
-        utterance.rate = voiceGender === 'male' ? 0.94 : 0.98;
-        utterance.pitch = voiceGender === 'male' ? 0.88 : 1.06;
+      const wavBlob = base64ToBlob(data.audioBase64, data.mimeType || 'audio/wav');
+      const objectUrl = URL.createObjectURL(wavBlob);
+      activeObjectUrl = objectUrl;
 
-        utterance.onend = () => {
-          if (token !== sessionSeq || activeUtterance !== utterance) return;
-          activeUtterance = null;
-          activeKey = null;
-          isPausedState = false;
-          updateButtonsUi(null);
-        };
+      const audio = new Audio(objectUrl);
+      activeAudio = audio;
 
-        utterance.onerror = (ev) => {
-          if (token !== sessionSeq || activeUtterance !== utterance) return;
-          const errName = ev && ev.error ? String(ev.error) : 'unknown';
-          activeUtterance = null;
-          activeKey = null;
-          isPausedState = false;
-          updateButtonsUi(null);
-          if (errName !== 'canceled' && errName !== 'interrupted') {
-            showToast(`Speech error: ${errName}`);
-          }
-        };
+      audio.onended = () => {
+        if (token !== sessionSeq || activeAudio !== audio) return;
+        activeAudio = null;
+        activeKey = null;
+        isPausedState = false;
+        revokeActiveUrl();
+        updateButtonsUi(null);
+      };
 
-        try {
-          if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-          }
-        } catch {
-          // Ignore
+      audio.onerror = () => {
+        if (token !== sessionSeq || activeAudio !== audio) return;
+        activeAudio = null;
+        activeKey = null;
+        isPausedState = false;
+        revokeActiveUrl();
+        updateButtonsUi(null);
+        showToast('Audio playback failed.');
+      };
+
+      await audio.play();
+      return true;
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        return false;
+      }
+      if (token === sessionSeq) {
+        if (activeAbortController === controller) {
+          activeAbortController = null;
         }
-
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        activeUtterance = null;
+        activeAudio = null;
         activeKey = null;
         isPausedState = false;
+        revokeActiveUrl();
         updateButtonsUi(null);
-        showToast(`Speech error: ${(err && err.message) || 'speak-failed'}`);
+        showToast((err && err.message) || 'Audio generation failed.');
       }
-    });
-
-    return true;
+      return false;
+    }
   }
 
   function init() {
     ensureSpeakingAnimationStyle();
-
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      refreshCachedVoices();
-      try {
-        if (typeof window.speechSynthesis.addEventListener === 'function') {
-          window.speechSynthesis.addEventListener('voiceschanged', refreshCachedVoices);
-        }
-      } catch {
-        // Ignore
-      }
-    }
 
     if (voiceGenderLabel) {
       voiceGenderLabel.textContent = voiceGender === 'male' ? 'Male' : 'Female';

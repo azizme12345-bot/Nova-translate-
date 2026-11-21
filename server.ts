@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import type { ApiRequest, ApiResponse } from './api/_config.js';
 import translateHandler from './api/translate.js';
 import imageTranslateHandler from './api/image-translate.js';
+import speechToTextHandler from './api/speech-to-text.js';
+import ttsHandler from './api/tts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 3000;
@@ -19,6 +21,14 @@ async function startServer() {
 
   app.all('/api/image-translate', (req, res) => {
     void imageTranslateHandler(req as unknown as ApiRequest, res as unknown as ApiResponse);
+  });
+
+  app.all('/api/speech-to-text', (req, res) => {
+    void speechToTextHandler(req as unknown as ApiRequest, res as unknown as ApiResponse);
+  });
+
+  app.all('/api/tts', (req, res) => {
+    void ttsHandler(req as unknown as ApiRequest, res as unknown as ApiResponse);
   });
 
   const isProd = process.env.NODE_ENV === 'production';
